@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "16818035848",
+    "project_id": "lgu-emergency-communication",
+    "storage_bucket": "lgu-emergency-communication.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:16818035848:android:10483c28c42e7f0b11533d",
+        "android_client_info": {
+          "package_name": "com.lgu.emergencycommunicationsystem"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAD5-zBi_tE-Ke2gkhFlwFPdKFoLK0Wl1I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
