@@ -29,6 +29,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -37,6 +39,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.myfirstapp.ui.components.ProfileItem
 import com.example.myfirstapp.ui.components.SectionTitle
+import com.example.myfirstapp.viewmodel.AuthViewModel
+import com.example.myfirstapp.viewmodel.AuthState
 
 @Composable
 fun GuestProfileScreen(onLoginClick: () -> Unit, onSignUpClick: () -> Unit) {
@@ -80,100 +84,103 @@ fun GuestProfileScreen(onLoginClick: () -> Unit, onSignUpClick: () -> Unit) {
 
 @Composable
 fun ProfileScreen(
-    isLoggedIn: Boolean,
-    onLogin: () -> Unit,
-    onSignUp: () -> Unit,
-    onLogout: () -> Unit
+    authViewModel: AuthViewModel,
+    onLoginClick: () -> Unit,
+    onSignUpClick: () -> Unit
 ) {
+    val authState by authViewModel.authState.collectAsState()
+
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
         Box(modifier = Modifier.padding(padding)) {
-            if (isLoggedIn) {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    // Header
-                    item {
-                        Text(
-                            "Profile & Settings",
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.padding(bottom = 24.dp)
-                        )
-                    }
+            when (authState) {
+                is AuthState.Authenticated -> {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        // Header
+                        item {
+                            Text(
+                                "Profile & Settings",
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.padding(bottom = 24.dp)
+                            )
+                        }
 
-                    // Profile Card
-                    item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.Person,
-                                        contentDescription = "User avatar",
-                                        modifier = Modifier.size(64.dp),
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                    Spacer(modifier = Modifier.width(16.dp))
-                                    Column {
-                                        Text("Juan Dela Cruz", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurface)
-                                        Text("juan.delacruz@email.com", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        // Profile Card
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Person,
+                                            contentDescription = "User avatar",
+                                            modifier = Modifier.size(64.dp),
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                        Spacer(modifier = Modifier.width(16.dp))
+                                        Column {
+                                            Text(authViewModel.currentUser?.email ?: "", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurface)
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    OutlinedButton(
+                                        onClick = { /* TODO */ },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Edit Profile", color = MaterialTheme.colorScheme.primary)
                                     }
                                 }
-                                Spacer(modifier = Modifier.height(16.dp))
-                                OutlinedButton(
-                                    onClick = { /* TODO */ },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text("Edit Profile", color = MaterialTheme.colorScheme.primary)
-                                }
                             }
+                            Spacer(modifier = Modifier.height(24.dp))
                         }
-                        Spacer(modifier = Modifier.height(24.dp))
-                    }
 
-                    // Settings Items
-                    item { SectionTitle("Settings") }
-                    item {
-                        ProfileItem(icon = Icons.Default.Notifications, text = "Notifications", hasSwitch = true)
-                    }
-                    item {
-                        ProfileItem(icon = Icons.Default.Security, text = "Privacy & Security")
-                    }
+                        // Settings Items
+                        item { SectionTitle("Settings") }
+                        item {
+                            ProfileItem(icon = Icons.Default.Notifications, text = "Notifications", hasSwitch = true)
+                        }
+                        item {
+                            ProfileItem(icon = Icons.Default.Security, text = "Privacy & Security")
+                        }
 
-                    item { Spacer(modifier = Modifier.height(16.dp)) }
+                        item { Spacer(modifier = Modifier.height(16.dp)) }
 
-                    // Legal Items
-                    item { SectionTitle("Legal") }
-                    item {
-                        ProfileItem(icon = Icons.Default.Description, text = "Terms of Service")
-                    }
-                    item {
-                        ProfileItem(icon = Icons.Default.Info, text = "About this App")
-                    }
+                        // Legal Items
+                        item { SectionTitle("Legal") }
+                        item {
+                            ProfileItem(icon = Icons.Default.Description, text = "Terms of Service")
+                        }
+                        item {
+                            ProfileItem(icon = Icons.Default.Info, text = "About this App")
+                        }
 
 
-                    // Logout Button
-                    item {
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Button(
-                            onClick = onLogout,
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Logout")
+                        // Logout Button
+                        item {
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Button(
+                                onClick = { authViewModel.logout() },
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Logout")
+                            }
                         }
                     }
                 }
-            } else {
-                GuestProfileScreen(
-                    onLoginClick = onLogin,
-                    onSignUpClick = onSignUp
-                )
+                else -> {
+                    GuestProfileScreen(
+                        onLoginClick = onLoginClick,
+                        onSignUpClick = onSignUpClick
+                    )
+                }
             }
         }
     }
