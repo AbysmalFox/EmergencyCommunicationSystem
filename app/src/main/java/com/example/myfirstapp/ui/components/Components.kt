@@ -3,6 +3,7 @@ package com.example.myfirstapp.ui.components
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Warning
@@ -48,6 +50,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -63,7 +67,9 @@ fun ProfileItem(icon: ImageVector, text: String, hasSwitch: Boolean = false, onC
     var isChecked by remember { mutableStateOf(true) }
     Card(
         onClick = { if (!hasSwitch) onClick() },
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
@@ -118,52 +124,196 @@ fun SegmentedButtonRow(options: List<String>, selectedOption: String, onOptionSe
 }
 
 @Composable
+fun EmergencyCallButton(onClick: () -> Unit) {
+    val shape = RoundedCornerShape(24.dp)
+    Button(
+        onClick = onClick,
+        shape = shape,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFFC93F3F) // Red color from image
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 12.dp,
+                shape = shape,
+                spotColor = Color.Red,
+                ambientColor = Color.Red.copy(alpha = 0.5f)
+            )
+            .height(120.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Call,
+                contentDescription = "Emergency Call",
+                tint = Color.White,
+                modifier = Modifier.size(48.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(
+                    text = "EMERGENCY",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    letterSpacing = 2.sp
+                )
+                Text(
+                    text = "CALL",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 36.sp,
+                    letterSpacing = 2.sp
+                )
+            }
+        }
+    }
+}
+
+
+@Composable
 fun ActionGrid(onEmergencyCallClick: () -> Unit, onReportClick: () -> Unit, onSafeClick: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ActionGridItem(title = "EMERGENCY CALL", icon = Icons.Filled.Call, color = MaterialTheme.colorScheme.error, onClick = onEmergencyCallClick)
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ActionGridItem("Report Incident", Icons.Filled.Warning, MaterialTheme.colorScheme.surface, onClick = onReportClick, modifier = Modifier.weight(1f))
-            ActionGridItem("I Am Safe", Icons.Filled.CheckCircle, MaterialTheme.colorScheme.surface, onClick = onSafeClick, modifier = Modifier.weight(1f))
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        EmergencyCallButton(onClick = onEmergencyCallClick)
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            ActionGridItem("Report Incident", Icons.Filled.Warning, onClick = onReportClick, modifier = Modifier.weight(1f))
+            ActionGridItem("I Am Safe", Icons.Filled.CheckCircle, onClick = onSafeClick, modifier = Modifier.weight(1f))
         }
     }
 }
 
 @Composable
-fun ActionGridItem(title: String, icon: ImageVector, color: Color, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Card(onClick = onClick, modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = color)) {
-        Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Icon(icon, contentDescription = title, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(32.dp))
+fun ActionGridItem(
+    title: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(24.dp)
+    Button(
+        onClick = onClick,
+        shape = shape,
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = modifier
+            .shadow(elevation = 4.dp, shape = shape, spotColor = Color.Black.copy(alpha = 0.3f))
+            .height(110.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(icon, contentDescription = title, tint = Color.White, modifier = Modifier.size(32.dp))
             Spacer(modifier = Modifier.height(8.dp))
-            Text(title, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
         }
     }
 }
+
 
 @Composable
 fun WeatherWidget(state: WeatherState) {
+    val shape = RoundedCornerShape(24.dp)
     when (state) {
         is WeatherState.Loading -> {
-            Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .clip(shape)
+                    .background(MaterialTheme.colorScheme.surface),
+                contentAlignment = Alignment.Center
+            ) {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         }
         is WeatherState.Success -> {
-            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(state.location, fontWeight = FontWeight.Bold, fontSize = 22.sp, color = MaterialTheme.colorScheme.onBackground)
-                    Text(state.condition, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(state.temperature, fontSize = 48.sp, fontWeight = FontWeight.Light, color = MaterialTheme.colorScheme.onBackground)
-                    AsyncImage(model = state.iconUrl, contentDescription = state.condition, modifier = Modifier.size(64.dp))
+            Box(
+                 modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(elevation = 4.dp, shape = shape, spotColor = Color.Black.copy(alpha = 0.3f))
+                    .clip(shape)
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(24.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    AsyncImage(
+                        model = state.iconUrl,
+                        contentDescription = state.condition,
+                        modifier = Modifier.size(90.dp)
+                    )
+                    Spacer(modifier = Modifier.width(20.dp))
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                         Row {
+                            Text(
+                                text = state.temperature.substringBefore("."), // e.g. "8"
+                                fontSize = 72.sp,
+                                fontWeight = FontWeight.Light,
+                                color = Color.White
+                            )
+                             Text(
+                                 text = ".${state.temperature.substringAfter(".").substringBefore("°")}°C", // e.g., ".0°C"
+                                 fontSize = 24.sp,
+                                 fontWeight = FontWeight.Light,
+                                 color = Color.White,
+                                 modifier = Modifier.padding(top = 12.dp)
+                             )
+                        }
+                        Text(
+                            text = state.condition,
+                            fontSize = 20.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                         Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = "Location",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = state.location,
+                                fontSize = 16.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
         }
         is WeatherState.Error -> {
-            Text(state.message, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(16.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = shape,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Filled.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.onError)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        state.message,
+                        color = MaterialTheme.colorScheme.onError,
+                    )
+                }
+            }
         }
     }
 }
+
 
 @Composable
 fun HotlineItem(name: String, number: String) {
