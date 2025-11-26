@@ -1,4 +1,4 @@
-package com.example.myfirstapp
+package com.lgu.emergencycommunicationsystem
 
 import android.os.Bundle
 import android.util.Log
