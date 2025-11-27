@@ -101,10 +101,10 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            verticalArrangement = Arrangement.spacedBy(27.dp) // Reduced spacing
         ) {
             item {
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(9.dp)) // Reduced spacing
                 AnimatedVisibility(
                     visibleState = animationState,
                     enter = fadeIn(animationSpec = tween(durationMillis = 500)) +
@@ -143,7 +143,7 @@ fun HomeScreen(
                     WeatherWidget(weatherViewModel.weatherState.collectAsState().value)
                 }
             }
-            item { Spacer(modifier = Modifier.height(16.dp)) }
+            item { Spacer(modifier = Modifier.height(8.dp)) } // Reduced spacing
         }
 
         PullRefreshIndicator(

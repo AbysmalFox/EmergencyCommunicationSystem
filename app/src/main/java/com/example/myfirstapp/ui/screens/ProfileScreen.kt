@@ -28,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -43,7 +44,11 @@ import com.example.myfirstapp.viewmodel.AuthViewModel
 import com.example.myfirstapp.viewmodel.AuthState
 
 @Composable
-fun GuestProfileScreen(onLoginClick: () -> Unit, onSignUpClick: () -> Unit) {
+fun AuthPromptScreen(
+    onLoginClick: () -> Unit,
+    onSignUpClick: () -> Unit,
+    onGuestModeClick: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -53,7 +58,7 @@ fun GuestProfileScreen(onLoginClick: () -> Unit, onSignUpClick: () -> Unit) {
     ) {
         Icon(
             imageVector = Icons.Default.AccountCircle,
-            contentDescription = "Guest",
+            contentDescription = "Profile Icon",
             modifier = Modifier.size(100.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -79,6 +84,10 @@ fun GuestProfileScreen(onLoginClick: () -> Unit, onSignUpClick: () -> Unit) {
         ) {
             Text("Sign Up", color = MaterialTheme.colorScheme.primary)
         }
+        Spacer(modifier = Modifier.height(12.dp))
+        TextButton(onClick = onGuestModeClick) {
+            Text("Continue as Guest", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
@@ -94,6 +103,7 @@ fun ProfileScreen(
         Box(modifier = Modifier.padding(padding)) {
             when (authState) {
                 is AuthState.Authenticated -> {
+                    // Screen for logged-in users
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
@@ -161,7 +171,6 @@ fun ProfileScreen(
                             ProfileItem(icon = Icons.Default.Info, text = "About this App")
                         }
 
-
                         // Logout Button
                         item {
                             Spacer(modifier = Modifier.height(24.dp))
@@ -175,11 +184,51 @@ fun ProfileScreen(
                         }
                     }
                 }
-                else -> {
-                    GuestProfileScreen(
+                is AuthState.Anonymous -> {
+                    // Screen for guest users
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        item { Text("Profile & Settings", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.padding(bottom = 24.dp)) }
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(imageVector = Icons.Default.Person, contentDescription = "User avatar", modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text("Anonymous User", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurface)
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Button(onClick = onLoginClick, modifier = Modifier.weight(1f)) { Text("Login") }
+                                        OutlinedButton(onClick = onSignUpClick, modifier = Modifier.weight(1f)) { Text("Sign Up") }
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(24.dp))
+                        }
+                        item { SectionTitle("Settings") }
+                        item { ProfileItem(icon = Icons.Default.Notifications, text = "Notifications", hasSwitch = true) }
+                        item { ProfileItem(icon = Icons.Default.Security, text = "Privacy & Security") }
+                        item { Spacer(modifier = Modifier.height(16.dp)) }
+                        item { SectionTitle("Legal") }
+                        item { ProfileItem(icon = Icons.Default.Description, text = "Terms of Service") }
+                        item { ProfileItem(icon = Icons.Default.Info, text = "About this App") }
+                    }
+                }
+                is AuthState.Unauthenticated -> {
+                    AuthPromptScreen(
                         onLoginClick = onLoginClick,
-                        onSignUpClick = onSignUpClick
+                        onSignUpClick = onSignUpClick,
+                        onGuestModeClick = { authViewModel.signInAnonymously() }
                     )
+                }
+                else -> {
+                    // Loading or Error states can be handled here
                 }
             }
         }

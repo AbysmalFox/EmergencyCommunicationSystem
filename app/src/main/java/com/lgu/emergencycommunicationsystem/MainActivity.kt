@@ -101,10 +101,18 @@ fun EmergencyApp() {
                 )
             }
             composable(Screen.Login.route) {
-                LoginScreen(authViewModel = authViewModel, onLoginSuccess = { navController.navigate(Screen.Profile.route) { popUpTo(Screen.Login.route) { inclusive = true } } })
+                LoginScreen(
+                    authViewModel = authViewModel, 
+                    onLoginSuccess = { navController.navigate(Screen.Profile.route) { popUpTo(Screen.Login.route) { inclusive = true } } },
+                    onBackPressed = { navController.popBackStack() }
+                )
             }
             composable(Screen.SignUp.route) {
-                SignUpScreen(authViewModel = authViewModel, onSignUpSuccess = { navController.navigate(Screen.Success.route) { popUpTo(Screen.SignUp.route) { inclusive = true } } })
+                SignUpScreen(
+                    authViewModel = authViewModel, 
+                    onSignUpSuccess = { navController.navigate(Screen.Success.route) { popUpTo(Screen.SignUp.route) { inclusive = true } } },
+                    onBackPressed = { navController.popBackStack() }
+                )
             }
             composable(Screen.Success.route) {
                 SuccessScreen(onTimeout = { navController.navigate(Screen.Login.route) { popUpTo(Screen.Success.route) { inclusive = true } } })

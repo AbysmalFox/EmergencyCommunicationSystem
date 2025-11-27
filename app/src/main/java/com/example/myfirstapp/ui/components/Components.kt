@@ -142,12 +142,12 @@ fun EmergencyCallButton(onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .shadow(
-                elevation = 12.dp,
+                elevation = 10.dp, // Reduced elevation
                 shape = shape,
                 spotColor = Color.Red,
-                ambientColor = Color.Red.copy(alpha = 0.5f)
+                ambientColor = Color.Red.copy(alpha = 0.4f)
             )
-            .height(120.dp)
+            .height(80.dp) // Reduced height
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -158,7 +158,7 @@ fun EmergencyCallButton(onClick: () -> Unit) {
                 imageVector = Icons.Filled.Call,
                 contentDescription = "Emergency Call",
                 tint = Color.White,
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier.size(32.dp) // Reduced icon size
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column {
@@ -166,15 +166,15 @@ fun EmergencyCallButton(onClick: () -> Unit) {
                     text = "EMERGENCY",
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                    letterSpacing = 2.sp
+                    fontSize = 15.sp, // Reduced font size
+                    letterSpacing = 1.5.sp
                 )
                 Text(
                     text = "CALL",
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 36.sp,
-                    letterSpacing = 2.sp
+                    fontSize = 24.sp, // Reduced font size
+                    letterSpacing = 1.5.sp
                 )
             }
         }
@@ -184,9 +184,9 @@ fun EmergencyCallButton(onClick: () -> Unit) {
 
 @Composable
 fun ActionGrid(onEmergencyCallClick: () -> Unit, onReportClick: () -> Unit, onSafeClick: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(15.dp)) { // Reduced spacing
         EmergencyCallButton(onClick = onEmergencyCallClick)
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(15.dp)) {
             ActionGridItem("Report Incident", Icons.Filled.Warning, onClick = onReportClick, modifier = Modifier.weight(1f))
             ActionGridItem("I Am Safe", Icons.Filled.CheckCircle, onClick = onSafeClick, modifier = Modifier.weight(1f))
         }
@@ -207,16 +207,16 @@ fun ActionGridItem(
         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface),
         modifier = modifier
             .shadow(elevation = 4.dp, shape = shape, spotColor = Color.Black.copy(alpha = 0.3f))
-            .height(110.dp),
+            .height(80.dp), // Reduced height
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(icon, contentDescription = title, tint = Color.White, modifier = Modifier.size(32.dp))
+            Icon(icon, contentDescription = title, tint = Color.White, modifier = Modifier.size(24.dp)) // Reduced icon size
             Spacer(modifier = Modifier.height(8.dp))
-            Text(title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+            Text(title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 12.sp) // Reduced font size
         }
     }
 }

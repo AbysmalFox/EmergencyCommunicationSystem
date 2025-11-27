@@ -12,9 +12,10 @@ import kotlinx.coroutines.launch
 
 sealed class AuthState {
     object Authenticated : AuthState()
-    object Unauthenticated : AuthState()
+    object Anonymous : AuthState() // Represents an active guest session
+    object Unauthenticated : AuthState() // The initial state, prompting for action
     object Loading : AuthState()
-    object SignUpSuccess : AuthState() // New state for successful sign-up
+    object SignUpSuccess : AuthState()
     data class Error(val message: String) : AuthState()
 }
 
@@ -22,10 +23,36 @@ class AuthViewModel : ViewModel() {
 
     private val auth: FirebaseAuth = Firebase.auth
 
-    private val _authState = MutableStateFlow<AuthState>(if (auth.currentUser != null) AuthState.Authenticated else AuthState.Unauthenticated)
+    private val _authState = MutableStateFlow<AuthState>(getInitialState())
     val authState: StateFlow<AuthState> = _authState
 
+    private fun getInitialState(): AuthState {
+        val user = auth.currentUser
+        return when {
+            user == null -> AuthState.Unauthenticated
+            user.isAnonymous -> AuthState.Anonymous
+            else -> AuthState.Authenticated
+        }
+    }
+
     val currentUser get() = auth.currentUser
+
+    fun signInAnonymously() {
+        viewModelScope.launch {
+            if (auth.currentUser == null) {
+                _authState.value = AuthState.Loading
+                auth.signInAnonymously().addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        _authState.value = AuthState.Anonymous
+                    } else {
+                        _authState.value = AuthState.Error("Guest sign-in failed.")
+                    }
+                }
+            } else if (auth.currentUser?.isAnonymous == true) {
+                _authState.value = AuthState.Anonymous // Already a guest
+            }
+        }
+    }
 
     fun login(email: String, password: String) {
         viewModelScope.launch {
@@ -67,6 +94,7 @@ class AuthViewModel : ViewModel() {
     }
 
     fun resetAuthState() {
+        // After SignUpSuccess or Error, go back to the prompt screen
         _authState.value = AuthState.Unauthenticated
     }
 }
