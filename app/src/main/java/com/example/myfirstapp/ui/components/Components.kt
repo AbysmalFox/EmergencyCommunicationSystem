@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
@@ -25,7 +27,10 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Thermostat
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -44,6 +49,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -61,6 +67,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.myfirstapp.data.models.WeatherState
 import com.example.myfirstapp.navigation.Screen
+import kotlinx.coroutines.delay
 
 @Composable
 fun ProfileItem(icon: ImageVector, text: String, hasSwitch: Boolean = false, onClick: () -> Unit = {}) {
@@ -223,7 +230,7 @@ fun WeatherWidget(state: WeatherState) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp)
+                    .height(280.dp)
                     .clip(shape)
                     .background(MaterialTheme.colorScheme.surface),
                 contentAlignment = Alignment.Center
@@ -232,8 +239,8 @@ fun WeatherWidget(state: WeatherState) {
             }
         }
         is WeatherState.Success -> {
-            Box(
-                 modifier = Modifier
+            Column(
+                modifier = Modifier
                     .fillMaxWidth()
                     .shadow(elevation = 4.dp, shape = shape, spotColor = Color.Black.copy(alpha = 0.3f))
                     .clip(shape)
@@ -253,20 +260,20 @@ fun WeatherWidget(state: WeatherState) {
                     Column(
                         modifier = Modifier.weight(1f)
                     ) {
-                         Row {
+                        Row {
                             Text(
-                                text = state.temperature.substringBefore("."), // e.g. "8"
+                                text = state.temperature.substringBefore("."),
                                 fontSize = 72.sp,
                                 fontWeight = FontWeight.Light,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onSurface
                             )
-                             Text(
-                                 text = ".${state.temperature.substringAfter(".").substringBefore("°")}°C", // e.g., ".0°C"
-                                 fontSize = 24.sp,
-                                 fontWeight = FontWeight.Light,
-                                 color = Color.White,
-                                 modifier = Modifier.padding(top = 12.dp)
-                             )
+                            Text(
+                                text = ".${state.temperature.substringAfter(".").substringBefore("°")}°C",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Light,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(top = 12.dp)
+                            )
                         }
                         Text(
                             text = state.condition,
@@ -274,7 +281,7 @@ fun WeatherWidget(state: WeatherState) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                         Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.LocationOn,
                                 contentDescription = "Location",
@@ -290,6 +297,14 @@ fun WeatherWidget(state: WeatherState) {
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                WeatherDetailsRow(state)
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                WeatherAdvice(advice = state.advice)
             }
         }
         is WeatherState.Error -> {
@@ -314,6 +329,88 @@ fun WeatherWidget(state: WeatherState) {
     }
 }
 
+@Composable
+fun WeatherDetailsRow(state: WeatherState.Success) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceAround
+    ) {
+        WeatherDetailItem(
+            icon = Icons.Default.Thermostat,
+            label = "Feels Like",
+            value = state.feelsLike
+        )
+        WeatherDetailItem(
+            icon = Icons.Default.WaterDrop,
+            label = "Humidity",
+            value = state.humidity
+        )
+        WeatherDetailItem(
+            icon = Icons.Default.Air,
+            label = "Wind",
+            value = state.windSpeed
+        )
+        WeatherDetailItem(
+            icon = Icons.Default.Visibility,
+            label = "Visibility",
+            value = state.visibility
+        )
+    }
+}
+
+@Composable
+fun WeatherDetailItem(icon: ImageVector, label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = value,
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+fun WeatherAdvice(advice: String) {
+    var displayedText by remember(advice) { mutableStateOf("") }
+
+    LaunchedEffect(advice) {
+        displayedText = ""
+        delay(200)
+        advice.forEachIndexed { index, _ ->
+            displayedText = advice.substring(0, index + 1)
+            delay(30)
+        }
+    }
+
+    Row(verticalAlignment = Alignment.Top) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.Chat,
+            contentDescription = "Weather Advice",
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .padding(end = 12.dp, top = 4.dp)
+                .size(24.dp)
+        )
+        Text(
+            text = displayedText,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium
+        )
+    }
+}
 
 @Composable
 fun HotlineItem(name: String, number: String) {
