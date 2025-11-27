@@ -15,8 +15,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.myfirstapp.navigation.Screen
 import com.example.myfirstapp.ui.components.AppBottomNavigation
@@ -52,21 +54,25 @@ fun EmergencyApp() {
     val weatherViewModel: WeatherViewModel = viewModel()
     val weatherState by weatherViewModel.weatherState.collectAsState()
 
-    var currentScreen by remember { mutableStateOf<Screen>(Screen.Home) }
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    val mainScreens = listOf(Screen.Home.route, Screen.Alerts.route, Screen.Profile.route)
 
     Scaffold(
         bottomBar = {
-            // Show bottom bar only on main screens
-            if (currentScreen is Screen.Home || currentScreen is Screen.Alerts || currentScreen is Screen.Profile) {
+            if (currentRoute in mainScreens) {
                 AppBottomNavigation(
-                    selectedScreen = currentScreen,
-                    onScreenSelected = { screen ->
+                    selectedScreen = Screen.fromRoute(currentRoute),
+                    onScreenSelected = {
+                        screen ->
                         navController.navigate(screen.route) {
-                            popUpTo(Screen.Home.route) { saveState = true }
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
                             launchSingleTop = true
                             restoreState = true
                         }
-                        currentScreen = screen
                     }
                 )
             }
@@ -78,7 +84,6 @@ fun EmergencyApp() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(Screen.Home.route) {
-                currentScreen = Screen.Home
                 HomeScreen(
                     onEmergencyCallClick = { navController.navigate(Screen.EmergencyContacts.route) },
                     onReportIncidentClick = { navController.navigate(Screen.ReportIncident.route) },
@@ -86,11 +91,9 @@ fun EmergencyApp() {
                 )
             }
             composable(Screen.Alerts.route) {
-                currentScreen = Screen.Alerts
                 AlertsScreen()
             }
             composable(Screen.Profile.route) {
-                currentScreen = Screen.Profile
                 ProfileScreen(
                     authViewModel = authViewModel,
                     onLoginClick = { navController.navigate(Screen.Login.route) },
@@ -98,23 +101,18 @@ fun EmergencyApp() {
                 )
             }
             composable(Screen.Login.route) {
-                currentScreen = Screen.Login
                 LoginScreen(authViewModel = authViewModel, onLoginSuccess = { navController.navigate(Screen.Profile.route) { popUpTo(Screen.Login.route) { inclusive = true } } })
             }
             composable(Screen.SignUp.route) {
-                currentScreen = Screen.SignUp
                 SignUpScreen(authViewModel = authViewModel, onSignUpSuccess = { navController.navigate(Screen.Success.route) { popUpTo(Screen.SignUp.route) { inclusive = true } } })
             }
             composable(Screen.Success.route) {
-                currentScreen = Screen.Success
                 SuccessScreen(onTimeout = { navController.navigate(Screen.Login.route) { popUpTo(Screen.Success.route) { inclusive = true } } })
             }
             composable(Screen.EmergencyContacts.route) {
-                currentScreen = Screen.EmergencyContacts
                 EmergencyContactsScreen(onBackPressed = { navController.popBackStack() })
             }
             composable(Screen.ReportIncident.route) {
-                currentScreen = Screen.ReportIncident
                 ReportIncidentScreen(weatherState = weatherState, onBackPressed = { navController.popBackStack() })
             }
         }
@@ -132,3 +130,13 @@ val Screen.route: String
         is Screen.EmergencyContacts -> "emergency_contacts"
         is Screen.ReportIncident -> "report_incident"
     }
+
+// Helper to get Screen object from route string
+fun Screen.Companion.fromRoute(route: String?): Screen {
+    return when (route) {
+        "home" -> Screen.Home
+        "alerts" -> Screen.Alerts
+        "profile" -> Screen.Profile
+        else -> Screen.Home // Default screen
+    }
+}

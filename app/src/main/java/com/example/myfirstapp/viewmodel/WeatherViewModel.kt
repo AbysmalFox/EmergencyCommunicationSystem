@@ -4,6 +4,9 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.location.Geocoder
 import android.location.Location
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
@@ -24,6 +27,8 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
     val weatherState: StateFlow<WeatherState> = _weatherState
     private val apiKey = "de9f8eb51584955d6d6fe607c9d81c84"
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(application)
+    var hasLoadedData: Boolean = false
+        private set
 
     @SuppressLint("MissingPermission")
     suspend fun requestLocationAndFetchWeather() {
@@ -110,11 +115,19 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
             )
         } catch (_: Exception) {
             _weatherState.value = WeatherState.Error("Failed to load weather. Check connection.")
+        } finally {
+            hasLoadedData = true
         }
     }
 
-    fun setLocationPermissionDenied() { _weatherState.value = WeatherState.Error("Permission denied. Enable location in settings.") }
-    fun setLocationNotFound() { _weatherState.value = WeatherState.Error("GPS signal lost. Ensure location is on.") }
+    fun setLocationPermissionDenied() {
+         _weatherState.value = WeatherState.Error("Permission denied. Enable location in settings.")
+         hasLoadedData = true
+    }
+    fun setLocationNotFound() {
+        _weatherState.value = WeatherState.Error("GPS signal lost. Ensure location is on.")
+        hasLoadedData = true
+    }
 
     private fun getWeatherAdvice(
     condition: String,

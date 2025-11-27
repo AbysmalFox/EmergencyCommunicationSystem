@@ -9,4 +9,15 @@ sealed class Screen(val route: String) {
     data object Success : Screen("success")
     data object EmergencyContacts : Screen("emergency_contacts")
     data object ReportIncident : Screen("report_incident")
+
+    companion object {
+        fun fromRoute(route: String?): Screen {
+            return when (route) {
+                "home" -> Home
+                "alerts" -> Alerts
+                "profile" -> Profile
+                else -> Home // Default screen
+            }
+        }
+    }
 }
