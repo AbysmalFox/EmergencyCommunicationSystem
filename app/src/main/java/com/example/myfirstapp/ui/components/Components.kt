@@ -103,8 +103,8 @@ fun ProfileItem(icon: ImageVector, text: String, hasSwitch: Boolean = false, onC
 }
 
 @Composable
-fun SectionTitle(title: String) {
-    Text(title, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.padding(bottom = 8.dp))
+fun SectionTitle(title: String, color: Color = MaterialTheme.colorScheme.onBackground) {
+    Text(title, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = color, modifier = Modifier.padding(bottom = 8.dp))
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
