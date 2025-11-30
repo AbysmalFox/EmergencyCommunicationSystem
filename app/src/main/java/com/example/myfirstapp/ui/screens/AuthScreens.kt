@@ -106,7 +106,7 @@ fun LoginScreen(authViewModel: AuthViewModel, onLoginSuccess: () -> Unit, onBack
                         Text("Try again")
                     }
                 }
-                else -> {
+                is AuthState.Unauthenticated, is AuthState.SignUpSuccess -> {
                     Button(
                         onClick = { authViewModel.login(email, password) },
                         modifier = Modifier.fillMaxWidth()
@@ -115,11 +115,6 @@ fun LoginScreen(authViewModel: AuthViewModel, onLoginSuccess: () -> Unit, onBack
                     }
                 }
             }
-        }
-    }
-    LaunchedEffect(authState) {
-        if (authState is AuthState.Authenticated) {
-            onLoginSuccess()
         }
     }
 }
@@ -199,7 +194,7 @@ fun SignUpScreen(authViewModel: AuthViewModel, onSignUpSuccess: () -> Unit, onBa
                         Text("Try again")
                     }
                 }
-                else -> {
+                is AuthState.Unauthenticated, is AuthState.SignUpSuccess -> {
                     Button(
                         onClick = { authViewModel.signUp(email, password) },
                         modifier = Modifier.fillMaxWidth(),

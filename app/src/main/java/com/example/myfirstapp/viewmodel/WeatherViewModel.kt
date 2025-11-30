@@ -161,8 +161,10 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
         else -> ""
     }
 
-    val visibilityDescription = when {
-        visibility < 1000 -> "Visibility is low. Be extra careful when driving or walking."
+    val visibilityDescription = when (
+        visibility
+    ) {
+        in 0..999 -> "Visibility is low. Be extra careful when driving or walking."
         else -> ""
     }
 

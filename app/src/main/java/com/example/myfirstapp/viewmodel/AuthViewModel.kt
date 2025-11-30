@@ -3,16 +3,11 @@ package com.example.myfirstapp.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 sealed class AuthState {
-    object Authenticated : AuthState()
-    object Anonymous : AuthState() // Represents an active guest session
     object Unauthenticated : AuthState() // The initial state, prompting for action
     object Loading : AuthState()
     object SignUpSuccess : AuthState()
@@ -21,75 +16,26 @@ sealed class AuthState {
 
 class AuthViewModel : ViewModel() {
 
-    private val auth: FirebaseAuth = Firebase.auth
-
     private val _authState = MutableStateFlow<AuthState>(getInitialState())
     val authState: StateFlow<AuthState> = _authState
 
     private fun getInitialState(): AuthState {
-        val user = auth.currentUser
-        return when {
-            user == null -> AuthState.Unauthenticated
-            user.isAnonymous -> AuthState.Anonymous
-            else -> AuthState.Authenticated
-        }
-    }
-
-    val currentUser get() = auth.currentUser
-
-    fun signInAnonymously() {
-        viewModelScope.launch {
-            if (auth.currentUser == null) {
-                _authState.value = AuthState.Loading
-                auth.signInAnonymously().addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        _authState.value = AuthState.Anonymous
-                    } else {
-                        _authState.value = AuthState.Error("Guest sign-in failed.")
-                    }
-                }
-            } else if (auth.currentUser?.isAnonymous == true) {
-                _authState.value = AuthState.Anonymous // Already a guest
-            }
-        }
+        return AuthState.Unauthenticated
     }
 
     fun login(email: String, password: String) {
         viewModelScope.launch {
-            _authState.value = AuthState.Loading
-            auth.signInWithEmailAndPassword(email.trim(), password)
-                .addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        Log.d("AuthViewModel", "Login successful")
-                        _authState.value = AuthState.Authenticated
-                    } else {
-                        Log.e("AuthViewModel", "Login failed", task.exception)
-                        _authState.value = AuthState.Error(task.exception?.message ?: "Login failed")
-                    }
-                }
+            _authState.value = AuthState.Error("Login functionality is not available without a backend.")
         }
     }
 
     fun signUp(email: String, password: String) {
         viewModelScope.launch {
-            _authState.value = AuthState.Loading
-            Log.d("AuthViewModel", "Attempting to sign up with email: $email")
-            auth.createUserWithEmailAndPassword(email.trim(), password)
-                .addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        Log.d("AuthViewModel", "Sign up successful")
-                        auth.signOut() // Sign out immediately after sign up
-                        _authState.value = AuthState.SignUpSuccess
-                    } else {
-                        Log.e("AuthViewModel", "Sign up failed", task.exception)
-                        _authState.value = AuthState.Error(task.exception?.message ?: "Sign up failed")
-                    }
-                }
+            _authState.value = AuthState.Error("Sign up functionality is not available without a backend.")
         }
     }
 
     fun logout() {
-        auth.signOut()
         _authState.value = AuthState.Unauthenticated
     }
 
