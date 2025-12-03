@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Allow cleartext traffic for specific local IP addresses for development -->
+        <domain includeSubdomains="true">192.168.1.4</domain> <!-- Your PC's IP -->
+        <domain includeSubdomains="true">10.0.2.2</domain> <!-- Android Emulator's loopback IP -->
+        <!-- You can add more local IPs here if needed -->
+    </domain-config>
+    <!-- OR, for broader (but less secure) local testing if you can't specify exact IPs: -->
+    <!-- <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config> -->
+</network-security-config>
