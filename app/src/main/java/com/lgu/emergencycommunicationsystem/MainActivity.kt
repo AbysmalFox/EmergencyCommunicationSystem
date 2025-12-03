@@ -24,6 +24,8 @@ import com.example.myfirstapp.ui.screens.EmergencyContactsScreen
 import com.example.myfirstapp.ui.screens.HomeScreen
 import com.example.myfirstapp.ui.screens.ProfileScreen
 import com.example.myfirstapp.ui.screens.ReportIncidentScreen
+import com.example.myfirstapp.ui.screens.LoginScreen // Added import
+import com.example.myfirstapp.ui.screens.SignUpScreen // Added import
 import com.example.myfirstapp.ui.theme.DarkColorScheme
 import com.example.myfirstapp.viewmodel.WeatherViewModel
 
@@ -86,13 +88,40 @@ fun EmergencyApp() {
                 AlertsScreen()
             }
             composable(Screen.Profile.route) {
-                ProfileScreen()
+                ProfileScreen(
+                    onLoginClick = { navController.navigate(Screen.Login.route) },
+                    onSignUpClick = { navController.navigate(Screen.SignUp.route) }
+                )
             }
             composable(Screen.EmergencyContacts.route) {
                 EmergencyContactsScreen(onBackPressed = { navController.popBackStack() })
             }
             composable(Screen.ReportIncident.route) {
                 ReportIncidentScreen(weatherState = weatherState, onBackPressed = { navController.popBackStack() })
+            }
+            // Added LoginScreen composable
+            composable(Screen.Login.route) {
+                LoginScreen(
+                    onBackPressed = { navController.popBackStack() },
+                    onLoginSuccess = { navController.navigate(Screen.Home.route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }},
+                    onSignUpClick = { navController.navigate(Screen.SignUp.route) } // Added this line
+                )
+            }
+            // Added SignUpScreen composable
+            composable(Screen.SignUp.route) {
+                SignUpScreen(
+                    onSignUpSuccess = { navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.SignUp.route) { inclusive = true }
+                    }},
+                    onLoginClick = { navController.navigate(Screen.Login.route) },
+                    onBackPressed = { navController.popBackStack() }
+                )
             }
         }
     }
@@ -105,6 +134,8 @@ val Screen.route: String
         is Screen.Profile -> "profile"
         is Screen.EmergencyContacts -> "emergency_contacts"
         is Screen.ReportIncident -> "report_incident"
+        is Screen.Login -> "login" // Added route definition
+        is Screen.SignUp -> "signup" // Added route definition
     }
 
 // Helper to get Screen object from route string
@@ -113,6 +144,8 @@ fun Screen.Companion.fromRoute(route: String?): Screen {
         "home" -> Screen.Home
         "alerts" -> Screen.Alerts
         "profile" -> Screen.Profile
+        "login" -> Screen.Login // Added route handling
+        "signup" -> Screen.SignUp // Added route handling
         else -> Screen.Home // Default screen
     }
 }

@@ -9,8 +9,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
+import android.util.Log // Added import for Log
 
-// Define the possible states for the signup UI
 sealed class SignUpState {
     object Idle : SignUpState()
     object Loading : SignUpState()
@@ -20,13 +20,10 @@ sealed class SignUpState {
 
 class SignUpViewModel : ViewModel() {
 
-    // MutableStateFlow to hold the current UI state, exposed as an immutable StateFlow
     private val _signUpState = MutableStateFlow<SignUpState>(SignUpState.Idle)
     val signUpState: StateFlow<SignUpState> = _signUpState
 
-    // Function to trigger the signup process
     fun signUp(username: String, email: String, password: String, confirmPassword: String) {
-        // Basic client-side validation before hitting the backend
         if (password != confirmPassword) {
             _signUpState.value = SignUpState.Error("Passwords do not match.")
             return
@@ -35,19 +32,16 @@ class SignUpViewModel : ViewModel() {
             _signUpState.value = SignUpState.Error("All fields are required.")
             return
         }
-        if (password.length < 6) { // Example password policy
+        if (password.length < 6) {
             _signUpState.value = SignUpState.Error("Password must be at least 6 characters long.")
             return
         }
-        // More robust email validation can be added here if needed
 
-        _signUpState.value = SignUpState.Loading // Set state to loading
+        _signUpState.value = SignUpState.Loading
 
         viewModelScope.launch {
             try {
-                // Create the request body
                 val request = RegisterRequest(username, email, password)
-                // Make the network call
                 val response = RetrofitClient.authApiService.registerUser(request)
 
                 if (response.isSuccessful) {
@@ -56,27 +50,33 @@ class SignUpViewModel : ViewModel() {
                         _signUpState.value = SignUpState.Success(authResponse.message)
                     } else {
                         // Backend returned success: false
-                        _signUpState.value = SignUpState.Error(authResponse?.message ?: "Unknown registration error.")
+                        // Try to get a specific message if backend sends one
+                        _signUpState.value = SignUpState.Error(authResponse?.message ?: "Registration failed: Unknown reason.")
                     }
                 } else {
-                    // HTTP error (4xx, 5xx)
-                    val errorBody = response.errorBody()?.string()
-                    _signUpState.value = SignUpState.Error(errorBody ?: "Network error. Please try again.")
+                    // HTTP error (4xx, 5xx) - Try to parse error body for more details
+                    val errorBodyString = response.errorBody()?.string()
+                    _signUpState.value = SignUpState.Error("Server error (${response.code()}): ${errorBodyString ?: "No specific error message."}")
+                    // Log the detailed error for debugging
+                    Log.e("SignUpViewModel", "HTTP Error ${response.code()}: $errorBodyString")
                 }
             } catch (e: HttpException) {
                 // Retrofit specific HTTP errors
-                _signUpState.value = SignUpState.Error("Server error: ${e.message}")
+                val errorBody = e.response()?.errorBody()?.string()
+                _signUpState.value = SignUpState.Error("HTTP Exception: ${e.code()} - ${errorBody ?: e.message}")
+                Log.e("SignUpViewModel", "HttpException: ${e.code()} - $errorBody", e)
             } catch (e: IOException) {
                 // No internet connection or other network issues
-                _signUpState.value = SignUpState.Error("Network connection failed. Check your internet and XAMPP server.")
+                _signUpState.value = SignUpState.Error("Network error: Could not connect to server. Check your connection and XAMPP.")
+                Log.e("SignUpViewModel", "IOException during signup: ${e.message}", e)
             } catch (e: Exception) {
                 // Any other unexpected errors
-                _signUpState.value = SignUpState.Error("An unexpected error occurred: ${e.localizedMessage}")
+                _signUpState.value = SignUpState.Error("An unexpected error occurred: ${e.localizedMessage ?: "Unknown error"}")
+                Log.e("SignUpViewModel", "Unexpected error during signup: ${e.message}", e)
             }
         }
     }
 
-    // Function to reset the state, e.g., after an error message has been shown
     fun resetSignUpState() {
         _signUpState.value = SignUpState.Idle
     }
