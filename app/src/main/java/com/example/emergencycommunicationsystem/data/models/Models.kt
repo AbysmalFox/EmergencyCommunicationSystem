@@ -1,0 +1,46 @@
+package com.example.emergencycommunicationsystem.data.models
+
+import com.google.gson.annotations.SerializedName
+
+data class WeatherResponse(
+    val main: Main,
+    val weather: List<Weather>,
+    val name: String,
+    val wind: Wind,
+    val visibility: Int
+)
+data class Main(
+    val temp: Double,
+    @SerializedName("feels_like") val feelsLike: Double,
+    val humidity: Int
+)
+data class Weather(val main: String, val icon: String)
+data class Wind(val speed: Double)
+
+data class LatLng(val lat: Double, val lon: Double)
+data class Alert(
+    val id: String,
+    val category: String,
+    val title: String,
+    val content: String,
+    val timestamp: String,
+    val source: String
+)
+
+sealed interface WeatherState {
+    data object Loading : WeatherState
+    data class Success(
+        val location: String,
+        val temperature: String,
+        val condition: String,
+        val iconUrl: String,
+        val lat: Double,
+        val lon: Double,
+        val advice: String,
+        val feelsLike: String,
+        val humidity: String,
+        val windSpeed: String,
+        val visibility: String
+    ) : WeatherState
+    data class Error(val message: String) : WeatherState
+}

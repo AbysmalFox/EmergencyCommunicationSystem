@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.lgu.emergencycommunicationsystem"
+    namespace = "com.example.emergencycommunicationsystem"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.lgu.emergencycommunicationsystem"
+        applicationId = "com.example.emergencycommunicationsystem"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
