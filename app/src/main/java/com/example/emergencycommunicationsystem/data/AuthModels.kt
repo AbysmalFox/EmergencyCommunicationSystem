@@ -2,7 +2,7 @@ package com.example.emergencycommunicationsystem.data
 
 // Request body for registration
 data class RegisterRequest(
-    val username: String, // Maps to 'fullName' in your UI
+    val name: String, // <--- CHANGED FROM 'username' TO 'name'
     val email: String,
     val password: String
 )

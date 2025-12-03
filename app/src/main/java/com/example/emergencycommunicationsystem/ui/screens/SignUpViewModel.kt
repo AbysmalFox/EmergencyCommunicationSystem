@@ -23,12 +23,12 @@ class SignUpViewModel : ViewModel() {
     private val _signUpState = MutableStateFlow<SignUpState>(SignUpState.Idle)
     val signUpState: StateFlow<SignUpState> = _signUpState
 
-    fun signUp(username: String, email: String, password: String, confirmPassword: String) {
+    fun signUp(fullName: String, email: String, password: String, confirmPassword: String) {
         if (password != confirmPassword) {
             _signUpState.value = SignUpState.Error("Passwords do not match.")
             return
         }
-        if (username.isBlank() || email.isBlank() || password.isBlank()) {
+        if (fullName.isBlank() || email.isBlank() || password.isBlank()) {
             _signUpState.value = SignUpState.Error("All fields are required.")
             return
         }
@@ -41,7 +41,11 @@ class SignUpViewModel : ViewModel() {
 
         viewModelScope.launch {
             try {
-                val request = RegisterRequest(username, email, password)
+                val request = RegisterRequest(
+                    name = fullName, // <--- CHANGED THIS: Pass `fullName` from UI to `name` in RegisterRequest
+                    email = email,
+                    password = password
+                )
                 val response = RetrofitClient.authApiService.registerUser(request)
 
                 if (response.isSuccessful) {

@@ -1,33 +1,32 @@
 package com.example.emergencycommunicationsystem.network
 
 import com.google.gson.GsonBuilder
-import okhttp3.OkHttpClient // <-- ADD THIS IMPORT
-import okhttp3.logging.HttpLoggingInterceptor // <-- ADD THIS IMPORT
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import java.util.concurrent.TimeUnit // <-- ADD THIS IMPORT
+import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    // IMPORTANT:
-    // - For Android Emulator: "http://10.0.2.2/PHP/api/"
-    // - For Physical Device (on same Wi-Fi): "http://192.168.1.4/PHP/api/" (Your PC's IP)
-    private const val BASE_URL = "http://192.168.1.4/PHP/api/"
+    // IMPORTANT: SET THE CORRECT BASE_URL FOR YOUR XAMPP SERVER
+    // For Android EMULATOR:
+    private const val BASE_URL_EMULATOR = "http://10.0.2.2/PHP/api/"
+    // For PHYSICAL Android DEVICE (on the same Wi-Fi as your PC, with PC IP 192.168.1.4):
+    private const val BASE_URL_PHYSICAL_DEVICE = "http://192.168.1.4/PHP/api/"
+
+    // Ensure this is set to EMULATOR if you are using an emulator
+    private const val CURRENT_BASE_URL = BASE_URL_EMULATOR // <--- Set for emulator
 
     private val gson = GsonBuilder()
         .setLenient()
         .create()
 
-    // Create a logger for network requests
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        // Set to BODY to log request and response headers and body
-        // Change to BASIC or HEADERS for less verbosity, or NONE for no logging
         level = HttpLoggingInterceptor.Level.BODY
     }
 
-    // Create an OkHttpClient with the logging interceptor
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(loggingInterceptor)
-        // Add timeouts to catch slow responses
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
@@ -35,8 +34,8 @@ object RetrofitClient {
 
     private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
-            .baseUrl(BASE_URL)
-            .client(okHttpClient) // <-- SET THE CUSTOM OKHTTPCLIENT
+            .baseUrl(CURRENT_BASE_URL)
+            .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
     }
