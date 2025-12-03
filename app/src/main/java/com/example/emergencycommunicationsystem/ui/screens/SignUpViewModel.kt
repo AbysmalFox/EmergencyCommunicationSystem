@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
-import android.util.Log // Added import for Log
+import android.util.Log
 
 sealed class SignUpState {
     object Idle : SignUpState()
@@ -24,6 +24,12 @@ class SignUpViewModel : ViewModel() {
     val signUpState: StateFlow<SignUpState> = _signUpState
 
     fun signUp(fullName: String, email: String, password: String, confirmPassword: String) {
+        // Add logging here to check received values
+        Log.d("SignUpViewModel", "Received fullName: '" + fullName + "'")
+        Log.d("SignUpViewModel", "Received email: '" + email + "'")
+        Log.d("SignUpViewModel", "Received password: '" + password + "'")
+        Log.d("SignUpViewModel", "Received confirmPassword: '" + confirmPassword + "'")
+
         if (password != confirmPassword) {
             _signUpState.value = SignUpState.Error("Passwords do not match.")
             return
@@ -42,7 +48,7 @@ class SignUpViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val request = RegisterRequest(
-                    name = fullName, // <--- CHANGED THIS: Pass `fullName` from UI to `name` in RegisterRequest
+                    name = fullName,
                     email = email,
                     password = password
                 )
@@ -53,28 +59,21 @@ class SignUpViewModel : ViewModel() {
                     if (authResponse?.success == true) {
                         _signUpState.value = SignUpState.Success(authResponse.message)
                     } else {
-                        // Backend returned success: false
-                        // Try to get a specific message if backend sends one
                         _signUpState.value = SignUpState.Error(authResponse?.message ?: "Registration failed: Unknown reason.")
                     }
                 } else {
-                    // HTTP error (4xx, 5xx) - Try to parse error body for more details
                     val errorBodyString = response.errorBody()?.string()
                     _signUpState.value = SignUpState.Error("Server error (${response.code()}): ${errorBodyString ?: "No specific error message."}")
-                    // Log the detailed error for debugging
                     Log.e("SignUpViewModel", "HTTP Error ${response.code()}: $errorBodyString")
                 }
             } catch (e: HttpException) {
-                // Retrofit specific HTTP errors
                 val errorBody = e.response()?.errorBody()?.string()
                 _signUpState.value = SignUpState.Error("HTTP Exception: ${e.code()} - ${errorBody ?: e.message}")
                 Log.e("SignUpViewModel", "HttpException: ${e.code()} - $errorBody", e)
             } catch (e: IOException) {
-                // No internet connection or other network issues
                 _signUpState.value = SignUpState.Error("Network error: Could not connect to server. Check your connection and XAMPP.")
                 Log.e("SignUpViewModel", "IOException during signup: ${e.message}", e)
             } catch (e: Exception) {
-                // Any other unexpected errors
                 _signUpState.value = SignUpState.Error("An unexpected error occurred: ${e.localizedMessage ?: "Unknown error"}")
                 Log.e("SignUpViewModel", "Unexpected error during signup: ${e.message}", e)
             }
