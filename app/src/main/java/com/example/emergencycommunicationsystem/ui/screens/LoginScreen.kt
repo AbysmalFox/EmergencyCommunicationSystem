@@ -1,5 +1,9 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
+import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -11,6 +15,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -19,20 +24,52 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
-fun LoginScreen(onLoginSuccess: () -> Unit, onSignUpClick: () -> Unit, onBackPressed: () -> Unit) {
+fun LoginScreen(
+    onLoginSuccess: (userId: Int, username: String, email: String, token: String) -> Unit, // Callback with user data
+    onSignUpClick: () -> Unit,
+    onBackPressed: () -> Unit,
+    viewModel: LoginViewModel = viewModel() // Get the ViewModel instance
+) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) } // State to hold the error message string
+
+    val context = LocalContext.current
+    val loginState by viewModel.loginState.collectAsState()
+
+    // Handle side effects based on loginState
+    LaunchedEffect(loginState) {
+        when (val state = loginState) { // Use 'val state' to avoid casting
+            is LoginState.Success -> {
+                Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
+                viewModel.resetLoginState() // Reset state
+                // Navigate on success, passing user data
+                onLoginSuccess(state.userId, state.username, state.email, state.token)
+            }
+            is LoginState.Error -> {
+                // **CHANGED:** Instead of a toast, set the errorMessage state
+                errorMessage = state.message
+                viewModel.resetLoginState() // Reset state to allow new attempts
+            }
+            else -> { /* Do nothing for Idle or Loading states here */ }
+        }
+    }
 
     Scaffold(containerColor = MaterialTheme.colorScheme.background) {
         Column(
@@ -46,18 +83,74 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onSignUpClick: () -> Unit, onBackPre
             IconButton(onClick = onBackPressed, modifier = Modifier.align(Alignment.Start)) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
             }
-            Text("Welcome Back", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
+            Text(
+                text = "Login to Account",
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.onBackground
+            )
             Spacer(modifier = Modifier.height(32.dp))
-            OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email Address") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(
+                value = email,
+                onValueChange = {
+                    email = it
+                    errorMessage = null // Clear error when user starts typing
+                },
+                label = { Text("Email Address") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                modifier = Modifier.fillMaxWidth(),
+                enabled = loginState !is LoginState.Loading
+            )
             Spacer(modifier = Modifier.height(16.dp))
-            OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Password") }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth())
-            Spacer(modifier = Modifier.height(32.dp))
-            Button(onClick = onLoginSuccess, modifier = Modifier.fillMaxWidth()) {
-                Text("Login")
+            OutlinedTextField(
+                value = password,
+                onValueChange = {
+                    password = it
+                    errorMessage = null // Clear error when user starts typing
+                },
+                label = { Text("Password") },
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                modifier = Modifier.fillMaxWidth(),
+                enabled = loginState !is LoginState.Loading
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // **NEW: Error Message Display**
+            // This Text composable will only be visible when there is an error.
+            AnimatedVisibility(
+                visible = errorMessage != null,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                Text(
+                    text = errorMessage ?: "",
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = {
+                    viewModel.login(email, password)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = loginState !is LoginState.Loading
+            ) {
+                if (loginState is LoginState.Loading) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
+                } else {
+                    Text("Login")
+                }
             }
             Spacer(modifier = Modifier.height(16.dp))
-            TextButton(onClick = onSignUpClick) {
-                Text("Don\'t have an account? Sign Up", color = MaterialTheme.colorScheme.primary)
+            TextButton(
+                onClick = onSignUpClick,
+                enabled = loginState !is LoginState.Loading
+            ) {
+                Text("Don't have an account? Sign Up", color = MaterialTheme.colorScheme.primary)
             }
         }
     }

@@ -24,17 +24,19 @@ import com.example.emergencycommunicationsystem.ui.screens.EmergencyContactsScre
 import com.example.emergencycommunicationsystem.ui.screens.HomeScreen
 import com.example.emergencycommunicationsystem.ui.screens.ProfileScreen
 import com.example.emergencycommunicationsystem.ui.screens.ReportIncidentScreen
-import com.example.emergencycommunicationsystem.ui.screens.LoginScreen // Added import
+import com.example.emergencycommunicationsystem.ui.screens.LoginScreen
 import androidx.compose.runtime.Composable
 import com.example.emergencycommunicationsystem.ui.screens.SignUpScreen
 import com.example.emergencycommunicationsystem.ui.screens.SignUpViewModel
 import com.example.emergencycommunicationsystem.ui.screens.SignUpState
 import com.example.emergencycommunicationsystem.ui.theme.DarkColorScheme
 import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
+import com.example.emergencycommunicationsystem.AuthManager
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AuthManager.initialize(applicationContext)
         enableEdgeToEdge()
 
         setContent {
@@ -50,6 +52,8 @@ fun EmergencyApp() {
     val navController = rememberNavController()
     val weatherViewModel: WeatherViewModel = viewModel()
     val weatherState by weatherViewModel.weatherState.collectAsState()
+
+    val isLoggedIn by AuthManager.isLoggedInFlow.collectAsState()
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -92,8 +96,12 @@ fun EmergencyApp() {
             }
             composable(Screen.Profile.route) {
                 ProfileScreen(
+                    isLoggedIn = isLoggedIn,
+                    username = if (isLoggedIn) AuthManager.getUsername() else null,
+                    email = if (isLoggedIn) AuthManager.getEmail() else null,
                     onLoginClick = { navController.navigate(Screen.Login.route) },
-                    onSignUpClick = { navController.navigate(Screen.SignUp.route) }
+                    onSignUpClick = { navController.navigate(Screen.SignUp.route) },
+                    onLogoutClick = { AuthManager.logout() }
                 )
             }
             composable(Screen.EmergencyContacts.route) {
@@ -102,28 +110,23 @@ fun EmergencyApp() {
             composable(Screen.ReportIncident.route) {
                 ReportIncidentScreen(weatherState = weatherState, onBackPressed = { navController.popBackStack() })
             }
-            // Added LoginScreen composable
             composable(Screen.Login.route) {
                 LoginScreen(
                     onBackPressed = { navController.popBackStack() },
-                    onLoginSuccess = { navController.navigate(Screen.Home.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }},
-                    onSignUpClick = { navController.navigate(Screen.SignUp.route) } // Added this line
+                    onLoginSuccess = { userId, username, email, token ->
+                        AuthManager.saveLoginState(userId, username, email, token)
+                        navController.popBackStack()
+                    },
+                    onSignUpClick = { navController.navigate(Screen.SignUp.route) }
                 )
             }
-            // Added SignUpScreen composable
             composable(Screen.SignUp.route) {
                 val viewModel: SignUpViewModel = viewModel()
                 val state by viewModel.signUpState.collectAsState()
 
                 LaunchedEffect(state) {
                     if (state is SignUpState.Success) {
-                        navController.navigate(Screen.Home.route) {
+                        navController.navigate(Screen.Profile.route) {
                             popUpTo(Screen.SignUp.route) { inclusive = true }
                         }
                     }
@@ -149,18 +152,17 @@ val Screen.route: String
         is Screen.Profile -> "profile"
         is Screen.EmergencyContacts -> "emergency_contacts"
         is Screen.ReportIncident -> "report_incident"
-        is Screen.Login -> "login" // Added route definition
-        is Screen.SignUp -> "signup" // Added route definition
+        is Screen.Login -> "login"
+        is Screen.SignUp -> "signup"
     }
 
-// Helper to get Screen object from route string
 fun Screen.Companion.fromRoute(route: String?): Screen {
     return when (route) {
         "home" -> Screen.Home
         "alerts" -> Screen.Alerts
         "profile" -> Screen.Profile
-        "login" -> Screen.Login // Added route handling
-        "signup" -> Screen.SignUp // Added route handling
-        else -> Screen.Home // Default screen
+        "login" -> Screen.Login
+        "signup" -> Screen.SignUp
+        else -> Screen.Home
     }
 }
