@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">Emergency Communication System</string>
+    <string name="hello">Hello</string>
+    <string name="language_preference">Language Preference</string>
+    <string name="profile_and_settings">Profile &amp; Settings</string>
+    <string name="settings">Settings</string>
+    <string name="receive_notifications">Receive Notifications</string>
+    <string name="privacy_policy">Privacy Policy</string>
+    <string name="about_app">About App</string>
 </resources>

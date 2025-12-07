@@ -37,8 +37,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.emergencycommunicationsystem.R
 
 @Composable
 fun ProfileScreen(
@@ -47,7 +49,8 @@ fun ProfileScreen(
     email: String?,
     onLoginClick: () -> Unit,
     onSignUpClick: () -> Unit,
-    onLogoutClick: () -> Unit
+    onLogoutClick: () -> Unit,
+    onLanguageSettingsClick: () -> Unit
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -62,7 +65,7 @@ fun ProfileScreen(
         ) {
             item {
                 Text(
-                    "Profile & Settings",
+                    stringResource(R.string.profile_and_settings),
                     style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.padding(bottom = 24.dp)
@@ -80,7 +83,7 @@ fun ProfileScreen(
 
             item {
                 Text(
-                    "Settings",
+                    stringResource(R.string.settings),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier
@@ -93,7 +96,7 @@ fun ProfileScreen(
                 var receiveNotifications by remember { mutableStateOf(true) }
                 ProfileItem(
                     icon = Icons.Default.Notifications,
-                    text = "Receive Notifications",
+                    text = stringResource(R.string.receive_notifications),
                     checked = receiveNotifications,
                     onCheckedChange = { receiveNotifications = it }
                 )
@@ -101,21 +104,21 @@ fun ProfileScreen(
             item {
                 ProfileItem(
                     icon = Icons.Default.Language,
-                    text = "Language Preference",
-                    onClick = { /* Handle language settings click */ }
+                    text = stringResource(R.string.language_preference),
+                    onClick = onLanguageSettingsClick
                 )
             }
             item {
                 ProfileItem(
                     icon = Icons.Default.Security,
-                    text = "Privacy Policy",
+                    text = stringResource(R.string.privacy_policy),
                     onClick = { /* Handle privacy policy click */ }
                 )
             }
             item {
                 ProfileItem(
                     icon = Icons.Default.Info,
-                    text = "About App",
+                    text = stringResource(R.string.about_app),
                     onClick = { /* Handle about app click */ }
                 )
             }

@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Sistema ng Komunikasyon para sa Emerhensiya</string>
+    <string name="hello">Kamusta</string>
+    <string name="language_preference">Kagustuhan sa Wika</string>
+    <string name="profile_and_settings">Profile at Mga Setting</string>
+    <string name="settings">Mga Setting</string>
+    <string name="receive_notifications">Makatanggap ng mga Abiso</string>
+    <string name="privacy_policy">Patakaran sa Privacy</string>
+    <string name="about_app">Tungkol sa App</string>
+</resources>

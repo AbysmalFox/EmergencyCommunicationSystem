@@ -1,38 +1,53 @@
 package com.example.emergencycommunicationsystem
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.emergencycommunicationsystem.data.UserPrefs
 import com.example.emergencycommunicationsystem.navigation.Screen
 import com.example.emergencycommunicationsystem.ui.components.AppBottomNavigation
 import com.example.emergencycommunicationsystem.ui.screens.AlertsScreen
 import com.example.emergencycommunicationsystem.ui.screens.EmergencyContactsScreen
 import com.example.emergencycommunicationsystem.ui.screens.HomeScreen
+import com.example.emergencycommunicationsystem.ui.screens.LanguageSettingsScreen
+import com.example.emergencycommunicationsystem.ui.screens.LoginScreen
 import com.example.emergencycommunicationsystem.ui.screens.ProfileScreen
 import com.example.emergencycommunicationsystem.ui.screens.ReportIncidentScreen
-import com.example.emergencycommunicationsystem.ui.screens.LoginScreen
-import androidx.compose.runtime.Composable
 import com.example.emergencycommunicationsystem.ui.screens.SignUpScreen
-import com.example.emergencycommunicationsystem.ui.screens.SignUpViewModel
 import com.example.emergencycommunicationsystem.ui.screens.SignUpState
+import com.example.emergencycommunicationsystem.ui.screens.SignUpViewModel
 import com.example.emergencycommunicationsystem.ui.theme.EmergencyCommunicationSystemTheme
 import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
-import com.example.emergencycommunicationsystem.AuthManager
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 class MainActivity : ComponentActivity() {
+
+    override fun attachBaseContext(newBase: Context) {
+        runBlocking {
+            val lang = UserPrefs.getLanguage(newBase).first()
+            super.attachBaseContext(LocaleHelper.setAppLocale(newBase, lang))
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AuthManager.initialize(applicationContext)
@@ -51,6 +66,9 @@ fun EmergencyApp() {
     val navController = rememberNavController()
     val weatherViewModel: WeatherViewModel = viewModel()
     val weatherState by weatherViewModel.weatherState.collectAsState()
+    val context = LocalContext.current
+    val activity = (LocalContext.current as? ComponentActivity)
+    val coroutineScope = rememberCoroutineScope()
 
     val isLoggedIn by AuthManager.isLoggedInFlow.collectAsState()
 
@@ -58,6 +76,7 @@ fun EmergencyApp() {
     val currentRoute = navBackStackEntry?.destination?.route
 
     val mainScreens = listOf(Screen.Home.route, Screen.Alerts.route, Screen.Profile.route)
+    val currentLanguage = runBlocking { UserPrefs.getLanguage(context).first() }
 
     Scaffold(
         bottomBar = {
@@ -100,7 +119,8 @@ fun EmergencyApp() {
                     email = if (isLoggedIn) AuthManager.getEmail() else null,
                     onLoginClick = { navController.navigate(Screen.Login.route) },
                     onSignUpClick = { navController.navigate(Screen.SignUp.route) },
-                    onLogoutClick = { AuthManager.logout() }
+                    onLogoutClick = { AuthManager.logout() },
+                    onLanguageSettingsClick = { navController.navigate(Screen.LanguageSettings.route) }
                 )
             }
             composable(Screen.EmergencyContacts.route) {
@@ -137,6 +157,19 @@ fun EmergencyApp() {
                         viewModel.signUp(fullName, email, password, confirmPassword)
                     },
                     onLoginClick = { navController.navigate(Screen.Login.route) },
+                    onBackPressed = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.LanguageSettings.route) {
+                LanguageSettingsScreen(
+                    currentLanguage = currentLanguage,
+                    onConfirm = {
+                        lang ->
+                        coroutineScope.launch {
+                            UserPrefs.saveLanguage(context, lang)
+                            activity?.recreate()
+                        }
+                    },
                     onBackPressed = { navController.popBackStack() }
                 )
             }

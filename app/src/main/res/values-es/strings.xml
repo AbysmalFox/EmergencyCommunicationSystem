@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Sistema de Comunicación de Emergencia</string>
+    <string name="hello">Hola</string>
+    <string name="language_preference">Preferencia de idioma</string>
+    <string name="profile_and_settings">Perfil y Configuraciones</string>
+    <string name="settings">Configuraciones</string>
+    <string name="receive_notifications">Recibir Notificaciones</string>
+    <string name="privacy_policy">Política de Privacidad</string>
+    <string name="about_app">Acerca de la App</string>
+</resources>
