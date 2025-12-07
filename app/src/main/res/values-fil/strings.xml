@@ -7,4 +7,19 @@
     <string name="receive_notifications">Makatanggap ng mga Abiso</string>
     <string name="privacy_policy">Patakaran sa Privacy</string>
     <string name="about_app">Tungkol sa App</string>
+    <string name="emergency_dashboard">Dashboard ng Emergency</string>
+    <string name="dashboard_subtitle">Gawa ng mga Mag-aaral, para sa Komunidad</string>
+    <string name="emergency_call_label">EMERHENSIYA</string>
+    <string name="call_button">TAWAG</string>
+    <string name="report_incident">Iulat ang Insidente</string>
+    <string name="i_am_safe">Ligtas Ako</string>
+    <string name="gps_signal_lost">Nawala ang signal ng GPS. Tiyaking naka-on ang lokasyon.</string>
+    <string name="feels_like">Pakiramdam</string>
+    <string name="humidity">Halumigmig</string>
+    <string name="wind">Hangin</string>
+    <string name="visibility">Pagpapakita</string>
+    <string name="weather_widget_message">Mababa ang pagpapakita dahil sa kasalukuyang mga kondisyon. Magmaneho nang dahan-dahan at manatiling alerto. Mataas ang halumigmig, kaya asahan ang medyo malagkit na pakiramdam.</string>
+    <string name="home">Home</string>
+    <string name="alerts">Mga Alerto</string>
+    <string name="profile">Profile</string>
 </resources>

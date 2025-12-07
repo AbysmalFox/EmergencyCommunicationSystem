@@ -35,10 +35,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.ui.components.ActionGrid
 import com.example.emergencycommunicationsystem.ui.components.WeatherWidget
 import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
@@ -112,13 +114,13 @@ fun HomeScreen(
                 ) {
                     Column {
                         Text(
-                            "Emergency Dashboard",
+                            stringResource(R.string.emergency_dashboard),
                             fontSize = 26.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
                         Text(
-                            "Built by Students, for the Community",
+                            stringResource(R.string.dashboard_subtitle),
                             fontSize = 15.sp,
                             color = Color.White.copy(alpha = 0.7f)
                         )

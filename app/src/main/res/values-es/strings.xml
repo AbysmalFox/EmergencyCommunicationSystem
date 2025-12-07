@@ -7,4 +7,19 @@
     <string name="receive_notifications">Recibir Notificaciones</string>
     <string name="privacy_policy">Política de Privacidad</string>
     <string name="about_app">Acerca de la App</string>
+    <string name="emergency_dashboard">Tablero de Emergencia</string>
+    <string name="dashboard_subtitle">Construido por Estudiantes, para la Comunidad</string>
+    <string name="emergency_call_label">EMERGENCIA</string>
+    <string name="call_button">LLAMAR</string>
+    <string name="report_incident">Reportar Incidente</string>
+    <string name="i_am_safe">Estoy a Salvo</string>
+    <string name="gps_signal_lost">Señal de GPS perdida. Asegúrese de que la ubicación esté activada.</string>
+    <string name="feels_like">Se siente como</string>
+    <string name="humidity">Humedad</string>
+    <string name="wind">Viento</string>
+    <string name="visibility">Visibilidad</string>
+    <string name="weather_widget_message">La visibilidad es baja debido a las condiciones actuales. Conduzca despacio y manténgase alerta. La humedad es alta, así que espere algo de pegajosidad.</string>
+    <string name="home">Inicio</string>
+    <string name="alerts">Alertas</string>
+    <string name="profile">Perfil</string>
 </resources>

@@ -63,10 +63,12 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.data.models.WeatherState
 import com.example.emergencycommunicationsystem.navigation.Screen
 import kotlinx.coroutines.delay
@@ -158,21 +160,21 @@ fun EmergencyCallButton(onClick: () -> Unit) {
         ) {
             Icon(
                 imageVector = Icons.Filled.Call,
-                contentDescription = "Emergency Call",
+                contentDescription = stringResource(R.string.emergency_call_label),
                 tint = Color.White,
                 modifier = Modifier.size(32.dp) // Reduced icon size
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column {
                 Text(
-                    text = "EMERGENCY",
+                    text = stringResource(R.string.emergency_call_label),
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp, // Reduced font size
                     letterSpacing = 1.5.sp
                 )
                 Text(
-                    text = "CALL",
+                    text = stringResource(R.string.call_button),
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     fontSize = 24.sp, // Reduced font size
@@ -189,8 +191,8 @@ fun ActionGrid(onEmergencyCallClick: () -> Unit, onReportClick: () -> Unit, onSa
     Column(verticalArrangement = Arrangement.spacedBy(15.dp)) { // Reduced spacing
         EmergencyCallButton(onClick = onEmergencyCallClick)
         Row(horizontalArrangement = Arrangement.spacedBy(15.dp)) {
-            ActionGridItem("Report Incident", Icons.Filled.Warning, onClick = onReportClick, modifier = Modifier.weight(1f))
-            ActionGridItem("I Am Safe", Icons.Filled.CheckCircle, onClick = onSafeClick, modifier = Modifier.weight(1f))
+            ActionGridItem(stringResource(R.string.report_incident), Icons.Filled.Warning, onClick = onReportClick, modifier = Modifier.weight(1f))
+            ActionGridItem(stringResource(R.string.i_am_safe), Icons.Filled.CheckCircle, onClick = onSafeClick, modifier = Modifier.weight(1f))
         }
     }
 }
@@ -322,7 +324,7 @@ fun WeatherWidget(state: WeatherState) {
                     Icon(Icons.Filled.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.onError)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        state.message,
+                        stringResource(R.string.gps_signal_lost),
                         color = MaterialTheme.colorScheme.onError,
                     )
                 }
@@ -339,22 +341,22 @@ fun WeatherDetailsRow(state: WeatherState.Success) {
     ) {
         WeatherDetailItem(
             icon = Icons.Default.Thermostat,
-            label = "Feels Like",
+            label = stringResource(R.string.feels_like),
             value = state.feelsLike
         )
         WeatherDetailItem(
             icon = Icons.Default.WaterDrop,
-            label = "Humidity",
+            label = stringResource(R.string.humidity),
             value = state.humidity
         )
         WeatherDetailItem(
             icon = Icons.Default.Air,
-            label = "Wind",
+            label = stringResource(R.string.wind),
             value = state.windSpeed
         )
         WeatherDetailItem(
             icon = Icons.Default.Visibility,
-            label = "Visibility",
+            label = stringResource(R.string.visibility),
             value = state.visibility
         )
     }
@@ -407,7 +409,7 @@ fun WeatherAdvice(advice: String) {
                 .size(24.dp)
         )
         Text(
-            text = displayedText,
+            text = stringResource(R.string.weather_widget_message),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium
         )
@@ -518,8 +520,14 @@ fun RowScope.BottomNavItem(screen: Screen, isSelected: Boolean, onSelected: () -
             )
         }
         Spacer(modifier = Modifier.height(4.dp))
+        val title = when (screen) {
+            Screen.Home -> stringResource(R.string.home)
+            Screen.Alerts -> stringResource(R.string.alerts)
+            Screen.Profile -> stringResource(R.string.profile)
+            else -> ""
+        }
         Text(
-            text = screen.title,
+            text = title,
             color = textColor,
             fontSize = 12.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal

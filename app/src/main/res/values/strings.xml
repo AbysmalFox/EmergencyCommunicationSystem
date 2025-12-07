@@ -7,4 +7,19 @@
     <string name="receive_notifications">Receive Notifications</string>
     <string name="privacy_policy">Privacy Policy</string>
     <string name="about_app">About App</string>
+    <string name="emergency_dashboard">Emergency Dashboard</string>
+    <string name="dashboard_subtitle">Built by Students, for the Community</string>
+    <string name="emergency_call_label">EMERGENCY</string>
+    <string name="call_button">CALL</string>
+    <string name="report_incident">Report Incident</string>
+    <string name="i_am_safe">I Am Safe</string>
+    <string name="gps_signal_lost">GPS signal lost. Ensure location is on.</string>
+    <string name="feels_like">Feels Like</string>
+    <string name="humidity">Humidity</string>
+    <string name="wind">Wind</string>
+    <string name="visibility">Visibility</string>
+    <string name="weather_widget_message">Visibility is low due to current conditions. Drive slowly and stay alert. The humidity is high, so expect some stickiness.</string>
+    <string name="home">Home</string>
+    <string name="alerts">Alerts</string>
+    <string name="profile">Profile</string>
 </resources>
