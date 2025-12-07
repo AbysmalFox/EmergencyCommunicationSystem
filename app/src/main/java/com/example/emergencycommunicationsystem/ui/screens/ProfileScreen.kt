@@ -39,7 +39,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 @Composable
 fun ProfileScreen(
@@ -143,8 +142,8 @@ private fun AnonymousUserCard(
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 "Anonymous User",
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(16.dp))

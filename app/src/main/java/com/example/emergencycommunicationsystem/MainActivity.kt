@@ -5,7 +5,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -29,7 +28,7 @@ import androidx.compose.runtime.Composable
 import com.example.emergencycommunicationsystem.ui.screens.SignUpScreen
 import com.example.emergencycommunicationsystem.ui.screens.SignUpViewModel
 import com.example.emergencycommunicationsystem.ui.screens.SignUpState
-import com.example.emergencycommunicationsystem.ui.theme.DarkColorScheme
+import com.example.emergencycommunicationsystem.ui.theme.EmergencyCommunicationSystemTheme
 import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
 import com.example.emergencycommunicationsystem.AuthManager
 
@@ -40,7 +39,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            MaterialTheme(colorScheme = DarkColorScheme) {
+            EmergencyCommunicationSystemTheme {
                 EmergencyApp()
             }
         }
