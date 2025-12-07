@@ -1,13 +1,13 @@
 package com.example.emergencycommunicationsystem.navigation
 
-sealed class Screen(val route: String) {
-    data object Home : Screen("home")
-    data object Alerts : Screen("alerts")
-    data object Profile : Screen("profile")
-    data object EmergencyContacts : Screen("emergency_contacts")
-    data object ReportIncident : Screen("report_incident")
-    data object Login : Screen("login") // Added Login Screen
-    data object SignUp : Screen("signup") // Added SignUp Screen
+sealed class Screen(val route: String, val title: String) {
+    data object Home : Screen("home", "Home")
+    data object Alerts : Screen("alerts", "Alerts")
+    data object Profile : Screen("profile", "Profile")
+    data object EmergencyContacts : Screen("emergency_contacts", "Emergency Contacts")
+    data object ReportIncident : Screen("report_incident", "Report Incident")
+    data object Login : Screen("login", "Login") // Added Login Screen
+    data object SignUp : Screen("signup", "Sign Up") // Added SignUp Screen
 
     companion object {
         fun fromRoute(route: String?): Screen {

@@ -2,12 +2,16 @@ package com.example.emergencycommunicationsystem.ui.components
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -39,12 +43,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -431,29 +433,96 @@ fun HotlineItem(name: String, number: String) {
 @Composable
 fun AppBottomNavigation(selectedScreen: Screen, onScreenSelected: (Screen) -> Unit) {
     val items = listOf(Screen.Home, Screen.Alerts, Screen.Profile)
-    NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-        items.forEach { screen ->
-            NavigationBarItem(
-                selected = selectedScreen == screen,
-                onClick = { onScreenSelected(screen) },
-                label = { Text(screen.route.replaceFirstChar { it.uppercase() }) },
-                icon = {
-                    val icon = when (screen) {
-                        Screen.Home -> Icons.Filled.Home
-                        Screen.Alerts -> Icons.Filled.Notifications
-                        Screen.Profile -> Icons.Filled.Person
-                        else -> Icons.Filled.Error // Should not happen
-                    }
-                    Icon(icon, contentDescription = screen.route)
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                    selectedTextColor = MaterialTheme.colorScheme.primary,
-                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    indicatorColor = MaterialTheme.colorScheme.surface
-                )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 24.dp, end = 24.dp, bottom = 65.dp)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(
+                    elevation = 8.dp,
+                    shape = RoundedCornerShape(50),
+                    clip = true
+                ),
+            shape = RoundedCornerShape(50),
+            color = MaterialTheme.colorScheme.surface,
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp) // Increased height to accommodate text
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                items.forEach { screen ->
+                    BottomNavItem(
+                        screen = screen,
+                        isSelected = selectedScreen == screen,
+                        onSelected = { onScreenSelected(screen) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RowScope.BottomNavItem(screen: Screen, isSelected: Boolean, onSelected: () -> Unit) {
+    val icon = when (screen) {
+        Screen.Home -> Icons.Filled.Home
+        Screen.Alerts -> Icons.Filled.Notifications
+        Screen.Profile -> Icons.Filled.Person
+        else -> Icons.Filled.Error // Should not happen
+    }
+    val iconColor by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        label = "icon color"
+    )
+
+    val textColor by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        label = "text color"
+    )
+
+
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .clip(RoundedCornerShape(24.dp)) // Use rounded corner shape for better click feedback
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onSelected
+            ),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .background(
+                    color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent,
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = screen.title,
+                tint = iconColor,
+                modifier = Modifier.size(24.dp)
             )
         }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = screen.title,
+            color = textColor,
+            fontSize = 12.sp,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+        )
     }
 }

@@ -143,25 +143,3 @@ fun EmergencyApp() {
         }
     }
 }
-
-val Screen.route: String
-    get() = when (this) {
-        is Screen.Home -> "home"
-        is Screen.Alerts -> "alerts"
-        is Screen.Profile -> "profile"
-        is Screen.EmergencyContacts -> "emergency_contacts"
-        is Screen.ReportIncident -> "report_incident"
-        is Screen.Login -> "login"
-        is Screen.SignUp -> "signup"
-    }
-
-fun Screen.Companion.fromRoute(route: String?): Screen {
-    return when (route) {
-        "home" -> Screen.Home
-        "alerts" -> Screen.Alerts
-        "profile" -> Screen.Profile
-        "login" -> Screen.Login
-        "signup" -> Screen.SignUp
-        else -> Screen.Home
-    }
-}
