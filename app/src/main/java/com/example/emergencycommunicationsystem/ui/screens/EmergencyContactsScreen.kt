@@ -1,8 +1,8 @@
+
 package com.example.emergencycommunicationsystem.ui.screens
 
 import android.content.Intent
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -10,7 +10,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.with
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -50,6 +50,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -66,7 +67,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -77,13 +77,6 @@ import androidx.core.net.toUri
 import java.util.Locale
 import kotlinx.coroutines.delay
 
-// 1. Define your Colors explicitly
-private val DarkBg = Color(0xFF1A1E29)
-private val SafetyOrange = Color(0xFFFF7F00)
-private val TextWhite = Color.White
-private val SubtleGray = Color(0xFF2A2E3D)
-private val CallEndRed = Color(0xFFE63946)
-
 private data class Hotline(
     val name: String,
     val number: String,
@@ -92,7 +85,6 @@ private data class Hotline(
     val buttonIcon: ImageVector
 )
 
-@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun EmergencyContactsScreen(onBackPressed: () -> Unit) {
     var activeCall by remember { mutableStateOf<Hotline?>(null) }
@@ -114,11 +106,11 @@ fun EmergencyContactsScreen(onBackPressed: () -> Unit) {
         )
     }
 
-    Scaffold(containerColor = DarkBg) { padding ->
+    Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
         AnimatedContent(
             modifier = Modifier.padding(padding),
             targetState = activeCall,
-            transitionSpec = { fadeIn(animationSpec = tween(400)) with fadeOut(animationSpec = tween(400)) },
+            transitionSpec = { fadeIn(animationSpec = tween(400)) togetherWith fadeOut(animationSpec = tween(400)) },
             label = "ScreenSwitch"
         ) { call ->
             if (call == null) {
@@ -149,15 +141,19 @@ private fun HotlineList(
             TopAppBar(
                 title = { Text("Emergency Hotlines") },
                 navigationIcon = { IconButton(onClick = onBackPressed) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBg, titleContentColor = TextWhite, navigationIconContentColor = TextWhite)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
+                )
             )
         },
         bottomBar = { Footer() },
-        containerColor = DarkBg
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(horizontal = 16.dp),
+            contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             hotlineGroups.forEach { (header, hotlines) ->
@@ -176,22 +172,22 @@ private fun HotlineList(
 private fun ListHeader(title: String) {
     Text(
         text = title,
-        color = SafetyOrange,
-        fontSize = 20.sp,
+        color = MaterialTheme.colorScheme.primary,
+        style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.Bold,
         modifier = Modifier
             .fillMaxWidth()
-            .background(DarkBg)
-            .padding(vertical = 8.dp, horizontal = 16.dp) // Added horizontal padding to align with cards
+            .background(MaterialTheme.colorScheme.background)
+            .padding(vertical = 8.dp)
     )
 }
 
 @Composable
 private fun HotlineCard(hotline: Hotline, onClick: (Hotline) -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable { onClick(hotline) }.padding(horizontal = 16.dp), // Added padding here
+        modifier = Modifier.fillMaxWidth().clickable { onClick(hotline) },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = SubtleGray)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(
             modifier = Modifier.padding(20.dp),
@@ -200,21 +196,21 @@ private fun HotlineCard(hotline: Hotline, onClick: (Hotline) -> Unit) {
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(hotline.listIcon, null, tint = TextWhite.copy(alpha = 0.8f), modifier = Modifier.size(20.dp))
+                    Icon(hotline.listIcon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(hotline.name, color = TextWhite, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(hotline.name, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(hotline.number, color = TextWhite.copy(alpha = 0.9f), fontSize = 16.sp, modifier = Modifier.padding(start = 32.dp))
+                Text(hotline.number, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = 32.dp))
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(hotline.description, color = TextWhite.copy(alpha = 0.6f), fontSize = 14.sp, lineHeight = 18.sp, modifier = Modifier.padding(start = 32.dp))
+                Text(hotline.description, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium, lineHeight = 18.sp, modifier = Modifier.padding(start = 32.dp))
             }
             Spacer(modifier = Modifier.width(16.dp))
             Box(
-                modifier = Modifier.size(48.dp).clip(CircleShape).background(SafetyOrange),
+                modifier = Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(hotline.buttonIcon, "Call ${hotline.name}", tint = TextWhite)
+                Icon(hotline.buttonIcon, "Call ${hotline.name}", tint = MaterialTheme.colorScheme.onPrimary)
             }
         }
     }
@@ -251,22 +247,22 @@ private fun SimulatedCallInterface(hotline: Hotline, onEndCall: () -> Unit) {
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(contentAlignment = Alignment.Center) {
-                Box(modifier = Modifier.size(150.dp).scale(scale).clip(CircleShape).background(SafetyOrange.copy(alpha = 0.3f)))
+                Box(modifier = Modifier.size(150.dp).scale(scale).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)))
                 Box(
-                    modifier = Modifier.size(120.dp).clip(CircleShape).background(SafetyOrange),
+                    modifier = Modifier.size(120.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(hotline.buttonIcon, null, tint = TextWhite, modifier = Modifier.size(60.dp))
+                    Icon(hotline.buttonIcon, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(60.dp))
                 }
             }
             Spacer(modifier = Modifier.height(32.dp))
-            Text("Calling...", color = Color.Gray, fontSize = 16.sp)
+            Text("Calling...", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge)
             Spacer(modifier = Modifier.height(8.dp))
-            Text(hotline.name, color = TextWhite, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Text(hotline.name, color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
             val minutes = timerSeconds / 60
             val seconds = timerSeconds % 60
-            Text(String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds), color = TextWhite, fontSize = 20.sp)
+            Text(String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds), color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.titleLarge)
         }
 
         Row(
@@ -288,39 +284,44 @@ private fun ActionButton(icon: ImageVector, text: String, onClick: () -> Unit) {
             onClick = onClick,
             shape = CircleShape,
             modifier = Modifier.size(64.dp),
-            border = BorderStroke(1.dp, TextWhite.copy(alpha = 0.5f)),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)),
             contentPadding = PaddingValues(0.dp)
         ) {
-            Icon(icon, contentDescription = text, tint = TextWhite, modifier = Modifier.size(28.dp))
+            Icon(icon, contentDescription = text, tint = MaterialTheme.colorScheme.onBackground)
         }
-        Text(text, color = TextWhite, fontSize = 12.sp)
+        Text(text, color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
 @Composable
-private fun EndCallButton(onEndCall: () -> Unit) {
+private fun EndCallButton(onClick: () -> Unit) {
     Button(
-        onClick = onEndCall,
+        onClick = onClick,
         shape = CircleShape,
         modifier = Modifier.size(72.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = CallEndRed),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.error
+        ),
         contentPadding = PaddingValues(0.dp)
     ) {
-        Icon(Icons.Default.CallEnd, "End Call", tint = Color.White, modifier = Modifier.size(36.dp))
+        Icon(
+            Icons.Default.CallEnd,
+            contentDescription = "End Call",
+            modifier = Modifier.size(36.dp),
+            tint = MaterialTheme.colorScheme.onError
+        )
     }
 }
 
 @Composable
 private fun Footer() {
-    Box(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "Location: Quezon City. Disclaimer: Use only for emergencies.",
-            color = TextWhite.copy(alpha = 0.6f),
-            fontSize = 12.sp,
-            textAlign = TextAlign.Center
-        )
-    }
+    Text(
+        text = "Location: Quezon City. Disclaimer: Use only for emergencies.",
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.bodySmall,
+        textAlign = TextAlign.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    )
 }
