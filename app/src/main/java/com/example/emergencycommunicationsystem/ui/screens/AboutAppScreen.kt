@@ -5,8 +5,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -19,6 +17,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.emergencycommunicationsystem.R
 
@@ -36,19 +35,19 @@ fun AboutAppScreen(onBackPressed: () -> Unit) {
                 }
             )
         }
-    ) { paddingValues ->
+    ) {
+        paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(16.dp)
-                .verticalScroll(rememberScrollState())
         ) {
-            Text(
-                stringResource(R.string.about_app_content),
-                style = MaterialTheme.typography.bodyLarge
-            )
+            Text("AlertaraQc", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("Version 1.0.0", style = MaterialTheme.typography.bodySmall)
             Spacer(modifier = Modifier.height(16.dp))
+            Text(stringResource(R.string.about_app_content))
         }
     }
 }

@@ -1,3 +1,4 @@
+
 package com.example.emergencycommunicationsystem.ui.screens
 
 import android.location.Geocoder
@@ -7,7 +8,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -18,9 +18,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAPhoto
@@ -29,15 +28,14 @@ import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.LocalPolice
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MedicalServices
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -54,25 +52,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.emergencycommunicationsystem.data.models.WeatherState
-import com.example.emergencycommunicationsystem.ui.components.SectionTitle
 import java.util.Locale
-
-// --- Theme Colors ---
-val deepNavyBlue = Color(0xFF1A1E29)
-val vibrantSafetyOrange = Color(0xFFFF7F00)
-val subtleGray = Color(0xFF2C313D)
-val textWhite = Color.White.copy(alpha = 0.9f)
-val textGray = Color.White.copy(alpha = 0.6f)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,17 +69,19 @@ fun ReportIncidentScreen(
 ) {
     var incidentDetails by remember { mutableStateOf("") }
     var reporterName by remember { mutableStateOf("") }
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
+
     val incidentTypes = mapOf(
-        "Fire" to Icons.Filled.LocalFireDepartment,
-        "Flood" to Icons.Filled.Flood,
-        "Medical" to Icons.Filled.MedicalServices,
-        "Crime" to Icons.Filled.LocalPolice
+        "Fire" to Icons.Default.LocalFireDepartment,
+        "Flood" to Icons.Default.Flood,
+        "Medical" to Icons.Default.MedicalServices,
+        "Crime" to Icons.Default.LocalPolice
     )
     var selectedIncidentType by remember { mutableStateOf(incidentTypes.keys.first()) }
-    val urgencyLevels = listOf("Low", "Medium", "High")
-    var selectedUrgency by remember { mutableStateOf(urgencyLevels.first()) }
 
-    var imageUri by remember { mutableStateOf<Uri?>(null) }
+    val urgencyLevels = listOf("Low", "Medium", "High")
+    var selectedUrgency by remember { mutableStateOf(urgencyLevels[0]) }
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri: Uri? -> imageUri = uri }
@@ -101,99 +90,97 @@ fun ReportIncidentScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Report Incident", color = textWhite) },
+                title = { Text("Report Incident") },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = textWhite
+                            contentDescription = "Back"
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = deepNavyBlue)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                )
             )
         },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { /* TODO: Submit Report */ },
-                containerColor = vibrantSafetyOrange,
-                modifier = Modifier.shadow(8.dp, CircleShape)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Send,
-                    contentDescription = "Submit Report",
-                    tint = Color.White
-                )
-            }
-        },
-        containerColor = deepNavyBlue
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+                .padding(paddingValues)
         ) {
-            item {
-                Text(
-                    "Report an Incident",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textWhite
-                )
-            }
-            item { MapPreview(weatherState) }
-            item { IncidentTypeSelector(incidentTypes, selectedIncidentType) { selectedIncidentType = it } }
-            item { UrgencySelector(urgencyLevels, selectedUrgency) { selectedUrgency = it } }
-            item {
-                ModernTextField(
-                    value = reporterName,
-                    onValueChange = { reporterName = it },
-                    label = "Your Name (Optional)",
-                    placeholder = "Defaults to Anonymous"
-                )
-            }
-            item {
-                ModernTextField(
-                    value = incidentDetails,
-                    onValueChange = { incidentDetails = it },
-                    label = "Details of Incident",
-                    placeholder = "Provide as much detail as possible...",
-                    modifier = Modifier.height(120.dp)
-                )
-            }
-            item {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    if (imageUri != null) {
-                        AsyncImage(
-                            model = imageUri,
-                            contentDescription = "Selected image preview",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+                contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp) // Adjusted padding
+            ) {
+                item { MapPreview(weatherState) }
 
-                    OutlinedButton(
-                        onClick = { imagePickerLauncher.launch("image/*") },
-                        modifier = Modifier.fillMaxWidth(),
-                        border = BorderStroke(1.dp, vibrantSafetyOrange),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = vibrantSafetyOrange)
-                    ) {
-                        Icon(Icons.Filled.AddAPhoto, contentDescription = "Add Photo", modifier = Modifier.size(ButtonDefaults.IconSize))
-                        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                        Text(if (imageUri == null) "Attach Photo" else "Change Photo")
-                    }
+                item {
+                    IncidentTypeSelector(
+                        incidentTypes = incidentTypes,
+                        selectedType = selectedIncidentType,
+                        onTypeSelect = { selectedIncidentType = it }
+                    )
+                }
+
+                item {
+                    UrgencySelector(
+                        urgencyLevels = urgencyLevels,
+                        selectedUrgency = selectedUrgency,
+                        onUrgencySelect = { selectedUrgency = it }
+                    )
+                }
+
+                item {
+                    FormTextField(
+                        value = reporterName,
+                        onValueChange = { reporterName = it },
+                        label = "Your Name (Optional)",
+                        placeholder = "Defaults to Anonymous"
+                    )
+                }
+
+                item {
+                    FormTextField(
+                        value = incidentDetails,
+                        onValueChange = { incidentDetails = it },
+                        label = "Details of Incident",
+                        placeholder = "Provide as much detail as possible...",
+                        modifier = Modifier.height(120.dp)
+                    )
+                }
+
+                item {
+                    ImageAttachment(
+                        imageUri = imageUri,
+                        onAttachImage = { imagePickerLauncher.launch("image/*") }
+                    )
                 }
             }
-            item { Spacer(modifier = Modifier.height(64.dp)) } // Space for FAB
+
+            Button(
+                onClick = { /* TODO: Submit Report */ },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .height(56.dp),
+                shape = MaterialTheme.shapes.extraLarge,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text(
+                    text = "Submit Report",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
@@ -219,33 +206,36 @@ fun MapPreview(weatherState: WeatherState) {
         }
     }
 
-    SectionTitle("Location", color = textWhite)
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(150.dp)
-            .shadow(4.dp, RoundedCornerShape(16.dp)),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = subtleGray)
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+    Column {
+        Text(
+            text = "Location",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
         ) {
-            // Placeholder for a map view
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Icon(
-                    imageVector = Icons.Filled.LocationOn,
+                    imageVector = Icons.Default.LocationOn,
                     contentDescription = "Location Pin",
-                    tint = vibrantSafetyOrange,
-                    modifier = Modifier.size(40.dp)
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(36.dp)
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.width(16.dp))
                 Text(
                     text = address,
-                    color = textGray,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 16.dp)
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -258,35 +248,44 @@ fun IncidentTypeSelector(
     selectedType: String,
     onTypeSelect: (String) -> Unit
 ) {
-    SectionTitle("Type of Incident", color = textWhite)
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        incidentTypes.forEach { (type, icon) ->
-            val isSelected = type == selectedType
-            val backgroundColor = if (isSelected) vibrantSafetyOrange else subtleGray
-            val contentColor = if (isSelected) Color.White else textWhite
-            val borderColor = if (isSelected) vibrantSafetyOrange else Color.Transparent
+    Column {
+        Text(
+            text = "Type of Incident",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            incidentTypes.forEach { (type, icon) ->
+                val isSelected = type == selectedType
+                val containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
 
-            Card(
-                modifier = Modifier
-                    .weight(1f)
-                    .aspectRatio(1f)
-                    .shadow(if (isSelected) 8.dp else 2.dp, RoundedCornerShape(16.dp))
-                    .clickable { onTypeSelect(type) },
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(2.dp, borderColor),
-                colors = CardDefaults.cardColors(containerColor = backgroundColor, contentColor = contentColor)
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .aspectRatio(1f)
+                        .clickable { onTypeSelect(type) },
+                    shape = MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(
+                        containerColor = containerColor,
+                        contentColor = contentColor
+                    ),
+                    elevation = CardDefaults.cardElevation(if (isSelected) 4.dp else 1.dp)
                 ) {
-                    Icon(imageVector = icon, contentDescription = type, modifier = Modifier.size(36.dp))
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(type, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Icon(imageVector = icon, contentDescription = type, modifier = Modifier.size(32.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(type, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
+                    }
                 }
             }
         }
@@ -299,61 +298,116 @@ fun UrgencySelector(
     selectedUrgency: String,
     onUrgencySelect: (String) -> Unit
 ) {
-    SectionTitle("Urgency Level", color = textWhite)
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        urgencyLevels.forEach { level ->
-            val isSelected = level == selectedUrgency
-            val buttonColors = if (isSelected) {
-                ButtonDefaults.buttonColors(containerColor = vibrantSafetyOrange, contentColor = Color.White)
-            } else {
-                ButtonDefaults.outlinedButtonColors(containerColor = subtleGray, contentColor = textWhite)
-            }
-            val modifier = if (isSelected) Modifier.weight(1f).shadow(8.dp, RoundedCornerShape(12.dp)) else Modifier.weight(1f)
+    val lowUrgencyColor = Color(0xFF3B82F6) // A calm blue
+    val mediumUrgencyColor = Color(0xFFF59E0B) // A cautionary orange
+    val highUrgencyColor = MaterialTheme.colorScheme.error // The theme's error color for high alert
 
-            Button(
-                onClick = { onUrgencySelect(level) },
-                modifier = modifier,
-                shape = RoundedCornerShape(12.dp),
-                colors = buttonColors,
-                border = if (!isSelected) BorderStroke(1.dp, textGray) else null,
-                contentPadding = PaddingValues(vertical = 16.dp)
-            ) {
-                Text(level, fontWeight = FontWeight.SemiBold)
+    Column {
+        Text(
+            text = "Urgency Level",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            urgencyLevels.forEach { level ->
+                val isSelected = level == selectedUrgency
+                val (containerColor, contentColor) = when {
+                    isSelected && level == "Low" -> lowUrgencyColor to Color.White
+                    isSelected && level == "Medium" -> mediumUrgencyColor to Color.White
+                    isSelected && level == "High" -> highUrgencyColor to Color.White
+                    else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+                }
+
+                Button(
+                    onClick = { onUrgencySelect(level) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
+                    shape = MaterialTheme.shapes.medium,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = containerColor,
+                        contentColor = contentColor
+                    ),
+                    border = if (!isSelected) BorderStroke(1.dp, MaterialTheme.colorScheme.outline) else null,
+                    elevation = if (isSelected) ButtonDefaults.buttonElevation(4.dp) else null
+                ) {
+                    Text(level, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }
 }
 
 @Composable
-fun ModernTextField(
+fun FormTextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
     placeholder: String,
     modifier: Modifier = Modifier
 ) {
-    SectionTitle(label, color = textWhite)
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        placeholder = { Text(placeholder, color = textGray) },
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp)),
-        shape = RoundedCornerShape(12.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = subtleGray,
-            unfocusedContainerColor = subtleGray,
-            focusedBorderColor = vibrantSafetyOrange,
-            unfocusedBorderColor = Color.Transparent,
-            focusedLabelColor = vibrantSafetyOrange,
-            unfocusedLabelColor = textGray,
-            cursorColor = vibrantSafetyOrange,
-            focusedTextColor = textWhite,
-            unfocusedTextColor = textWhite,
+    Column {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
         )
-    )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = modifier.fillMaxWidth(),
+            placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+            shape = MaterialTheme.shapes.large,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = Color.Transparent
+            )
+        )
+    }
+}
+
+@Composable
+fun ImageAttachment(
+    imageUri: Uri?,
+    onAttachImage: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        if (imageUri != null) {
+            AsyncImage(
+                model = imageUri,
+                contentDescription = "Selected image preview",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .clip(MaterialTheme.shapes.large)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        OutlinedButton(
+            onClick = onAttachImage,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = MaterialTheme.shapes.extraLarge,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+        ) {
+            Icon(Icons.Default.AddAPhoto, contentDescription = "Add Photo", modifier = Modifier.size(ButtonDefaults.IconSize))
+            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+            Text(if (imageUri == null) "Attach Photo" else "Change Photo")
+        }
+    }
 }

@@ -51,7 +51,8 @@ fun ProfileScreen(
     onSignUpClick: () -> Unit,
     onLogoutClick: () -> Unit,
     onLanguageSettingsClick: () -> Unit,
-    onPrivacyPolicyClick: () -> Unit
+    onPrivacyPolicyClick: () -> Unit,
+    onAboutAppClick: () -> Unit
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -120,7 +121,7 @@ fun ProfileScreen(
                 ProfileItem(
                     icon = Icons.Default.Info,
                     text = stringResource(R.string.about_app),
-                    onClick = { /* Handle about app click */ }
+                    onClick = onAboutAppClick
                 )
             }
         }

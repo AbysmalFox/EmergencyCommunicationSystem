@@ -23,6 +23,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.emergencycommunicationsystem.data.UserPrefs
 import com.example.emergencycommunicationsystem.navigation.Screen
 import com.example.emergencycommunicationsystem.ui.components.AppBottomNavigation
+import com.example.emergencycommunicationsystem.ui.screens.AboutAppScreen
 import com.example.emergencycommunicationsystem.ui.screens.AlertsScreen
 import com.example.emergencycommunicationsystem.ui.screens.EmergencyContactsScreen
 import com.example.emergencycommunicationsystem.ui.screens.HomeScreen
@@ -131,7 +132,8 @@ fun EmergencyApp() {
                         }
                     },
                     onLanguageSettingsClick = { navController.navigate(Screen.LanguageSettings.route) },
-                    onPrivacyPolicyClick = { navController.navigate(Screen.PrivacyPolicy.route) }
+                    onPrivacyPolicyClick = { navController.navigate(Screen.PrivacyPolicy.route) },
+                    onAboutAppClick = { navController.navigate(Screen.AboutApp.route) } // Added this line
                 )
             }
             composable(Screen.EmergencyContacts.route) {
@@ -186,6 +188,9 @@ fun EmergencyApp() {
             }
             composable(Screen.PrivacyPolicy.route) {
                 PrivacyPolicyScreen(onBackPressed = { navController.popBackStack() })
+            }
+            composable(Screen.AboutApp.route) { // Added this block
+                AboutAppScreen(onBackPressed = { navController.popBackStack() })
             }
         }
     }
