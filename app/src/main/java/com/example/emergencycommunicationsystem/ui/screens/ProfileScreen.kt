@@ -1,5 +1,9 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,27 +16,35 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.LocalPolice
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,7 +53,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.emergencycommunicationsystem.R
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     isLoggedIn: Boolean,
@@ -54,6 +68,10 @@ fun ProfileScreen(
     onPrivacyPolicyClick: () -> Unit,
     onAboutAppClick: () -> Unit
 ) {
+    var showNotificationSettings by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
+    val scope = rememberCoroutineScope()
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxSize()
@@ -63,14 +81,15 @@ fun ProfileScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp, vertical = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item {
                 Text(
                     stringResource(R.string.profile_and_settings),
                     style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(bottom = 24.dp)
+                    modifier = Modifier.padding(bottom = 16.dp)
                 )
             }
 
@@ -80,7 +99,7 @@ fun ProfileScreen(
                 } else {
                     AnonymousUserCard(onLoginClick = onLoginClick, onSignUpClick = onSignUpClick)
                 }
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
             item {
@@ -90,17 +109,15 @@ fun ProfileScreen(
                     color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 16.dp)
+                        .padding(bottom = 8.dp)
                 )
             }
 
             item {
-                var receiveNotifications by remember { mutableStateOf(true) }
                 ProfileItem(
                     icon = Icons.Default.Notifications,
                     text = stringResource(R.string.receive_notifications),
-                    checked = receiveNotifications,
-                    onCheckedChange = { receiveNotifications = it }
+                    onClick = { showNotificationSettings = true }
                 )
             }
             item {
@@ -124,6 +141,93 @@ fun ProfileScreen(
                     onClick = onAboutAppClick
                 )
             }
+        }
+
+        if (showNotificationSettings) {
+            ModalBottomSheet(
+                onDismissRequest = { showNotificationSettings = false },
+                sheetState = sheetState
+            ) {
+                NotificationSettingsSheet(onDoneClick = {
+                    scope.launch {
+                        sheetState.hide()
+                    }.invokeOnCompletion {
+                        if (!sheetState.isVisible) {
+                            showNotificationSettings = false
+                        }
+                    }
+                })
+            }
+        }
+    }
+}
+
+@Composable
+private fun NotificationSettingsSheet(onDoneClick: () -> Unit) {
+    var receiveNotifications by remember { mutableStateOf(true) }
+    var crimeAlerts by remember { mutableStateOf(true) }
+    var disasterWarnings by remember { mutableStateOf(true) }
+    var fireAlerts by remember { mutableStateOf(true) }
+    var weatherAdvisories by remember { mutableStateOf(true) }
+
+    Column(
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp)
+    ) {
+        Text(
+            "Notification Settings",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
+
+        ProfileItem(
+            icon = Icons.Default.Notifications,
+            text = "Receive Notifications",
+            checked = receiveNotifications,
+            onCheckedChange = { receiveNotifications = it }
+        )
+
+        AnimatedVisibility(
+            visible = receiveNotifications,
+            enter = expandVertically(),
+            exit = shrinkVertically()
+        ) {
+            Column(modifier = Modifier.padding(start = 16.dp, top = 8.dp)) {
+                ProfileItem(
+                    icon = Icons.Default.LocalPolice, 
+                    text = "Crime Alerts",
+                    checked = crimeAlerts,
+                    onCheckedChange = { crimeAlerts = it }
+                )
+                ProfileItem(
+                    icon = Icons.Default.Warning,
+                    text = "Disaster Warnings",
+                    checked = disasterWarnings,
+                    onCheckedChange = { disasterWarnings = it }
+                )
+                ProfileItem(
+                    icon = Icons.Default.LocalFireDepartment,
+                    text = "Fire Alerts",
+                    checked = fireAlerts,
+                    onCheckedChange = { fireAlerts = it }
+                )
+                ProfileItem(
+                    icon = Icons.Default.Air,
+                    text = "Weather Advisories",
+                    checked = weatherAdvisories,
+                    onCheckedChange = { weatherAdvisories = it }
+                )
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+
+        Button(
+            onClick = onDoneClick,
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large
+        ) {
+            Text("Done")
         }
     }
 }
@@ -209,15 +313,21 @@ private fun LoggedInUserCard(
 }
 
 @Composable
-fun ProfileItem(icon: ImageVector, text: String, checked: Boolean? = null, onCheckedChange: ((Boolean) -> Unit)? = null, onClick: (() -> Unit)? = null) {
+fun ProfileItem(
+    icon: ImageVector,
+    text: String,
+    checked: Boolean? = null,
+    onCheckedChange: ((Boolean) -> Unit)? = null,
+    onClick: (() -> Unit)? = null
+) {
     val isSwitchItem = checked != null && onCheckedChange != null
-    var internalChecked by remember(checked) { mutableStateOf(checked ?: false) }
 
     Card(
-        onClick = { if (!isSwitchItem && onClick != null) onClick() },
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+        onClick = { 
+            if (onClick != null) onClick() 
+            else if (isSwitchItem) onCheckedChange?.invoke(checked.not()) 
+        },
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
@@ -229,17 +339,14 @@ fun ProfileItem(icon: ImageVector, text: String, checked: Boolean? = null, onChe
             Text(text, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
             if (isSwitchItem) {
                 Switch(
-                    checked = internalChecked,
-                    onCheckedChange = {
-                        internalChecked = it
-                        onCheckedChange?.invoke(it)
-                    },
+                    checked = checked ?: false,
+                    onCheckedChange = onCheckedChange,
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = MaterialTheme.colorScheme.primary,
                         checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
                     )
                 )
-            } else {
+            } else if (onClick != null) {
                 Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
