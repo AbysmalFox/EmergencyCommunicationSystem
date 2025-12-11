@@ -7,6 +7,7 @@
     <string name="receive_notifications">Receive Notifications</string>
     <string name="privacy_policy">Privacy Policy</string>
     <string name="about_app">About App</string>
+    <string name="about_app_content">This is the Emergency Communication System application. Its purpose is to provide users with critical alerts, reliable communication channels, and quick access to emergency services. This application is designed for educational purposes and should not be relied upon for real emergencies.</string>
     <string name="emergency_dashboard">Emergency Dashboard</string>
     <string name="dashboard_subtitle">Built by Students, for the Community</string>
     <string name="emergency_call_label">EMERGENCY</string>
@@ -22,4 +23,5 @@
     <string name="home">Home</string>
     <string name="alerts">Alerts</string>
     <string name="profile">Profile</string>
+    <string name="privacy_policy_content">This is a placeholder for the privacy policy. You should replace this with your own privacy policy.</string>
 </resources>

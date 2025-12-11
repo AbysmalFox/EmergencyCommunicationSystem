@@ -28,6 +28,7 @@ import com.example.emergencycommunicationsystem.ui.screens.EmergencyContactsScre
 import com.example.emergencycommunicationsystem.ui.screens.HomeScreen
 import com.example.emergencycommunicationsystem.ui.screens.LanguageSettingsScreen
 import com.example.emergencycommunicationsystem.ui.screens.LoginScreen
+import com.example.emergencycommunicationsystem.ui.screens.PrivacyPolicyScreen
 import com.example.emergencycommunicationsystem.ui.screens.ProfileScreen
 import com.example.emergencycommunicationsystem.ui.screens.ReportIncidentScreen
 import com.example.emergencycommunicationsystem.ui.screens.SignUpScreen
@@ -114,13 +115,23 @@ fun EmergencyApp() {
             }
             composable(Screen.Profile.route) {
                 ProfileScreen(
-                    isLoggedIn = isLoggedIn,
-                    username = if (isLoggedIn) AuthManager.getUsername() else null,
-                    email = if (isLoggedIn) AuthManager.getEmail() else null,
+                    isLoggedIn = isLoggedIn, // <-- Pass the collected state here
+                    username = if (isLoggedIn) AuthManager.getUsername() else null, // <-- Get username only if logged in
+                    email = if (isLoggedIn) AuthManager.getEmail() else null,       // <-- Get email only if logged in
                     onLoginClick = { navController.navigate(Screen.Login.route) },
                     onSignUpClick = { navController.navigate(Screen.SignUp.route) },
-                    onLogoutClick = { AuthManager.logout() },
-                    onLanguageSettingsClick = { navController.navigate(Screen.LanguageSettings.route) }
+                    onLogoutClick = {
+                        AuthManager.logout()
+                        // Navigate back to the profile screen and clear the back stack
+                        navController.navigate(Screen.Profile.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                inclusive = true
+                            }
+                            launchSingleTop = true
+                        }
+                    },
+                    onLanguageSettingsClick = { navController.navigate(Screen.LanguageSettings.route) },
+                    onPrivacyPolicyClick = { navController.navigate(Screen.PrivacyPolicy.route) }
                 )
             }
             composable(Screen.EmergencyContacts.route) {
@@ -172,6 +183,9 @@ fun EmergencyApp() {
                     },
                     onBackPressed = { navController.popBackStack() }
                 )
+            }
+            composable(Screen.PrivacyPolicy.route) {
+                PrivacyPolicyScreen(onBackPressed = { navController.popBackStack() })
             }
         }
     }

@@ -50,7 +50,8 @@ fun ProfileScreen(
     onLoginClick: () -> Unit,
     onSignUpClick: () -> Unit,
     onLogoutClick: () -> Unit,
-    onLanguageSettingsClick: () -> Unit
+    onLanguageSettingsClick: () -> Unit,
+    onPrivacyPolicyClick: () -> Unit
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -112,7 +113,7 @@ fun ProfileScreen(
                 ProfileItem(
                     icon = Icons.Default.Security,
                     text = stringResource(R.string.privacy_policy),
-                    onClick = { /* Handle privacy policy click */ }
+                    onClick = onPrivacyPolicyClick
                 )
             }
             item {

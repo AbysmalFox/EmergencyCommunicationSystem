@@ -7,6 +7,8 @@
     <string name="receive_notifications">Recibir Notificaciones</string>
     <string name="privacy_policy">Política de Privacidad</string>
     <string name="about_app">Acerca de la App</string>
+    <!-- TODO: Translate this string -->
+    <string name="about_app_content">This is the Emergency Communication System application. Its purpose is to provide users with critical alerts, reliable communication channels, and quick access to emergency services. This application is designed for educational purposes and should not be relied upon for real emergencies.</string>
     <string name="emergency_dashboard">Tablero de Emergencia</string>
     <string name="dashboard_subtitle">Construido por Estudiantes, para la Comunidad</string>
     <string name="emergency_call_label">EMERGENCIA</string>
@@ -22,4 +24,5 @@
     <string name="home">Inicio</string>
     <string name="alerts">Alertas</string>
     <string name="profile">Perfil</string>
+    <string name="privacy_policy_content">Este es un marcador de posición para la política de privacidad. Debe reemplazar esto con su propia política de privacidad.</string>
 </resources>

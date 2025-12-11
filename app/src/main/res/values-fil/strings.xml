@@ -7,7 +7,9 @@
     <string name="receive_notifications">Makatanggap ng mga Abiso</string>
     <string name="privacy_policy">Patakaran sa Privacy</string>
     <string name="about_app">Tungkol sa App</string>
-    <string name="emergency_dashboard">Dashboard ng Emergency</string>
+    <!-- TODO: Translate this string -->
+    <string name="about_app_content">This is the Emergency Communication System application. Its purpose is to provide users with critical alerts, reliable communication channels, and quick access to emergency services. This application is designed for educational purposes and should not be relied upon for real emergencies.</string>
+    <string name="emergency_dashboard">Dashboard ng Emerhensiya</string>
     <string name="dashboard_subtitle">Gawa ng mga Mag-aaral, para sa Komunidad</string>
     <string name="emergency_call_label">EMERHENSIYA</string>
     <string name="call_button">TAWAG</string>
@@ -22,4 +24,5 @@
     <string name="home">Home</string>
     <string name="alerts">Mga Alerto</string>
     <string name="profile">Profile</string>
+    <string name="privacy_policy_content">Ito ay isang placeholder para sa patakaran sa privacy. Dapat mong palitan ito ng iyong sariling patakaran sa privacy.</string>
 </resources>

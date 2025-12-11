@@ -9,6 +9,7 @@ sealed class Screen(val route: String, val title: String) {
     data object Login : Screen("login", "Login") // Added Login Screen
     data object SignUp : Screen("signup", "Sign Up") // Added SignUp Screen
     data object LanguageSettings : Screen("language_settings", "Language Settings")
+    data object PrivacyPolicy : Screen("privacy_policy", "Privacy Policy")
 
     companion object {
         fun fromRoute(route: String?): Screen {
@@ -19,6 +20,7 @@ sealed class Screen(val route: String, val title: String) {
                 "login" -> Login // Added Login route handling
                 "signup" -> SignUp // Added SignUp route handling
                 "language_settings" -> LanguageSettings
+                "privacy_policy" -> PrivacyPolicy
                 else -> Home // Default screen
             }
         }

@@ -1,5 +1,6 @@
 package com.example.emergencycommunicationsystem.network
 
+import com.example.emergencycommunicationsystem.utils.DeviceUtils
 import com.google.gson.GsonBuilder
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -8,14 +9,22 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    // IMPORTANT: SET THE CORRECT BASE_URL FOR YOUR XAMPP SERVER
-    // For Android EMULATOR:
+    // Define the possible base URLs
     private const val BASE_URL_EMULATOR = "http://10.0.2.2/PHP/api/"
-    // For PHYSICAL Android DEVICE (on the same Wi-Fi as your PC, with PC IP 192.168.1.4):
-    private const val BASE_URL_PHYSICAL_DEVICE = "http://192.168.1.4/PHP/api/"
+    // vvv THIS IS THE LINE TO CHANGE vvv
+    private const val BASE_URL_PHYSICAL_DEVICE = "http://192.168.1.2/PHP/api/" // <-- YOUR CORRECT PHYSICAL NETWORK IP
+    // ^^^ THIS IS THE LINE TO CHANGE ^^^
 
-    // Ensure this is set to EMULATOR if you are using an emulator
-    private const val CURRENT_BASE_URL = BASE_URL_EMULATOR // <--- Set for emulator
+    /**
+     * Dynamically determines the correct base URL.
+     */
+    private fun getBaseUrl(): String {
+        return if (DeviceUtils.isEmulator()) {
+            BASE_URL_EMULATOR
+        } else {
+            BASE_URL_PHYSICAL_DEVICE // This will now use the correct IP on your phone
+        }
+    }
 
     private val gson = GsonBuilder()
         .setLenient()
@@ -34,7 +43,7 @@ object RetrofitClient {
 
     private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
-            .baseUrl(CURRENT_BASE_URL)
+            .baseUrl(getBaseUrl())
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
