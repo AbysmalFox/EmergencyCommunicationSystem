@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.ui.components.ActionGrid
+import com.example.emergencycommunicationsystem.ui.components.SafeOverlay
 import com.example.emergencycommunicationsystem.ui.components.WeatherWidget
 import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
 import kotlinx.coroutines.launch
@@ -94,6 +95,9 @@ fun HomeScreen(
         }
     }
 
+    // state to control the safe overlay
+    var showSafeOverlay by remember { mutableStateOf(false) }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -106,7 +110,7 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(27.dp) // Reduced spacing
         ) {
             item {
-                Spacer(modifier = Modifier.height(9.dp)) // Reduced spacing
+                Spacer(modifier = androidx.compose.ui.Modifier.height(9.dp)) // Reduced spacing
                 AnimatedVisibility(
                     visibleState = animationState,
                     enter = fadeIn(animationSpec = tween(durationMillis = 500)) +
@@ -133,7 +137,7 @@ fun HomeScreen(
                     enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = 200)) +
                             slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(durationMillis = 500, delayMillis = 200))
                 ) {
-                    ActionGrid(onEmergencyCallClick, onReportClick = onReportIncidentClick, onSafeClick = {}) 
+                    ActionGrid(onEmergencyCallClick, onReportClick = onReportIncidentClick, onSafeClick = { if (!showSafeOverlay) showSafeOverlay = true })
                 }
             }
             item {
@@ -145,7 +149,7 @@ fun HomeScreen(
                     WeatherWidget(weatherViewModel.weatherState.collectAsState().value)
                 }
             }
-            item { Spacer(modifier = Modifier.height(8.dp)) } // Reduced spacing
+            item { Spacer(modifier = androidx.compose.ui.Modifier.height(8.dp)) } // Reduced spacing
         }
 
         PullRefreshIndicator(
@@ -154,5 +158,8 @@ fun HomeScreen(
             modifier = Modifier.align(Alignment.TopCenter),
             contentColor = MaterialTheme.colorScheme.primary
         )
+
+        // Overlay is drawn on top
+        SafeOverlay(visible = showSafeOverlay, onDismiss = { showSafeOverlay = false })
     }
 }
