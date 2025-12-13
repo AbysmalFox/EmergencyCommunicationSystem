@@ -137,7 +137,10 @@ fun EmergencyApp() {
                 )
             }
             composable(Screen.EmergencyContacts.route) {
-                EmergencyContactsScreen(onBackPressed = { navController.popBackStack() })
+                EmergencyContactsScreen(
+                    navController = navController, // <-- MODIFY: Pass the NavController
+                    onBackPressed = { navController.popBackStack() }
+                )
             }
             composable(Screen.ReportIncident.route) {
                 ReportIncidentScreen(weatherState = weatherState, onBackPressed = { navController.popBackStack() })

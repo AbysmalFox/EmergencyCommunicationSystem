@@ -1,4 +1,3 @@
-
 package com.example.emergencycommunicationsystem.ui.screens
 
 import android.content.Intent
@@ -74,6 +73,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
+import androidx.navigation.NavController
+import com.example.emergencycommunicationsystem.ui.components.Footer
 import java.util.Locale
 import kotlinx.coroutines.delay
 
@@ -86,7 +87,7 @@ private data class Hotline(
 )
 
 @Composable
-fun EmergencyContactsScreen(onBackPressed: () -> Unit) {
+fun EmergencyContactsScreen(navController: NavController, onBackPressed: () -> Unit) {
     var activeCall by remember { mutableStateOf<Hotline?>(null) }
 
     val hotlineGroups = remember {
@@ -117,7 +118,8 @@ fun EmergencyContactsScreen(onBackPressed: () -> Unit) {
                 HotlineList(
                     hotlineGroups = hotlineGroups,
                     onItemClick = { hotline -> activeCall = hotline },
-                    onBackPressed = onBackPressed
+                    onBackPressed = onBackPressed,
+                    navController = navController
                 )
             } else {
                 SimulatedCallInterface(
@@ -134,7 +136,8 @@ fun EmergencyContactsScreen(onBackPressed: () -> Unit) {
 private fun HotlineList(
     hotlineGroups: Map<String, List<Hotline>>,
     onItemClick: (Hotline) -> Unit,
-    onBackPressed: () -> Unit
+    onBackPressed: () -> Unit,
+    navController: NavController
 ) {
     Scaffold(
         topBar = {
@@ -148,7 +151,7 @@ private fun HotlineList(
                 )
             )
         },
-        bottomBar = { Footer() },
+        bottomBar = { Footer(navController = navController) },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         LazyColumn(
