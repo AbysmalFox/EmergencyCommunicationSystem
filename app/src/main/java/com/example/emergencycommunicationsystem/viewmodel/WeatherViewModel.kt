@@ -33,7 +33,7 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
         try {
             val location = getLocation()
             fetchWeatherByLocation(location.latitude, location.longitude)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             setLocationNotFound()
         }
     }
@@ -55,7 +55,7 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
                     .addOnFailureListener { e -> continuation.resumeWithException(e) }
                     .addOnCanceledListener { continuation.cancel() }
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // If getting current location fails, fall back to last known location.
             suspendCancellableCoroutine<Location> { continuation ->
                 fusedLocationClient.lastLocation
@@ -76,6 +76,12 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
         // The loading state is already set by the calling function.
         try {
             val weatherResponse = RetrofitClient.instance.getCurrentWeatherByLocation(lat, lon, apiKey)
+            val forecastResponse = try {
+                RetrofitClient.instance.getForecastByLocation(lat, lon, apiKey)
+            } catch (_: Exception) {
+                // If forecast fails, continue with current weather only
+                null
+            }
 
             val locationName = withContext(Dispatchers.IO) {
                  try {
@@ -92,7 +98,7 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
 
             _weatherState.value = WeatherState.Success(
                 location = "$locationName, PH",
-                temperature = "${String.format(Locale.US, "%.1f", weatherResponse.main.temp)}°C",
+                temperature = "${String.format(Locale.US, "%.1f", weatherResponse.main.temp)}\u00b0C",
                 condition = condition,
                 iconUrl = "https://openweathermap.org/img/wn/$iconCode@4x.png",
                 lat = lat,
@@ -105,10 +111,11 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
                     windSpeed = weatherResponse.wind.speed,
                     visibility = weatherResponse.visibility
                 ),
-                feelsLike = "${String.format(Locale.US, "%.1f", weatherResponse.main.feelsLike)}°C",
+                feelsLike = "${String.format(Locale.US, "%.1f", weatherResponse.main.feelsLike)}\u00b0C",
                 humidity = "${weatherResponse.main.humidity}%",
                 windSpeed = "${String.format(Locale.US, "%.1f", weatherResponse.wind.speed)} km/h",
-                visibility = "${weatherResponse.visibility / 1000} km"
+                visibility = "${weatherResponse.visibility / 1000} km",
+                forecastData = forecastResponse?.list?.take(48) ?: emptyList() // Take first 48 items (2 days of 3-hourly data)
             )
         } catch (_: Exception) {
             _weatherState.value = WeatherState.Error("Failed to load weather. Check connection.")
@@ -134,13 +141,6 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
     windSpeed: Double,
     visibility: Int
 ): String {
-    val tempDescription = when {
-        temp > 30 -> "hot"
-        temp > 20 -> "warm"
-        temp > 10 -> "cool"
-        else -> "cold"
-    }
-
     val feelsLikeDescription = when {
         feelsLike > temp + 2 -> "It feels much hotter than the actual temperature."
         feelsLike < temp - 2 -> "It feels much cooler than the actual temperature."

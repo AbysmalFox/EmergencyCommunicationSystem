@@ -14,6 +14,14 @@ interface WeatherService {
         @Query("appid") apiKey: String,
         @Query("units") units: String = "metric"
     ): WeatherResponse
+
+    @GET("data/2.5/forecast")
+    suspend fun getForecastByLocation(
+        @Query("lat") lat: Double,
+        @Query("lon") lon: Double,
+        @Query("appid") apiKey: String,
+        @Query("units") units: String = "metric"
+    ): com.example.emergencycommunicationsystem.data.models.ForecastResponse
 }
 
 object RetrofitClient {

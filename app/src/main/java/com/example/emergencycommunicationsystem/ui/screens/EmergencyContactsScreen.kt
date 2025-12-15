@@ -73,8 +73,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
-import androidx.navigation.NavController
-import com.example.emergencycommunicationsystem.ui.components.Footer
 import java.util.Locale
 import kotlinx.coroutines.delay
 
@@ -86,8 +84,9 @@ private data class Hotline(
     val buttonIcon: ImageVector
 )
 
+@Suppress("UNUSED_VALUE")
 @Composable
-fun EmergencyContactsScreen(navController: NavController, onBackPressed: () -> Unit) {
+fun EmergencyContactsScreen(onBackPressed: () -> Unit) {
     var activeCall by remember { mutableStateOf<Hotline?>(null) }
 
     val hotlineGroups = remember {
@@ -118,8 +117,7 @@ fun EmergencyContactsScreen(navController: NavController, onBackPressed: () -> U
                 HotlineList(
                     hotlineGroups = hotlineGroups,
                     onItemClick = { hotline -> activeCall = hotline },
-                    onBackPressed = onBackPressed,
-                    navController = navController
+                    onBackPressed = onBackPressed
                 )
             } else {
                 SimulatedCallInterface(
@@ -136,8 +134,7 @@ fun EmergencyContactsScreen(navController: NavController, onBackPressed: () -> U
 private fun HotlineList(
     hotlineGroups: Map<String, List<Hotline>>,
     onItemClick: (Hotline) -> Unit,
-    onBackPressed: () -> Unit,
-    navController: NavController
+    onBackPressed: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -151,12 +148,12 @@ private fun HotlineList(
                 )
             )
         },
-        bottomBar = { Footer(navController = navController) },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(16.dp),
+            // add extra bottom padding so content and footer are not overlapped by the global bottom nav
+            contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             hotlineGroups.forEach { (header, hotlines) ->
@@ -166,6 +163,12 @@ private fun HotlineList(
                 items(hotlines, key = { it.number }) {
                     HotlineCard(hotline = it, onClick = onItemClick)
                 }
+            }
+
+            // Footer placed as a list item so it appears above the global bottom nav
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                Footer()
             }
         }
     }

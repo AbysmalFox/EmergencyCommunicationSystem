@@ -17,6 +17,23 @@ data class Main(
 data class Weather(val main: String, val icon: String)
 data class Wind(val speed: Double)
 
+data class ForecastResponse(
+    val list: List<ForecastItem>,
+    val city: City
+)
+
+data class ForecastItem(
+    val dt: Long,
+    val main: Main,
+    val weather: List<Weather>
+)
+
+data class City(
+    val name: String,
+    val country: String
+)
+
+@Suppress("unused")
 data class LatLng(val lat: Double, val lon: Double)
 data class Alert(
     val id: String,
@@ -40,7 +57,8 @@ sealed interface WeatherState {
         val feelsLike: String,
         val humidity: String,
         val windSpeed: String,
-        val visibility: String
+        val visibility: String,
+        val forecastData: List<ForecastItem> = emptyList()
     ) : WeatherState
     data class Error(val message: String) : WeatherState
 }

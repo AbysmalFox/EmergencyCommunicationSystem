@@ -138,7 +138,6 @@ fun EmergencyApp() {
             }
             composable(Screen.EmergencyContacts.route) {
                 EmergencyContactsScreen(
-                    navController = navController, // <-- MODIFY: Pass the NavController
                     onBackPressed = { navController.popBackStack() }
                 )
             }

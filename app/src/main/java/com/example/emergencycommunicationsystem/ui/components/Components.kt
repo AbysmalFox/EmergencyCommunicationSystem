@@ -1,7 +1,7 @@
 package com.example.emergencycommunicationsystem.ui.components
 
 import android.content.Intent
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -72,6 +72,7 @@ import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.data.models.WeatherState
 import com.example.emergencycommunicationsystem.navigation.Screen
 import kotlinx.coroutines.delay
+import java.util.Locale
 
 @Composable
 fun ProfileItem(icon: ImageVector, text: String, hasSwitch: Boolean = false, onClick: () -> Unit = {}) {
@@ -309,6 +310,10 @@ fun WeatherWidget(state: WeatherState) {
                 Spacer(modifier = Modifier.height(24.dp))
 
                 WeatherAdvice(advice = state.advice)
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                HorizontalForecastWidget(state.forecastData)
             }
         }
         is WeatherState.Error -> {
@@ -409,7 +414,7 @@ fun WeatherAdvice(advice: String) {
                 .size(24.dp)
         )
         Text(
-            text = stringResource(R.string.weather_widget_message),
+            text = displayedText.ifEmpty { stringResource(R.string.weather_widget_message) },
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium
         )
@@ -423,7 +428,7 @@ fun HotlineItem(name: String, number: String) {
         Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(text = name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface)
             Button(onClick = {
-                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number"))
+                val intent = Intent(Intent.ACTION_DIAL, ("tel:$number").toUri())
                 context.startActivity(intent)
             }, shape = CircleShape, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) {
                 Icon(Icons.Filled.Call, contentDescription = "Call $name", tint = MaterialTheme.colorScheme.onPrimary)
@@ -531,6 +536,105 @@ fun RowScope.BottomNavItem(screen: Screen, isSelected: Boolean, onSelected: () -
             color = textColor,
             fontSize = 12.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+        )
+    }
+}
+
+@Composable
+fun HorizontalForecastWidget(forecastItems: List<com.example.emergencycommunicationsystem.data.models.ForecastItem>) {
+    if (forecastItems.isEmpty()) return
+
+    // Use legacy date APIs (Calendar/SimpleDateFormat) to support older Android API levels
+    val dateKeyFormat = java.text.SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    dateKeyFormat.timeZone = java.util.TimeZone.getDefault()
+
+    // Group forecast items by local date string (e.g. 2025-12-16)
+    val itemsByDate = forecastItems.groupBy { item ->
+        val d = java.util.Date(item.dt * 1000)
+        dateKeyFormat.format(d)
+    }
+
+    // Build pairs (dateString -> representative item) for the next 6 days (tomorrow..+6)
+    val dayPairs = mutableListOf<Pair<String, com.example.emergencycommunicationsystem.data.models.ForecastItem>>()
+    val cal = java.util.Calendar.getInstance()
+    for (d in 1..6) {
+        val targetCal = java.util.Calendar.getInstance()
+        targetCal.add(java.util.Calendar.DAY_OF_YEAR, d)
+        val key = dateKeyFormat.format(targetCal.time)
+        val listForDate = itemsByDate[key]
+        if (!listForDate.isNullOrEmpty()) {
+            // choose the item closest to 12:00 local time (midday) as representative
+            val chosen = listForDate.minByOrNull { item ->
+                cal.time = java.util.Date(item.dt * 1000)
+                val hour = cal.get(java.util.Calendar.HOUR_OF_DAY)
+                kotlin.math.abs(hour - 12)
+            } ?: listForDate.first()
+            dayPairs.add(key to chosen)
+        }
+    }
+
+    if (dayPairs.isEmpty()) return
+
+    val dayNameFormat = java.text.SimpleDateFormat("EEE", Locale.getDefault())
+    Column {
+        Text(
+            text = "6-Day Forecast",
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+
+        androidx.compose.foundation.lazy.LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(count = dayPairs.size, key = { index -> dayPairs[index].second.dt }) { index ->
+                val (dateKey, item) = dayPairs[index]
+                // Use the chosen item's timestamp to derive the day short name
+                val repDate = java.util.Date(item.dt * 1000)
+                val dayName = dayNameFormat.format(repDate) // e.g. "Tue"
+
+                val iconCode = item.weather.firstOrNull()?.icon ?: "01d"
+                val iconUrl = "https://openweathermap.org/img/wn/$iconCode@2x.png"
+                val tempStr = "${String.format(Locale.US, "%.0f", item.main.temp)}°"
+
+                ForecastDay(dayName = dayName, iconUrl = iconUrl, temp = tempStr)
+            }
+        }
+    }
+}
+
+@Composable
+fun ForecastDay(dayName: String, iconUrl: String, temp: String) {
+    Column(
+        modifier = Modifier
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(12.dp)
+            )
+            .padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = dayName,
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Medium
+        )
+
+        AsyncImage(
+            model = iconUrl,
+            contentDescription = null,
+            modifier = Modifier.size(40.dp)
+        )
+
+        Text(
+            text = temp,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }
