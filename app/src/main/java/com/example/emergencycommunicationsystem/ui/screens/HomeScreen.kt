@@ -12,6 +12,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -103,10 +104,11 @@ fun HomeScreen(
             .fillMaxSize()
             .pullRefresh(pullRefreshState)
     ) {
+        // Reserve bottom padding so the last content (weather widget) scrolls above the floating nav
+        val bottomNavReserved = 136.dp // navOverlayHeight (92) + navOverlayLift (36) + extra (8)
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 20.dp),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = bottomNavReserved),
             verticalArrangement = Arrangement.spacedBy(27.dp) // Reduced spacing
         ) {
             item {

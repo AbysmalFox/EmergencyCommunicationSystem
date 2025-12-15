@@ -444,24 +444,22 @@ fun AppBottomNavigation(selectedScreen: Screen, onScreenSelected: (Screen) -> Un
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 24.dp, end = 24.dp, bottom = 65.dp)
+            .padding(start = 24.dp, end = 24.dp), // removed bottom padding so Scaffold won't reserve extra space
+        contentAlignment = Alignment.Center
     ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth()
                 .shadow(
                     elevation = 8.dp,
                     shape = RoundedCornerShape(50),
-                    clip = true
                 ),
             shape = RoundedCornerShape(50),
             color = MaterialTheme.colorScheme.surface,
         ) {
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp) // Increased height to accommodate text
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
+                    .height(74.dp), // reduced height to be compact
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -590,7 +588,7 @@ fun HorizontalForecastWidget(forecastItems: List<com.example.emergencycommunicat
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(count = dayPairs.size, key = { index -> dayPairs[index].second.dt }) { index ->
-                val (dateKey, item) = dayPairs[index]
+                val item = dayPairs[index].second
                 // Use the chosen item's timestamp to derive the day short name
                 val repDate = java.util.Date(item.dt * 1000)
                 val dayName = dayNameFormat.format(repDate) // e.g. "Tue"

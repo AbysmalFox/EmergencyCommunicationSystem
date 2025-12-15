@@ -5,15 +5,17 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -81,118 +83,127 @@ fun EmergencyApp() {
     val currentLanguage = runBlocking { UserPrefs.getLanguage(context).first() }
 
     Scaffold(
-        bottomBar = {
-            if (currentRoute in mainScreens) {
-                AppBottomNavigation(
-                    selectedScreen = Screen.fromRoute(currentRoute),
-                    onScreenSelected = {
-                        screen ->
-                        navController.navigate(screen.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                )
-            }
-        }
     ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Home.route,
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            composable(Screen.Home.route) {
-                HomeScreen(
-                    onEmergencyCallClick = { navController.navigate(Screen.EmergencyContacts.route) },
-                    onReportIncidentClick = { navController.navigate(Screen.ReportIncident.route) },
-                    weatherViewModel = weatherViewModel
-                )
-            }
-            composable(Screen.Alerts.route) {
-                AlertsScreen()
-            }
-            composable(Screen.Profile.route) {
-                ProfileScreen(
-                    isLoggedIn = isLoggedIn, // <-- Pass the collected state here
-                    username = if (isLoggedIn) AuthManager.getUsername() else null, // <-- Get username only if logged in
-                    email = if (isLoggedIn) AuthManager.getEmail() else null,       // <-- Get email only if logged in
-                    onLoginClick = { navController.navigate(Screen.Login.route) },
-                    onSignUpClick = { navController.navigate(Screen.SignUp.route) },
-                    onLogoutClick = {
-                        AuthManager.logout()
-                        // Navigate back to the profile screen and clear the back stack
-                        navController.navigate(Screen.Profile.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                inclusive = true
+        Box(modifier = Modifier.fillMaxSize()) {
+            NavHost(
+                navController = navController,
+                startDestination = Screen.Home.route,
+                modifier = Modifier.padding(innerPadding)
+            ) {
+                composable(Screen.Home.route) {
+                    HomeScreen(
+                        onEmergencyCallClick = { navController.navigate(Screen.EmergencyContacts.route) },
+                        onReportIncidentClick = { navController.navigate(Screen.ReportIncident.route) },
+                        weatherViewModel = weatherViewModel
+                    )
+                }
+                composable(Screen.Alerts.route) {
+                    AlertsScreen()
+                }
+                composable(Screen.Profile.route) {
+                    ProfileScreen(
+                        isLoggedIn = isLoggedIn, // <-- Pass the collected state here
+                        username = if (isLoggedIn) AuthManager.getUsername() else null, // <-- Get username only if logged in
+                        email = if (isLoggedIn) AuthManager.getEmail() else null,       // <-- Get email only if logged in
+                        onLoginClick = { navController.navigate(Screen.Login.route) },
+                        onSignUpClick = { navController.navigate(Screen.SignUp.route) },
+                        onLogoutClick = {
+                            AuthManager.logout()
+                            // Navigate back to the profile screen and clear the back stack
+                            navController.navigate(Screen.Profile.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    inclusive = true
+                                }
+                                launchSingleTop = true
                             }
-                            launchSingleTop = true
-                        }
-                    },
-                    onLanguageSettingsClick = { navController.navigate(Screen.LanguageSettings.route) },
-                    onPrivacyPolicyClick = { navController.navigate(Screen.PrivacyPolicy.route) },
-                    onAboutAppClick = { navController.navigate(Screen.AboutApp.route) } // Added this line
-                )
-            }
-            composable(Screen.EmergencyContacts.route) {
-                EmergencyContactsScreen(
-                    onBackPressed = { navController.popBackStack() }
-                )
-            }
-            composable(Screen.ReportIncident.route) {
-                ReportIncidentScreen(weatherState = weatherState, onBackPressed = { navController.popBackStack() })
-            }
-            composable(Screen.Login.route) {
-                LoginScreen(
-                    onBackPressed = { navController.popBackStack() },
-                    onLoginSuccess = { userId, username, email, token ->
-                        AuthManager.saveLoginState(userId, username, email, token)
-                        navController.popBackStack()
-                    },
-                    onSignUpClick = { navController.navigate(Screen.SignUp.route) }
-                )
-            }
-            composable(Screen.SignUp.route) {
-                val viewModel: SignUpViewModel = viewModel()
-                val state by viewModel.signUpState.collectAsState()
+                        },
+                        onLanguageSettingsClick = { navController.navigate(Screen.LanguageSettings.route) },
+                        onPrivacyPolicyClick = { navController.navigate(Screen.PrivacyPolicy.route) },
+                        onAboutAppClick = { navController.navigate(Screen.AboutApp.route) } // Added this line
+                    )
+                }
+                composable(Screen.EmergencyContacts.route) {
+                    EmergencyContactsScreen(
+                        onBackPressed = { navController.popBackStack() }
+                    )
+                }
+                composable(Screen.ReportIncident.route) {
+                    ReportIncidentScreen(weatherState = weatherState, onBackPressed = { navController.popBackStack() })
+                }
+                composable(Screen.Login.route) {
+                    LoginScreen(
+                        onBackPressed = { navController.popBackStack() },
+                        onLoginSuccess = { userId, username, email, token ->
+                            AuthManager.saveLoginState(userId, username, email, token)
+                            navController.popBackStack()
+                        },
+                        onSignUpClick = { navController.navigate(Screen.SignUp.route) }
+                    )
+                }
+                composable(Screen.SignUp.route) {
+                    val viewModel: SignUpViewModel = viewModel()
+                    val state by viewModel.signUpState.collectAsState()
 
-                LaunchedEffect(state) {
-                    if (state is SignUpState.Success) {
-                        navController.navigate(Screen.Profile.route) {
-                            popUpTo(Screen.SignUp.route) { inclusive = true }
+                    LaunchedEffect(state) {
+                        if (state is SignUpState.Success) {
+                            navController.navigate(Screen.Profile.route) {
+                                popUpTo(Screen.SignUp.route) { inclusive = true }
+                            }
                         }
                     }
-                }
 
-                SignUpScreen(
-                    state = state,
-                    onSignUpClick = { fullName, email, password, confirmPassword ->
-                        viewModel.signUp(fullName, email, password, confirmPassword)
-                    },
-                    onLoginClick = { navController.navigate(Screen.Login.route) },
-                    onBackPressed = { navController.popBackStack() }
-                )
+                    SignUpScreen(
+                        state = state,
+                        onSignUpClick = { fullName, email, password, confirmPassword ->
+                            viewModel.signUp(fullName, email, password, confirmPassword)
+                        },
+                        onLoginClick = { navController.navigate(Screen.Login.route) },
+                        onBackPressed = { navController.popBackStack() }
+                    )
+                }
+                composable(Screen.LanguageSettings.route) {
+                    LanguageSettingsScreen(
+                        currentLanguage = currentLanguage,
+                        onConfirm = {
+                            lang ->
+                            coroutineScope.launch {
+                                UserPrefs.saveLanguage(context, lang)
+                                activity?.recreate()
+                            }
+                        },
+                        onBackPressed = { navController.popBackStack() }
+                    )
+                }
+                composable(Screen.PrivacyPolicy.route) {
+                    PrivacyPolicyScreen(onBackPressed = { navController.popBackStack() })
+                }
+                composable(Screen.AboutApp.route) { // Added this block
+                    AboutAppScreen(onBackPressed = { navController.popBackStack() })
+                }
             }
-            composable(Screen.LanguageSettings.route) {
-                LanguageSettingsScreen(
-                    currentLanguage = currentLanguage,
-                    onConfirm = {
-                        lang ->
-                        coroutineScope.launch {
-                            UserPrefs.saveLanguage(context, lang)
-                            activity?.recreate()
+
+            // Overlay the oval bottom nav so it does NOT reserve Scaffold padding
+            if (currentRoute in mainScreens) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .navigationBarsPadding() // respect system nav/gesture area
+                        .padding(bottom = 20.dp), // lift the oval a bit higher
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+                    AppBottomNavigation(
+                        selectedScreen = Screen.fromRoute(currentRoute),
+                        onScreenSelected = { screen ->
+                            navController.navigate(screen.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
                         }
-                    },
-                    onBackPressed = { navController.popBackStack() }
-                )
-            }
-            composable(Screen.PrivacyPolicy.route) {
-                PrivacyPolicyScreen(onBackPressed = { navController.popBackStack() })
-            }
-            composable(Screen.AboutApp.route) { // Added this block
-                AboutAppScreen(onBackPressed = { navController.popBackStack() })
+                    )
+                }
             }
         }
     }

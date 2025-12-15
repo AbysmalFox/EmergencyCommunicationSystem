@@ -168,7 +168,7 @@ fun AlertsScreen() {
         } else {
             LazyColumn(
                 modifier = Modifier.padding(padding),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(16.dp, bottom = 136.dp + 16.dp), // Reserve space for floating bottom nav (136.dp) + original bottom padding (16.dp)
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(sampleAlerts) { alert ->

@@ -81,6 +81,7 @@ fun ProfileScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp, vertical = 24.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 136.dp), // Reserve space for floating bottom nav
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
