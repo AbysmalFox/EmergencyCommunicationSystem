@@ -21,8 +21,10 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +33,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -38,7 +42,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.emergencycommunicationsystem.data.models.Alert
+import com.example.emergencycommunicationsystem.viewmodel.AlertsUiState
+import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
 
 val sampleAlerts = listOf(
     Alert("1", "Weather", "Typhoon Warning", "Typhoon Karding has entered the Philippine Area of Responsibility and is expected to make landfall within 48 hours. All personnel are advised to take necessary precautions.", "2 min ago", "PAGASA"),
@@ -126,7 +133,11 @@ fun AlertItem(alert: Alert) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AlertsScreen() {
+fun AlertsScreen(
+    viewModel: AlertsViewModel = viewModel()
+) {
+    val state by viewModel.uiState.collectAsState()
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -139,40 +150,92 @@ fun AlertsScreen() {
             )
         }
     ) { padding ->
-        if (sampleAlerts.isEmpty()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.NotificationsOff,
-                    contentDescription = "No Alerts",
-                    modifier = Modifier.size(64.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    "No new alerts",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Text(
-                    "Your community alerts will appear here.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+        when (val uiState = state) {
+            is AlertsUiState.Loading -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Loading alerts...",
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.padding(padding),
-                contentPadding = PaddingValues(16.dp, bottom = 136.dp + 16.dp), // Reserve space for floating bottom nav (136.dp) + original bottom padding (16.dp)
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(sampleAlerts) { alert ->
-                    AlertItem(alert = alert)
+
+            is AlertsUiState.Success -> {
+                val alerts = uiState.alerts
+                if (alerts.isEmpty()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.NotificationsOff,
+                            contentDescription = "No Alerts",
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "No new alerts",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            "Your community alerts will appear here.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.padding(padding),
+                        contentPadding = PaddingValues(
+                            16.dp,
+                            bottom = 136.dp + 16.dp
+                        ), // Reserve space for floating bottom nav (136.dp) + original bottom padding (16.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(alerts) { alert ->
+                            AlertItem(alert = alert)
+                        }
+                    }
+                }
+            }
+
+            is AlertsUiState.Error -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "Failed to load alerts",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = uiState.message,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = { viewModel.loadAlerts() }) {
+                        Text("Retry")
+                    }
                 }
             }
         }
