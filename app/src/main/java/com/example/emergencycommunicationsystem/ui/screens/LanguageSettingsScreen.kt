@@ -25,7 +25,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.emergencycommunicationsystem.R
 
 @Composable
 fun LanguageSettingsScreen(
@@ -34,7 +36,11 @@ fun LanguageSettingsScreen(
     onBackPressed: () -> Unit
 ) {
     var selectedLanguage by remember { mutableStateOf(currentLanguage) }
-    val languages = listOf("en" to "English", "fil" to "Filipino", "es" to "Spanish")
+    val languages = listOf(
+        "en" to stringResource(R.string.language_english),
+        "fil" to stringResource(R.string.language_filipino),
+        "es" to stringResource(R.string.language_spanish)
+    )
 
     Column(
         modifier = Modifier
@@ -44,7 +50,7 @@ fun LanguageSettingsScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            "Choose Language",
+            text = stringResource(R.string.language_settings_title),
             style = MaterialTheme.typography.headlineMedium,
         )
 
@@ -74,7 +80,7 @@ fun LanguageSettingsScreen(
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(50)
             ) {
-                Text("Back")
+                Text(stringResource(R.string.language_settings_back))
             }
             Button(
                 onClick = { onConfirm(selectedLanguage) },
@@ -82,7 +88,7 @@ fun LanguageSettingsScreen(
                 enabled = selectedLanguage != currentLanguage, // Disable if language is not changed
                 shape = RoundedCornerShape(50)
             ) {
-                Text("Confirm")
+                Text(stringResource(R.string.language_settings_confirm))
             }
         }
     }

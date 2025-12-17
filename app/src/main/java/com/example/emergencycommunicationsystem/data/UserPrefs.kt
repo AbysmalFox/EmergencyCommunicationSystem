@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.util.Locale
 
 object UserPrefs {
     private val Context.dataStore by preferencesDataStore("settings")
@@ -20,6 +21,10 @@ object UserPrefs {
 
     fun getLanguage(context: Context): Flow<String> =
         context.dataStore.data.map { prefs ->
-            prefs[LANGUAGE_KEY] ?: "en" // default English
+            prefs[LANGUAGE_KEY] ?: when (Locale.getDefault().language) {
+                "es" -> "es"
+                "fil", "tl" -> "fil"
+                else -> "en"
+            }
         }
 }

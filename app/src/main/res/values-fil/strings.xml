@@ -25,4 +25,34 @@
     <string name="alerts">Mga Alerto</string>
     <string name="profile">Profile</string>
     <string name="privacy_policy_content">Ito ay isang placeholder para sa patakaran sa privacy. Dapat mong palitan ito ng iyong sariling patakaran sa privacy.</string>
+    <!-- Language settings -->
+    <string name="language_settings_title">Pumili ng Wika</string>
+    <string name="language_settings_back">Bumalik</string>
+    <string name="language_settings_confirm">Kumpirmahin</string>
+    <string name="language_english">Ingles</string>
+    <string name="language_filipino">Filipino</string>
+    <string name="language_spanish">Espanyol</string>
+    <!-- Weather advice -->
+    <string name="weather_advice_feels_much_hotter">Mas mainit ang pakiramdam kaysa sa aktwal na temperatura.</string>
+    <string name="weather_advice_feels_much_cooler">Mas malamig ang pakiramdam kaysa sa aktwal na temperatura.</string>
+    <string name="weather_advice_humidity_high">Mataas ang halumigmig, kaya asahan ang medyo malagkit na pakiramdam.</string>
+    <string name="weather_advice_wind_strong">Malakas ang hangin, kaya mag-ingat sa posibleng lumilipad na mga bagay.</string>
+    <string name="weather_advice_wind_breezy">Medyo mahangin.</string>
+    <string name="weather_advice_visibility_low">Mababa ang visibility. Mag-ingat lalo na sa pagmamaneho o paglalakad.</string>
+    <string name="weather_advice_clear_1">Maaraw at maliwanag ang panahon. Magandang oras para sa mga gawain sa labas—huwag kalimutang mag-sunscreen at uminom ng maraming tubig.</string>
+    <string name="weather_advice_clear_2">Malilinaw ang kalangitan ngayon. Sakto para lumabas, pero maaaring sobrang tirik ang araw mamaya, kaya mag-ingat.</string>
+    <string name="weather_advice_clouds_1">Maulap ang kalangitan. Puwedeng bahagyang bumaba ang temperatura, kaya mainam ang magdala ng magaan na jacket.</string>
+    <string name="weather_advice_clouds_2">Mukhang makulimlim. Wala pang ulan, pero mabuting bantayan ang lagay ng panahon.</string>
+    <string name="weather_advice_rain_1">Umuulan. Puwedeng dumulas ang mga kalsada, kaya dahan-dahan lang at magdala ng payong o raincoat.</string>
+    <string name="weather_advice_rain_2">Inaasahan ang ulan. Siguraduhing handa ka sa gamit na hindi nababasa at mag-ingat nang higit sa karaniwan.</string>
+    <string name="weather_advice_drizzle_1">May bahagyang ambon. Kaya naman, pero baka gusto mong mag-jacket para hindi mabasa.</string>
+    <string name="weather_advice_drizzle_2">Asahan ang mahinang ulan. Hindi ito malakas, pero sapat para mabasa ang paligid.</string>
+    <string name="weather_advice_thunderstorm_1">May paparating na thunderstorm. Mas mabuting manatili sa loob at iwasan ang mga bukas na lugar.</string>
+    <string name="weather_advice_thunderstorm_2">May paparating na malalakas na bagyo. Ipagsantabi muna ang mga lakad sa labas at manatiling nakaantabay sa mga abiso.</string>
+    <string name="weather_advice_snow_1">Umuulan ng niyebe. Magbihis nang makapal at mag-ingat—maaaring madulas ang mga kalsada.</string>
+    <string name="weather_advice_snow_2">Inaasahan ang malamig at maniyebeng panahon. Magbalot nang mabuti at maglakbay nang maingat kung kailangan lumabas.</string>
+    <string name="weather_advice_low_visibility_1">Mababa ang visibility dahil sa kasalukuyang kondisyon. Magmaneho nang mabagal at manatiling alerto.</string>
+    <string name="weather_advice_low_visibility_2">May mababang visibility sa panahon ngayon. Panganib ang pagbiyahe, kaya mag-ingat nang husto.</string>
+    <string name="weather_advice_unusual_1">Mukhang kakaiba ang lagay ng panahon ngayon. Manatiling nakatutok sa mga update at maging handa.</string>
+    <string name="weather_advice_unusual_2">Medyo hindi tiyak ang mga kondisyon. Mas mabuti nang manatiling alerto at handa sa anumang mangyari.</string>
 </resources>
