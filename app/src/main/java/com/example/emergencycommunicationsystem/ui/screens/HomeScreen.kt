@@ -53,6 +53,7 @@ import kotlinx.coroutines.launch
 fun HomeScreen(
     onEmergencyCallClick: () -> Unit,
     onReportIncidentClick: () -> Unit,
+    onMessageClick: () -> Unit = {},
     weatherViewModel: WeatherViewModel
 ) {
     val context = LocalContext.current
@@ -139,7 +140,12 @@ fun HomeScreen(
                     enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = 200)) +
                             slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(durationMillis = 500, delayMillis = 200))
                 ) {
-                    ActionGrid(onEmergencyCallClick, onReportClick = onReportIncidentClick, onSafeClick = { if (!showSafeOverlay) showSafeOverlay = true })
+                    ActionGrid(
+                        onEmergencyCallClick = onEmergencyCallClick,
+                        onReportClick = onReportIncidentClick,
+                        onSafeClick = { if (!showSafeOverlay) showSafeOverlay = true },
+                        onMessageClick = onMessageClick
+                    )
                 }
             }
             item {

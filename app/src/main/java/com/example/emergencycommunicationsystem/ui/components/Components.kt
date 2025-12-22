@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CheckCircle
@@ -188,12 +189,25 @@ fun EmergencyCallButton(onClick: () -> Unit) {
 
 
 @Composable
-fun ActionGrid(onEmergencyCallClick: () -> Unit, onReportClick: () -> Unit, onSafeClick: () -> Unit) {
+fun ActionGrid(
+    onEmergencyCallClick: () -> Unit,
+    onReportClick: () -> Unit,
+    onSafeClick: () -> Unit,
+    onMessageClick: () -> Unit = {}
+) {
     Column(verticalArrangement = Arrangement.spacedBy(15.dp)) { // Reduced spacing
         EmergencyCallButton(onClick = onEmergencyCallClick)
         Row(horizontalArrangement = Arrangement.spacedBy(15.dp)) {
             ActionGridItem(stringResource(R.string.report_incident), Icons.Filled.Warning, onClick = onReportClick, modifier = Modifier.weight(1f))
             ActionGridItem(stringResource(R.string.i_am_safe), Icons.Filled.CheckCircle, onClick = onSafeClick, modifier = Modifier.weight(1f))
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(15.dp)) {
+            ActionGridItem(
+                "Message Responder",
+                Icons.AutoMirrored.Filled.Message,
+                onClick = onMessageClick,
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }

@@ -97,6 +97,13 @@ fun EmergencyApp() {
                     HomeScreen(
                         onEmergencyCallClick = { navController.navigate(Screen.EmergencyContacts.route) },
                         onReportIncidentClick = { navController.navigate(Screen.ReportIncident.route) },
+                        onMessageClick = {
+                            val userId = AuthManager.getUserId()
+                            val userName = AuthManager.getUsername() ?: "User"
+                            navController.navigate(
+                                "${Screen.Messaging.route}?alertId=0&alertTitle=Message Responder&userId=$userId&userName=$userName"
+                            )
+                        },
                         weatherViewModel = weatherViewModel
                     )
                 }

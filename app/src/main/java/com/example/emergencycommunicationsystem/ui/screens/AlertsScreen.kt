@@ -156,7 +156,7 @@ fun AlertItem(alert: Alert, onMessageClick: (Alert) -> Unit = {}) {
 @Composable
 fun AlertsScreen(
     viewModel: AlertsViewModel = viewModel(),
-    onMessageClick: (Alert) -> Unit = {}
+    onMessageClick: ((Alert) -> Unit)? = null
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -229,7 +229,7 @@ fun AlertsScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(alerts) { alert ->
-                            AlertItem(alert = alert, onMessageClick = onMessageClick)
+                            AlertItem(alert = alert, onMessageClick = { onMessageClick?.invoke(alert) })
                         }
                     }
                 }
