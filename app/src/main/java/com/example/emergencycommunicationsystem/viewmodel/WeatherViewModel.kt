@@ -5,6 +5,7 @@ import android.app.Application
 import android.location.Geocoder
 import android.location.Location
 import androidx.lifecycle.AndroidViewModel
+import com.example.emergencycommunicationsystem.R
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
@@ -134,80 +135,80 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private fun getWeatherAdvice(
-    condition: String,
-    temp: Double,
-    feelsLike: Double,
-    humidity: Int,
-    windSpeed: Double,
-    visibility: Int
-): String {
-    val feelsLikeDescription = when {
-        feelsLike > temp + 2 -> "It feels much hotter than the actual temperature."
-        feelsLike < temp - 2 -> "It feels much cooler than the actual temperature."
-        else -> ""
+        condition: String,
+        temp: Double,
+        feelsLike: Double,
+        humidity: Int,
+        windSpeed: Double,
+        visibility: Int
+    ): String {
+        val app = getApplication<Application>()
+
+        val feelsLikeDescription = when {
+            feelsLike > temp + 2 -> app.getString(R.string.weather_advice_feels_much_hotter)
+            feelsLike < temp - 2 -> app.getString(R.string.weather_advice_feels_much_cooler)
+            else -> ""
+        }
+
+        val humidityDescription = when {
+            humidity > 75 -> app.getString(R.string.weather_advice_humidity_high)
+            else -> ""
+        }
+
+        val windDescription = when {
+            windSpeed > 15 -> app.getString(R.string.weather_advice_wind_strong)
+            windSpeed > 5 -> app.getString(R.string.weather_advice_wind_breezy)
+            else -> ""
+        }
+
+        val visibilityDescription = when (visibility) {
+            in 0..999 -> app.getString(R.string.weather_advice_visibility_low)
+            else -> ""
+        }
+
+        val baseReplies = when (condition.lowercase()) {
+            "clear" -> listOf(
+                app.getString(R.string.weather_advice_clear_1),
+                app.getString(R.string.weather_advice_clear_2)
+            )
+            "clouds" -> listOf(
+                app.getString(R.string.weather_advice_clouds_1),
+                app.getString(R.string.weather_advice_clouds_2)
+            )
+            "rain" -> listOf(
+                app.getString(R.string.weather_advice_rain_1),
+                app.getString(R.string.weather_advice_rain_2)
+            )
+            "drizzle" -> listOf(
+                app.getString(R.string.weather_advice_drizzle_1),
+                app.getString(R.string.weather_advice_drizzle_2)
+            )
+            "thunderstorm" -> listOf(
+                app.getString(R.string.weather_advice_thunderstorm_1),
+                app.getString(R.string.weather_advice_thunderstorm_2)
+            )
+            "snow" -> listOf(
+                app.getString(R.string.weather_advice_snow_1),
+                app.getString(R.string.weather_advice_snow_2)
+            )
+            "mist", "smoke", "haze", "dust", "fog", "sand", "ash", "squall", "tornado" -> listOf(
+                app.getString(R.string.weather_advice_low_visibility_1),
+                app.getString(R.string.weather_advice_low_visibility_2)
+            )
+            else -> listOf(
+                app.getString(R.string.weather_advice_unusual_1),
+                app.getString(R.string.weather_advice_unusual_2)
+            )
+        }
+
+        val adviceParts = listOfNotNull(
+            baseReplies.random(),
+            feelsLikeDescription.takeIf { it.isNotEmpty() },
+            humidityDescription.takeIf { it.isNotEmpty() },
+            windDescription.takeIf { it.isNotEmpty() },
+            visibilityDescription.takeIf { it.isNotEmpty() }
+        )
+
+        return adviceParts.joinToString(" ")
     }
-
-    val humidityDescription = when {
-        humidity > 75 -> "The humidity is high, so expect some stickiness."
-        else -> ""
-    }
-
-    val windDescription = when {
-        windSpeed > 15 -> "Winds are quite strong, so be careful of flying debris."
-        windSpeed > 5 -> "It’s a bit breezy."
-        else -> ""
-    }
-
-    val visibilityDescription = when (
-        visibility
-    ) {
-        in 0..999 -> "Visibility is low. Be extra careful when driving or walking."
-        else -> ""
-    }
-
-    val baseReplies = when (condition.lowercase()) {
-        "clear" -> listOf(
-            "It’s a bright, sunny day. A great time for outdoor plans—just don’t forget sunscreen and stay hydrated.",
-            "Clear skies today! Perfect for going out, but the sun might get strong later, so stay protected."
-        )
-        "clouds" -> listOf(
-            "The sky is cloudy. The temperature might drop a bit, so a light jacket could be a good idea.",
-            "It’s looking overcast. No rain yet, but keep an eye on the sky."
-        )
-        "rain" -> listOf(
-            "It’s raining. Roads can get slippery, so move carefully and carry an umbrella or raincoat.",
-            "Expect rainfall. Make sure you’re prepared with waterproof gear and take extra caution."
-        )
-        "drizzle" -> listOf(
-            "A light drizzle is happening. It’s manageable, but you might want a jacket to stay dry.",
-            "Expect some light rain. Nothing heavy, but enough to make things damp."
-        )
-        "thunderstorm" -> listOf(
-            "A thunderstorm is expected. It’s best to stay indoors and avoid open areas.",
-            "Thunderstorms incoming. Postpone outdoor plans and stay updated on alerts."
-        )
-        "snow" -> listOf(
-            "Snow is falling. Dress warmly and be cautious—roads can be slippery.",
-            "Expect snowy conditions. Bundle up and travel carefully if you need to go out."
-        )
-        "mist", "smoke", "haze", "dust", "fog", "sand", "ash", "squall", "tornado" -> listOf(
-            "Visibility is low due to current conditions. Drive slowly and stay alert.",
-            "Low-visibility weather detected. Travel can be risky, so please be careful."
-        )
-        else -> listOf(
-            "The weather seems unusual today. Keep an eye on updates and stay prepared.",
-            "Conditions are a bit unpredictable. It’s best to stay alert and ready for anything."
-        )
-    }
-
-    val adviceParts = listOfNotNull(
-        baseReplies.random(),
-        feelsLikeDescription.takeIf { it.isNotEmpty() },
-        humidityDescription.takeIf { it.isNotEmpty() },
-        windDescription.takeIf { it.isNotEmpty() },
-        visibilityDescription.takeIf { it.isNotEmpty() }
-    )
-
-    return adviceParts.joinToString(" ")
-}
 }

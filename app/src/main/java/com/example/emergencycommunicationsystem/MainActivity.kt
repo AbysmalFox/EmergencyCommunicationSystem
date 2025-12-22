@@ -83,7 +83,7 @@ fun EmergencyApp() {
     val currentRoute = navBackStackEntry?.destination?.route
 
     val mainScreens = listOf(Screen.Home.route, Screen.Alerts.route, Screen.Profile.route)
-    val currentLanguage = runBlocking { UserPrefs.getLanguage(context).first() }
+    val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
 
     Scaffold(
     ) { innerPadding ->
