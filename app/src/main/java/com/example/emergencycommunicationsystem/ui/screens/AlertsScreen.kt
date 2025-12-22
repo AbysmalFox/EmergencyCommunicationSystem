@@ -1,5 +1,6 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -40,10 +41,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.emergencycommunicationsystem.AuthManager
 import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.viewmodel.AlertsUiState
 import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
@@ -82,6 +85,7 @@ fun getColorForCategory(category: String): Color {
 
 @Composable
 fun AlertItem(alert: Alert, onMessageClick: (Alert) -> Unit = {}) {
+    val context = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -136,7 +140,13 @@ fun AlertItem(alert: Alert, onMessageClick: (Alert) -> Unit = {}) {
                     )
                 }
                 Button(
-                    onClick = { onMessageClick(alert) },
+                    onClick = {
+                        if (AuthManager.getUserId() != -1) {
+                            onMessageClick(alert)
+                        } else {
+                            Toast.makeText(context, "Please log in to send a message", Toast.LENGTH_SHORT).show()
+                        }
+                    },
                     modifier = Modifier.height(40.dp)
                 ) {
                     Icon(

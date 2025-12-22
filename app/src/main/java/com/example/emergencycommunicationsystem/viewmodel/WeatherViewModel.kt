@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import retrofit2.HttpException
+import java.io.IOException
 import java.util.Locale
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -23,13 +25,22 @@ import kotlin.coroutines.resumeWithException
 class WeatherViewModel(application: Application) : AndroidViewModel(application) {
     private val _weatherState = MutableStateFlow<WeatherState>(WeatherState.Loading)
     val weatherState: StateFlow<WeatherState> = _weatherState
-    private val apiKey = "de9f8eb51584955d6d6fe607c9d81c84"
+    private val apiKey = "de9f8eb51584955d6d6fe607c9d81c84" // NOTE: This key is likely invalid.
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(application)
     var hasLoadedData: Boolean = false
         private set
 
+    init {
+        if (apiKey == "YOUR_API_KEY" || apiKey.isBlank()) {
+            _weatherState.value = WeatherState.Error("API key is missing. Please add it in WeatherViewModel.")
+        }
+    }
+
     @SuppressLint("MissingPermission")
     suspend fun requestLocationAndFetchWeather() {
+        if (_weatherState.value is WeatherState.Error && (apiKey == "YOUR_API_KEY" || apiKey.isBlank())) {
+            return // Do not proceed if API key is missing
+        }
         _weatherState.value = WeatherState.Loading // Always set to loading on refresh
         try {
             val location = getLocation()
@@ -76,9 +87,9 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
     suspend fun fetchWeatherByLocation(lat: Double, lon: Double) {
         // The loading state is already set by the calling function.
         try {
-            val weatherResponse = RetrofitClient.instance.getCurrentWeatherByLocation(lat, lon, apiKey)
+            val weatherResponse = RetrofitClient.weatherService.getCurrentWeatherByLocation(lat, lon, apiKey)
             val forecastResponse = try {
-                RetrofitClient.instance.getForecastByLocation(lat, lon, apiKey)
+                RetrofitClient.weatherService.getForecastByLocation(lat, lon, apiKey)
             } catch (_: Exception) {
                 // If forecast fails, continue with current weather only
                 null
@@ -99,7 +110,7 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
 
             _weatherState.value = WeatherState.Success(
                 location = "$locationName, PH",
-                temperature = "${String.format(Locale.US, "%.1f", weatherResponse.main.temp)}\u00b0C",
+                temperature = "${String.format(Locale.US, "%.1f", weatherResponse.main.temp)}°C",
                 condition = condition,
                 iconUrl = "https://openweathermap.org/img/wn/$iconCode@4x.png",
                 lat = lat,
@@ -112,14 +123,25 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
                     windSpeed = weatherResponse.wind.speed,
                     visibility = weatherResponse.visibility
                 ),
-                feelsLike = "${String.format(Locale.US, "%.1f", weatherResponse.main.feelsLike)}\u00b0C",
+                feelsLike = "${String.format(Locale.US, "%.1f", weatherResponse.main.feelsLike)}°C",
                 humidity = "${weatherResponse.main.humidity}%",
                 windSpeed = "${String.format(Locale.US, "%.1f", weatherResponse.wind.speed)} km/h",
                 visibility = "${weatherResponse.visibility / 1000} km",
                 forecastData = forecastResponse?.list?.take(48) ?: emptyList() // Take first 48 items (2 days of 3-hourly data)
             )
-        } catch (_: Exception) {
-            _weatherState.value = WeatherState.Error("Failed to load weather. Check connection.")
+        } catch (e: HttpException) {
+            val errorBody = e.response()?.errorBody()?.string() // Don't use in production
+            val errorCode = e.code()
+            val errorMessage = when(errorCode) {
+                401 -> "Invalid API key. Please replace it in WeatherViewModel."
+                404 -> "Weather data not found for this location."
+                else -> "HTTP Error $errorCode: $errorBody"
+            }
+            _weatherState.value = WeatherState.Error(errorMessage)
+        } catch (e: IOException) {
+            _weatherState.value = WeatherState.Error("Network error. Please check your connection.")
+        } catch (e: Exception) {
+             _weatherState.value = WeatherState.Error("An unexpected error occurred: ${e.message}")
         } finally {
             hasLoadedData = true
         }

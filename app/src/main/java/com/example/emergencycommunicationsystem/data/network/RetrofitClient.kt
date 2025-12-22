@@ -1,13 +1,17 @@
 package com.example.emergencycommunicationsystem.data.network
 
+import com.example.emergencycommunicationsystem.data.models.ForecastResponse
 import com.example.emergencycommunicationsystem.data.models.WeatherResponse
+import com.example.emergencycommunicationsystem.network.MessagingApiService
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Query
 
 interface WeatherService {
-    @GET("data/2.5/weather")
+    @GET("weather")
     suspend fun getCurrentWeatherByLocation(
         @Query("lat") lat: Double,
         @Query("lon") lon: Double,
@@ -15,23 +19,48 @@ interface WeatherService {
         @Query("units") units: String = "metric"
     ): WeatherResponse
 
-    @GET("data/2.5/forecast")
+    @GET("forecast")
     suspend fun getForecastByLocation(
         @Query("lat") lat: Double,
         @Query("lon") lon: Double,
         @Query("appid") apiKey: String,
         @Query("units") units: String = "metric"
-    ): com.example.emergencycommunicationsystem.data.models.ForecastResponse
+    ): ForecastResponse
 }
 
-object RetrofitClient {
-    private const val BASE_URL = "https://api.openweathermap.org/"
 
-    val instance: WeatherService by lazy {
-        val retrofit = Retrofit.Builder()
-            .baseUrl(BASE_URL)
+object RetrofitClient {
+
+    // Create a logging interceptor for debugging
+    private val logging = HttpLoggingInterceptor().apply {
+        level = HttpLoggingInterceptor.Level.BODY // Logs request and response bodies
+    }
+
+    private val httpClient = OkHttpClient.Builder()
+        .addInterceptor(logging)
+        .build()
+
+    private val weatherRetrofit by lazy {
+        Retrofit.Builder()
+            .baseUrl(ApiConstants.WEATHER_BASE_URL)
+            .client(httpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-        retrofit.create(WeatherService::class.java)
+    }
+
+    private val messagingRetrofit by lazy {
+        Retrofit.Builder()
+            .baseUrl(ApiConstants.MESSAGING_BASE_URL)
+            .client(httpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    val weatherService: WeatherService by lazy {
+        weatherRetrofit.create(WeatherService::class.java)
+    }
+
+    val messagingService: MessagingApiService by lazy {
+        messagingRetrofit.create(MessagingApiService::class.java)
     }
 }

@@ -2,6 +2,7 @@ package com.example.emergencycommunicationsystem
 
 import android.content.Context
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -98,11 +99,15 @@ fun EmergencyApp() {
                         onEmergencyCallClick = { navController.navigate(Screen.EmergencyContacts.route) },
                         onReportIncidentClick = { navController.navigate(Screen.ReportIncident.route) },
                         onMessageClick = {
-                            val userId = AuthManager.getUserId()
-                            val userName = AuthManager.getUsername() ?: "User"
-                            navController.navigate(
-                                "${Screen.Messaging.route}?alertId=0&alertTitle=Message Responder&userId=$userId&userName=$userName"
-                            )
+                            if (AuthManager.getUserId() != -1) {
+                                val userId = AuthManager.getUserId()
+                                val userName = AuthManager.getUsername() ?: "User"
+                                navController.navigate(
+                                    "${Screen.Messaging.route}?alertId=0&alertTitle=Message Responder&userId=$userId&userName=$userName"
+                                )
+                            } else {
+                                Toast.makeText(context, "Please log in to send a message", Toast.LENGTH_SHORT).show()
+                            }
                         },
                         weatherViewModel = weatherViewModel
                     )
