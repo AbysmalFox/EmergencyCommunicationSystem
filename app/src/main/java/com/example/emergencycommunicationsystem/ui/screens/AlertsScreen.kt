@@ -14,11 +14,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Fireplace
 import androidx.compose.material.icons.filled.House
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Security
@@ -140,7 +140,7 @@ fun AlertItem(alert: Alert, onMessageClick: (Alert) -> Unit = {}) {
                     modifier = Modifier.height(40.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Message,
+                        imageVector = Icons.AutoMirrored.Filled.Message,
                         contentDescription = "Message",
                         modifier = Modifier.size(18.dp)
                     )
