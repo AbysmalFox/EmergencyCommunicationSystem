@@ -23,7 +23,7 @@ interface MessagingApiService {
     suspend fun sendMessage(
         @Field("conversation_id") conversationId: Int,
         @Field("sender_id") senderId: Int,
-        @Field("message") message: String
+        @Field("content") message: String
     ): MessageResponse
 
     @GET("messages/list")
