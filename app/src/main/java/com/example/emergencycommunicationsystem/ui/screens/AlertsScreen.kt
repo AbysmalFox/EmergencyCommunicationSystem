@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Fireplace
 import androidx.compose.material.icons.filled.House
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Security
@@ -80,40 +81,48 @@ fun getColorForCategory(category: String): Color {
 }
 
 @Composable
-fun AlertItem(alert: Alert) {
+fun AlertItem(alert: Alert, onMessageClick: (Alert) -> Unit = {}) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Row(modifier = Modifier.padding(16.dp)) {
-            Icon(
-                imageVector = getIconForCategory(alert.category),
-                contentDescription = alert.category,
-                modifier = Modifier.size(40.dp).align(Alignment.Top),
-                tint = getColorForCategory(alert.category)
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = alert.category.uppercase(),
-                    color = getColorForCategory(alert.category),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row {
+                Icon(
+                    imageVector = getIconForCategory(alert.category),
+                    contentDescription = alert.category,
+                    modifier = Modifier.size(40.dp).align(Alignment.Top),
+                    tint = getColorForCategory(alert.category)
                 )
-                Text(
-                    text = alert.title,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = alert.content,
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = alert.category.uppercase(),
+                        color = getColorForCategory(alert.category),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        text = alert.title,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = alert.content,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
                     Text(
                         text = alert.source,
                         fontSize = 12.sp,
@@ -126,6 +135,18 @@ fun AlertItem(alert: Alert) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                Button(
+                    onClick = { onMessageClick(alert) },
+                    modifier = Modifier.height(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Message,
+                        contentDescription = "Message",
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Message")
+                }
             }
         }
     }
@@ -134,7 +155,8 @@ fun AlertItem(alert: Alert) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlertsScreen(
-    viewModel: AlertsViewModel = viewModel()
+    viewModel: AlertsViewModel = viewModel(),
+    onMessageClick: (Alert) -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -207,7 +229,7 @@ fun AlertsScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(alerts) { alert ->
-                            AlertItem(alert = alert)
+                            AlertItem(alert = alert, onMessageClick = onMessageClick)
                         }
                     }
                 }

@@ -22,6 +22,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import androidx.navigation.NavType
 import com.example.emergencycommunicationsystem.data.UserPrefs
 import com.example.emergencycommunicationsystem.navigation.Screen
 import com.example.emergencycommunicationsystem.ui.components.AppBottomNavigation
@@ -31,6 +33,7 @@ import com.example.emergencycommunicationsystem.ui.screens.EmergencyContactsScre
 import com.example.emergencycommunicationsystem.ui.screens.HomeScreen
 import com.example.emergencycommunicationsystem.ui.screens.LanguageSettingsScreen
 import com.example.emergencycommunicationsystem.ui.screens.LoginScreen
+import com.example.emergencycommunicationsystem.ui.screens.MessagingScreen
 import com.example.emergencycommunicationsystem.ui.screens.PrivacyPolicyScreen
 import com.example.emergencycommunicationsystem.ui.screens.ProfileScreen
 import com.example.emergencycommunicationsystem.ui.screens.ReportIncidentScreen
@@ -98,7 +101,15 @@ fun EmergencyApp() {
                     )
                 }
                 composable(Screen.Alerts.route) {
-                    AlertsScreen()
+                    AlertsScreen(
+                        onMessageClick = { alert ->
+                            val userId = AuthManager.getUserId()
+                            val userName = AuthManager.getUsername() ?: "User"
+                            navController.navigate(
+                                "${Screen.Messaging.route}?alertId=${alert.id.toInt()}&alertTitle=${alert.title}&userId=$userId&userName=$userName"
+                            )
+                        }
+                    )
                 }
                 composable(Screen.Profile.route) {
                     ProfileScreen(
@@ -179,6 +190,30 @@ fun EmergencyApp() {
                 }
                 composable(Screen.AboutApp.route) { // Added this block
                     AboutAppScreen(onBackPressed = { navController.popBackStack() })
+                }
+                composable(
+                    "${Screen.Messaging.route}?alertId={alertId}&alertTitle={alertTitle}&userId={userId}&userName={userName}",
+                    arguments = listOf(
+                        navArgument("alertId") { type = NavType.IntType; defaultValue = -1 },
+                        navArgument("alertTitle") { type = NavType.StringType; defaultValue = "" },
+                        navArgument("userId") { type = NavType.IntType; defaultValue = -1 },
+                        navArgument("userName") { type = NavType.StringType; defaultValue = "" }
+                    )
+                ) { backStackEntry ->
+                    val alertId = backStackEntry.arguments?.getInt("alertId") ?: -1
+                    val alertTitle = backStackEntry.arguments?.getString("alertTitle") ?: ""
+                    val userId = backStackEntry.arguments?.getInt("userId") ?: -1
+                    val userName = backStackEntry.arguments?.getString("userName") ?: ""
+
+                    if (alertId != -1 && userId != -1) {
+                        MessagingScreen(
+                            alertId = alertId,
+                            alertTitle = alertTitle,
+                            userId = userId,
+                            userName = userName,
+                            onBackPressed = { navController.popBackStack() }
+                        )
+                    }
                 }
             }
 

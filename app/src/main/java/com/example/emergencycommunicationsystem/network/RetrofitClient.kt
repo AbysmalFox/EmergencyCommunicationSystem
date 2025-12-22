@@ -56,4 +56,8 @@ object RetrofitClient {
     val alertsApiService: AlertsApiService by lazy {
         retrofit.create(AlertsApiService::class.java)
     }
+
+    fun getClient(): Retrofit {
+        return retrofit
+    }
 }
