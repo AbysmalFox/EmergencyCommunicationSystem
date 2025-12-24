@@ -99,11 +99,11 @@ fun EmergencyApp() {
                         onEmergencyCallClick = { navController.navigate(Screen.EmergencyContacts.route) },
                         onReportIncidentClick = { navController.navigate(Screen.ReportIncident.route) },
                         onMessageClick = {
-                            if (AuthManager.getUserId() != -1) {
-                                val userId = AuthManager.getUserId()
+                            val userId = AuthManager.getUserId()
+                            if (userId > 0) {
                                 val userName = AuthManager.getUsername() ?: "User"
                                 navController.navigate(
-                                    "${Screen.Messaging.route}?alertId=0&alertTitle=Message Responder&userId=$userId&userName=$userName"
+                                    "${Screen.Messaging.route}?alertId=1&alertTitle=Message Responder&userId=$userId&userName=$userName"
                                 )
                             } else {
                                 Toast.makeText(context, "Please log in to send a message", Toast.LENGTH_SHORT).show()
@@ -116,10 +116,14 @@ fun EmergencyApp() {
                     AlertsScreen(
                         onMessageClick = { alert ->
                             val userId = AuthManager.getUserId()
-                            val userName = AuthManager.getUsername() ?: "User"
-                            navController.navigate(
-                                "${Screen.Messaging.route}?alertId=${alert.id.toInt()}&alertTitle=${alert.title}&userId=$userId&userName=$userName"
-                            )
+                            if (userId > 0) {
+                                val userName = AuthManager.getUsername() ?: "User"
+                                navController.navigate(
+                                    "${Screen.Messaging.route}?alertId=${alert.id.toInt()}&alertTitle=${alert.title}&userId=$userId&userName=$userName"
+                                )
+                            } else {
+                                Toast.makeText(context, "Please log in to respond to alerts", Toast.LENGTH_SHORT).show()
+                            }
                         }
                     )
                 }
@@ -212,12 +216,13 @@ fun EmergencyApp() {
                         navArgument("userName") { type = NavType.StringType; defaultValue = "" }
                     )
                 ) { backStackEntry ->
-                    val alertId = backStackEntry.arguments?.getInt("alertId") ?: -1
+                    val alertId = backStackEntry.arguments?.getInt("alertId") ?: 0
                     val alertTitle = backStackEntry.arguments?.getString("alertTitle") ?: ""
-                    val userId = backStackEntry.arguments?.getInt("userId") ?: -1
+                    val userId = backStackEntry.arguments?.getInt("userId") ?: 0
                     val userName = backStackEntry.arguments?.getString("userName") ?: ""
 
-                    if (alertId != -1 && userId != -1) {
+                    // Final, definitive check to ensure IDs are positive, as required by the server.
+                    if (alertId > 0 && userId > 0) {
                         MessagingScreen(
                             alertId = alertId,
                             alertTitle = alertTitle,
@@ -225,6 +230,17 @@ fun EmergencyApp() {
                             userName = userName,
                             onBackPressed = { navController.popBackStack() }
                         )
+                    } else {
+                        // This block should ideally not be reached if call-site checks are working,
+                        // but serves as a final safety net.
+                        LaunchedEffect(Unit) {
+                            Toast.makeText(
+                                context,
+                                "Error: Invalid user or alert ID. Please log in and try again.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            navController.popBackStack()
+                        }
                     }
                 }
             }

@@ -8,6 +8,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 import java.io.IOException
 
 class MessagingViewModel(
@@ -40,24 +41,46 @@ class MessagingViewModel(
 
         viewModelScope.launch {
             _isLoading.value = true
+            _errorMessage.value = null
             try {
+                // Step 1: Create or get the conversation ID
                 val convId = messagingRepository.createConversation(alertId, userId)
-                _conversationId.value = convId
-                // Fetch initial messages
-                val initialMessages = messagingRepository.fetchMessages(convId)
-                _messages.value = initialMessages
-                if (initialMessages.isNotEmpty()) {
-                    lastMessageId = initialMessages.maxOf { it.id }
+
+                if (convId > 0) {
+                    _conversationId.value = convId
+                    // Step 2: ONLY if we have a valid ID, fetch the initial messages.
+                    fetchInitialMessages(convId)
+                    // Step 3: Start polling for new messages
+                    startPolling(convId)
+                } else {
+                    throw Exception("Failed to retrieve a valid conversation ID from the server.")
                 }
-                // Start polling
-                startPolling(convId)
+
+            } catch (e: HttpException) {
+                val errorBody = e.response()?.errorBody()?.string()
+                _errorMessage.value = "HTTP Error ${e.code()}: $errorBody"
             } catch (e: IOException) {
-                _errorMessage.value = "Network error. Please check your connection."
+                _errorMessage.value = "Network Error: Please check your connection to the server."
             } catch (e: Exception) {
                 _errorMessage.value = "Failed to initialize conversation: ${e.message}"
-            } finally {
-                _isLoading.value = false
+                _isLoading.value = false // Stop loading on critical failure
             }
+        }
+    }
+
+    private suspend fun fetchInitialMessages(conversationId: Int) {
+        try {
+            val initialMessages = messagingRepository.fetchMessages(conversationId)
+            _messages.value = initialMessages
+            if (initialMessages.isNotEmpty()) {
+                lastMessageId = initialMessages.maxOf { it.id }
+            }
+        } catch (e: Exception) {
+            // The error from this will be caught by the outer try-catch block
+            // in initializeConversation, so we just re-throw it.
+            throw e
+        } finally {
+            _isLoading.value = false // End loading after the first fetch
         }
     }
 
@@ -76,7 +99,7 @@ class MessagingViewModel(
                         lastMessageId = updatedMessages.maxOf { it.id }
                     }
                 } catch (e: IOException) {
-                    // Network error - continue polling
+                    // Network error - continue polling silently
                 } catch (e: Exception) {
                     // Silently continue polling on other errors
                 }
@@ -90,7 +113,11 @@ class MessagingViewModel(
             return
         }
 
-        val convId = _conversationId.value ?: return
+        val convId = _conversationId.value
+        if (convId == null || convId <= 0) {
+            _errorMessage.value = "Cannot send message: Invalid conversation ID."
+            return
+        }
 
         viewModelScope.launch {
             _isSending.value = true
@@ -103,18 +130,22 @@ class MessagingViewModel(
                 if (success) {
                     _messageInput.value = ""
                     _errorMessage.value = null
-                    // Fetch messages immediately after sending
-                    delay(500)
-                    val updatedMessages = messagingRepository.fetchMessages(convId)
-                    _messages.value = updatedMessages
-                    if (updatedMessages.isNotEmpty()) {
-                        lastMessageId = updatedMessages.maxOf { it.id }
+                    // Fetch messages immediately after sending to get the latest state
+                    delay(500) // Give the server a moment to process
+                    val updatedMessages = messagingRepository.fetchMessages(convId, lastMessageId)
+                     if (updatedMessages.isNotEmpty()) {
+                        val fullMessageList = (_messages.value + updatedMessages).distinctBy { it.id }.sortedBy { it.id }
+                        _messages.value = fullMessageList
+                        lastMessageId = fullMessageList.maxOf { it.id }
                     }
                 } else {
-                    _errorMessage.value = "Failed to send message"
+                    _errorMessage.value = "Failed to send message. Server reported failure."
                 }
+            } catch (e: HttpException) {
+                val errorBody = e.response()?.errorBody()?.string()
+                _errorMessage.value = "Send Error ${e.code()}: $errorBody"
             } catch (e: IOException) {
-                _errorMessage.value = "Network error while sending"
+                _errorMessage.value = "Network error while sending. Check connection."
             } catch (e: Exception) {
                 _errorMessage.value = "Error sending message: ${e.message}"
             } finally {
@@ -136,4 +167,3 @@ class MessagingViewModel(
         isPolling = false
     }
 }
-

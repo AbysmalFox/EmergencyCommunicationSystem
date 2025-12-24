@@ -6,6 +6,7 @@
         </trust-anchors>
     </base-config>
     <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">10.0.2.2</domain> <!-- Allow cleartext for local emulator IP -->
+        <domain includeSubdomains="true">10.0.2.2</domain> <!-- Android Emulator's loopback IP -->
+        <domain includeSubdomains="true">192.168.1.2</domain> <!-- Your computer's network IP -->
     </domain-config>
 </network-security-config>

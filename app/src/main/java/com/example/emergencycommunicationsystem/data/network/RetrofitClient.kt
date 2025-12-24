@@ -28,12 +28,10 @@ interface WeatherService {
     ): ForecastResponse
 }
 
-
 object RetrofitClient {
 
-    // Create a logging interceptor for debugging
     private val logging = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY // Logs request and response bodies
+        level = HttpLoggingInterceptor.Level.BODY
     }
 
     private val httpClient = OkHttpClient.Builder()

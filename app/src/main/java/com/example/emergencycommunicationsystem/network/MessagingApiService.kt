@@ -4,37 +4,36 @@ import com.example.emergencycommunicationsystem.data.models.Conversation
 import com.example.emergencycommunicationsystem.data.models.ConversationResponse
 import com.example.emergencycommunicationsystem.data.models.Message
 import com.example.emergencycommunicationsystem.data.models.MessageResponse
-import retrofit2.http.Field
-import retrofit2.http.FormUrlEncoded
+import com.example.emergencycommunicationsystem.data.models.MessagesResponse
+import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Query
 
+// Data classes to represent the JSON request bodies
+data class CreateConversationRequest(val alert_id: Int, val user_id: Int)
+data class SendMessageRequest(val conversation_id: Int, val sender_id: Int, val content: String)
+
 interface MessagingApiService {
-    @FormUrlEncoded
-    @POST("conversations/create")
+    @POST("conversations/create.php")
     suspend fun createConversation(
-        @Field("alert_id") alertId: Int,
-        @Field("user_id") userId: Int
+        @Body request: CreateConversationRequest
     ): ConversationResponse
 
-    @FormUrlEncoded
-    @POST("messages/send")
+    @POST("messages/send.php")
     suspend fun sendMessage(
-        @Field("conversation_id") conversationId: Int,
-        @Field("sender_id") senderId: Int,
-        @Field("content") message: String
+        @Body request: SendMessageRequest
     ): MessageResponse
 
-    @GET("messages/list")
+    @GET("messages/list.php")
     suspend fun fetchMessages(
-        @Query("conversation_id") conversationId: Int,
+        // THE FIX: Changed "conversation_id" to the correct "conversationId" to match the PHP script.
+        @Query("conversationId") conversationId: Int,
         @Query("last_message_id") lastMessageId: Int = 0
-    ): List<Message>
+    ): MessagesResponse
 
-    @GET("conversations/list")
+    @GET("conversations/list.php")
     suspend fun listConversations(
         @Query("alert_id") alertId: Int
     ): List<Conversation>
 }
-
