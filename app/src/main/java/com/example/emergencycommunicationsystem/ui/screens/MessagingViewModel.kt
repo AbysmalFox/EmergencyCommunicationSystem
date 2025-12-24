@@ -4,9 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.emergencycommunicationsystem.data.models.Message
 import com.example.emergencycommunicationsystem.data.repository.MessagingRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
@@ -33,78 +35,79 @@ class MessagingViewModel(
     private val _isSending = MutableStateFlow(false)
     val isSending: StateFlow<Boolean> = _isSending
 
-    private var lastMessageId = 0
-    private var isPolling = false
+    private var pollingJob: Job? = null // 1. Add a Job property
 
     fun initializeConversation(alertId: Int, userId: Int) {
-        if (_conversationId.value != null) return // Already initialized
+        // Stop any previous polling before starting a new one
+        stopPolling()
 
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
             try {
-                // Step 1: Create or get the conversation ID
                 val convId = messagingRepository.createConversation(alertId, userId)
 
                 if (convId > 0) {
                     _conversationId.value = convId
-                    // Step 2: ONLY if we have a valid ID, fetch the initial messages.
-                    fetchInitialMessages(convId)
-                    // Step 3: Start polling for new messages
+                    // Start polling for messages
                     startPolling(convId)
                 } else {
-                    throw Exception("Failed to retrieve a valid conversation ID from the server.")
+                    throw Exception("Failed to retrieve a valid conversation ID.")
                 }
 
             } catch (e: HttpException) {
                 val errorBody = e.response()?.errorBody()?.string()
                 _errorMessage.value = "HTTP Error ${e.code()}: $errorBody"
+                _isLoading.value = false // Ensure loading stops on error
             } catch (e: IOException) {
                 _errorMessage.value = "Network Error: Please check your connection to the server."
+                _isLoading.value = false // Ensure loading stops on error
             } catch (e: Exception) {
                 _errorMessage.value = "Failed to initialize conversation: ${e.message}"
-                _isLoading.value = false // Stop loading on critical failure
+                _isLoading.value = false // Ensure loading stops on critical failure
             }
-        }
-    }
-
-    private suspend fun fetchInitialMessages(conversationId: Int) {
-        try {
-            val initialMessages = messagingRepository.fetchMessages(conversationId)
-            _messages.value = initialMessages
-            if (initialMessages.isNotEmpty()) {
-                lastMessageId = initialMessages.maxOf { it.id }
-            }
-        } catch (e: Exception) {
-            // The error from this will be caught by the outer try-catch block
-            // in initializeConversation, so we just re-throw it.
-            throw e
-        } finally {
-            _isLoading.value = false // End loading after the first fetch
         }
     }
 
     private fun startPolling(conversationId: Int) {
-        if (isPolling) return
-        isPolling = true
-
-        viewModelScope.launch {
-            while (isPolling) {
+        pollingJob = viewModelScope.launch {
+            var isInitialFetch = true
+            while (isActive) { // 2. Loop only while the coroutine is active
                 try {
-                    delay(4000) // Poll every 4 seconds
-                    val newMessages = messagingRepository.fetchMessages(conversationId, lastMessageId)
-                    if (newMessages.isNotEmpty()) {
-                        val updatedMessages = (_messages.value + newMessages).distinctBy { it.id }.sortedBy { it.id }
-                        _messages.value = updatedMessages
-                        lastMessageId = updatedMessages.maxOf { it.id }
+                    val lastMessageId = if (isInitialFetch) 0 else _messages.value.lastOrNull()?.id ?: 0
+                    val fetchedMessages = messagingRepository.fetchMessages(conversationId, lastMessageId)
+
+                    if (fetchedMessages.isNotEmpty()) {
+                        if (isInitialFetch) {
+                            _messages.value = fetchedMessages
+                        } else {
+                            _messages.value = (_messages.value + fetchedMessages).distinctBy { it.id }
+                        }
                     }
-                } catch (e: IOException) {
-                    // Network error - continue polling silently
                 } catch (e: Exception) {
-                    // Silently continue polling on other errors
+                    _errorMessage.value = "Failed to load messages: ${e.message}"
+                    // Optional: stop polling on error
+                    stopPolling()
+                } finally {
+                    if(isInitialFetch) {
+                        _isLoading.value = false // Stop loading indicator after first fetch
+                        isInitialFetch = false
+                    }
                 }
+                delay(3000) // 3. Wait for 3 seconds before the next poll
             }
         }
+    }
+
+    private fun stopPolling() {
+        pollingJob?.cancel() // 4. Cancel the existing job
+        pollingJob = null
+    }
+
+    // 5. This is the most important part for fixing the ANR on back press
+    override fun onCleared() {
+        super.onCleared()
+        stopPolling() // Ensure polling is stopped when the ViewModel is destroyed
     }
 
     fun sendMessage(senderId: Int) {
@@ -130,14 +133,7 @@ class MessagingViewModel(
                 if (success) {
                     _messageInput.value = ""
                     _errorMessage.value = null
-                    // Fetch messages immediately after sending to get the latest state
-                    delay(500) // Give the server a moment to process
-                    val updatedMessages = messagingRepository.fetchMessages(convId, lastMessageId)
-                     if (updatedMessages.isNotEmpty()) {
-                        val fullMessageList = (_messages.value + updatedMessages).distinctBy { it.id }.sortedBy { it.id }
-                        _messages.value = fullMessageList
-                        lastMessageId = fullMessageList.maxOf { it.id }
-                    }
+                    // The polling loop will fetch the sent message automatically
                 } else {
                     _errorMessage.value = "Failed to send message. Server reported failure."
                 }
@@ -160,10 +156,5 @@ class MessagingViewModel(
 
     fun clearError() {
         _errorMessage.value = null
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        isPolling = false
     }
 }

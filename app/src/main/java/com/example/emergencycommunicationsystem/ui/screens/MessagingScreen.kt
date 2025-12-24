@@ -1,5 +1,6 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -46,6 +47,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.emergencycommunicationsystem.data.models.Message
+import java.text.SimpleDateFormat
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import java.util.TimeZone
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -259,10 +264,18 @@ fun MessageBubble(message: Message, isCurrentUser: Boolean) {
 
 fun formatTime(timestamp: String): String {
     return try {
-        val parts = timestamp.split(" ")
-        if (parts.size > 1) parts[1] else timestamp
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val odt = java.time.OffsetDateTime.parse(timestamp.replace(" ", "T") + "Z")
+            odt.format(DateTimeFormatter.ofPattern("h:mm a"))
+        } else {
+            val parser = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            parser.timeZone = TimeZone.getTimeZone("UTC")
+            val date = parser.parse(timestamp)
+            val formatter = SimpleDateFormat("h:mm a", Locale.getDefault())
+            formatter.format(date!!)
+        }
     } catch (e: Exception) {
-        timestamp
+        timestamp // Fallback to raw timestamp
     }
 }
 
