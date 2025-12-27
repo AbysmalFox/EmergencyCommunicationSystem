@@ -6,7 +6,10 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -30,7 +33,6 @@ import com.example.emergencycommunicationsystem.navigation.Screen
 import com.example.emergencycommunicationsystem.ui.components.AppBottomNavigation
 import com.example.emergencycommunicationsystem.ui.screens.AboutAppScreen
 import com.example.emergencycommunicationsystem.ui.screens.AlertsScreen
-import com.example.emergencycommunicationsystem.ui.screens.AutoReplyChatScreen
 import com.example.emergencycommunicationsystem.ui.screens.EmergencyContactsScreen
 import com.example.emergencycommunicationsystem.ui.screens.HomeScreen
 import com.example.emergencycommunicationsystem.ui.screens.LanguageSettingsScreen
@@ -129,8 +131,7 @@ fun EmergencyApp() {
                             } else {
                                 Toast.makeText(context, "Please log in to respond to alerts", Toast.LENGTH_SHORT).show()
                             }
-                        },
-                        onGoToAutoReplyClick = { navController.navigate(Screen.AutoReplyChat.route) }
+                        }
                     )
                 }
                 composable(Screen.Profile.route) {
@@ -212,9 +213,6 @@ fun EmergencyApp() {
                 }
                 composable(Screen.AboutApp.route) { // Added this block
                     AboutAppScreen(onBackPressed = { navController.popBackStack() })
-                }
-                composable(Screen.AutoReplyChat.route) {
-                    AutoReplyChatScreen()
                 }
                 composable(
                     "${Screen.Messaging.route}?alertId={alertId}&alertTitle={alertTitle}&userId={userId}&userName={userName}",

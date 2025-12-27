@@ -17,6 +17,7 @@ import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.random.Random
 
 class MessagingViewModel(
     private val messagingRepository: MessagingRepository = MessagingRepository()
@@ -47,6 +48,8 @@ class MessagingViewModel(
 
     fun initializeConversation(alertId: Int, userId: Int) {
         stopPolling()
+        _messages.value = emptyList()
+        _quickReplies.value = emptyList()
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
@@ -55,8 +58,11 @@ class MessagingViewModel(
                 if (convId > 0) {
                     _conversationId.value = convId
                     startPolling(convId)
-                    addBotMessage("Hello 👋 I am an automated assistant. Please select one of the options below so I can assist you regarding the current alert.")
-                    _quickReplies.value = getInitialOptions()
+                    // Only activate the bot for specific alerts, not "General Inquiry" (ID 999)
+                    if (alertId != 999) {
+                        addBotMessage("Hello 👋 I am an automated assistant. Please select one of the options below so I can assist you regarding the current alert.")
+                        _quickReplies.value = getInitialOptions()
+                    }
                 } else {
                     throw Exception("Failed to retrieve a valid conversation ID.")
                 }
@@ -78,13 +84,14 @@ class MessagingViewModel(
             var isInitialFetch = true
             while (isActive) {
                 try {
+                    // Only get the last ID from messages confirmed by the server (positive IDs)
                     val lastMessageId = _messages.value.filter { it.id > 0 }.lastOrNull()?.id ?: 0
                     val fetchedMessages = messagingRepository.fetchMessages(conversationId, lastMessageId)
                     if (fetchedMessages.isNotEmpty()) {
                         val currentIds = _messages.value.map { it.id }.toSet()
                         val newMessages = fetchedMessages.filterNot { currentIds.contains(it.id) }
                         if (newMessages.isNotEmpty()) {
-                            _messages.value = (_messages.value + newMessages).sortedBy { it.sentAt }
+                            _messages.value = (_messages.value + newMessages).distinctBy { it.id }.sortedBy { it.sentAt }
                         }
                     }
                 } catch (e: Exception) {
@@ -117,9 +124,9 @@ class MessagingViewModel(
         val messageText = _messageInput.value
         _messageInput.value = "" // Clear input field immediately
 
-        // 1. Optimistically add user's message
+        // 1. Optimistically add user's message with a temporary negative ID
         val optimisticMessage = Message(
-            id = System.currentTimeMillis().toInt(),
+            id = Random.nextInt(Int.MIN_VALUE, 0),
             conversationId = convId,
             senderId = senderId,
             senderName = userName,
@@ -131,17 +138,13 @@ class MessagingViewModel(
 
         // 2. Send the message to the server
         viewModelScope.launch {
-            _isSending.value = true
             try {
                 messagingRepository.sendMessage(convId, senderId, messageText)
                 // Polling will handle updating the message list from the server
             } catch (e: Exception) {
                 _errorMessage.value = "Error sending message: ${e.message}"
-                // On failure, remove the optimistic message and restore the input
                 _messages.value = _messages.value.filterNot { it.id == optimisticMessage.id }
-                _messageInput.value = messageText
-            } finally {
-                _isSending.value = false
+                _messageInput.value = messageText // Restore input on failure
             }
         }
     }
@@ -151,7 +154,7 @@ class MessagingViewModel(
 
         // 1. Optimistically add user's message to the UI
         val optimisticMessage = Message(
-            id = System.currentTimeMillis().toInt(), // Temporary ID
+            id = Random.nextInt(Int.MIN_VALUE, 0),
             conversationId = convId,
             senderId = userId,
             senderName = userName,
@@ -159,38 +162,33 @@ class MessagingViewModel(
             sentAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
         )
         _messages.value = _messages.value + optimisticMessage
-        _quickReplies.value = emptyList() // Hide replies immediately
+        _quickReplies.value = emptyList()
 
         // 2. Send the message to the server and handle bot response
         viewModelScope.launch {
-            _isSending.value = true
             try {
                 val success = messagingRepository.sendMessage(convId, userId, reply.text)
                 if (success) {
-                    // Polling will replace the temporary message with the real one.
-                    // Now, get and show the bot's response.
                     val botResponse = getBotResponse(reply.payload)
                     addBotMessage(botResponse.first)
-                    _quickReplies.value = botResponse.second // Show new replies
+                    _quickReplies.value = botResponse.second
                 } else {
                     _errorMessage.value = "Failed to send reply."
-                    _messages.value = _messages.value.filterNot { it.id == optimisticMessage.id } // Remove optimistic message
-                    _quickReplies.value = getInitialOptions() // Restore options
+                    _messages.value = _messages.value.filterNot { it.id == optimisticMessage.id }
+                    _quickReplies.value = getInitialOptions()
                 }
             } catch (e: Exception) {
                 _errorMessage.value = "Error sending message: ${e.message}"
                 _messages.value = _messages.value.filterNot { it.id == optimisticMessage.id }
                 _quickReplies.value = getInitialOptions()
-            } finally {
-                _isSending.value = false
             }
         }
     }
 
     private suspend fun addBotMessage(text: String) {
-        delay(1000) // Delay to simulate bot typing
+        delay(1000)
         val botMessage = Message(
-            id = System.currentTimeMillis().toInt(),
+            id = Random.nextInt(Int.MIN_VALUE, 0),
             conversationId = _conversationId.value ?: 0,
             senderId = 0, // 0 for bot
             senderName = "Auto-Reply Bot",
