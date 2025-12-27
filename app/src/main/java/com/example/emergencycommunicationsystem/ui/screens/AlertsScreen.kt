@@ -51,14 +51,6 @@ import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.viewmodel.AlertsUiState
 import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
 
-val sampleAlerts = listOf(
-    Alert("1", "Weather", "Typhoon Warning", "Typhoon Karding has entered the Philippine Area of Responsibility and is expected to make landfall within 48 hours. All personnel are advised to take necessary precautions.", "2 min ago", "PAGASA"),
-    Alert("2", "Health", "Dengue Outbreak", "A state of calamity has been declared in several barangays due to a rapid increase in Dengue cases. All staff are to coordinate with local health units.", "1 hour ago", "DOH"),
-    Alert("3", "Security", "Public Disturbance", "A public disturbance has been reported near the city market. PNP units are on site. Avoid the area.", "3 hours ago", "PNP"),
-    Alert("4", "Earthquake", "Earthquake Information", "A 5.2 magnitude earthquake was recorded 15km S of Looc, Occidental Mindoro. No tsunami warning issued.", "Oct 15, 2023", "PHIVOLCS"),
-    Alert("5", "Fire", "Structure Fire", "A fire has been reported at a warehouse on 3rd St, Industrial Zone. All nearby units respond.", "Oct 14, 2023", "BFP")
-)
-
 @Composable
 fun getIconForCategory(category: String): ImageVector {
     return when (category) {
@@ -202,8 +194,9 @@ fun AlertsScreen(
             }
 
             is AlertsUiState.Success -> {
-                val alerts = uiState.alerts
-                if (alerts.isEmpty()) {
+                val filteredAlerts = uiState.alerts.filter { it.title != "General Inquiry" }
+
+                if (filteredAlerts.isEmpty()) {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -238,7 +231,7 @@ fun AlertsScreen(
                         ), // Reserve space for floating bottom nav (136.dp) + original bottom padding (16.dp)
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(alerts) { alert ->
+                        items(filteredAlerts) { alert ->
                             AlertItem(alert = alert, onMessageClick = { onMessageClick?.invoke(alert) })
                         }
                     }
