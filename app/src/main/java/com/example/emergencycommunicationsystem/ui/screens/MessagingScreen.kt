@@ -143,7 +143,7 @@ fun MessagingScreen(
 
                     QuickReplyPanel(
                         replies = quickReplies,
-                        onReplyClick = messagingViewModel::onQuickReplyClicked
+                        onReplyClick = { reply -> messagingViewModel.onQuickReplyClicked(reply, userId) }
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))

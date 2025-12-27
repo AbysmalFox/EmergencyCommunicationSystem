@@ -14,6 +14,9 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MessagingViewModel(
     private val messagingRepository: MessagingRepository = MessagingRepository()
@@ -40,37 +43,32 @@ class MessagingViewModel(
     private val _quickReplies = MutableStateFlow<List<QuickReply>>(emptyList())
     val quickReplies: StateFlow<List<QuickReply>> = _quickReplies.asStateFlow()
 
-    private var pollingJob: Job? = null // 1. Add a Job property
+    private var pollingJob: Job? = null
 
     fun initializeConversation(alertId: Int, userId: Int) {
-        // Stop any previous polling before starting a new one
         stopPolling()
-
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
             try {
                 val convId = messagingRepository.createConversation(alertId, userId)
-
                 if (convId > 0) {
                     _conversationId.value = convId
-                    // Start polling for messages
                     startPolling(convId)
+                    addBotMessage("Hello 👋 I am an automated assistant. Please select one of the options below so I can assist you regarding the current alert.")
                     _quickReplies.value = getInitialOptions()
                 } else {
                     throw Exception("Failed to retrieve a valid conversation ID.")
                 }
-
             } catch (e: HttpException) {
-                val errorBody = e.response()?.errorBody()?.string()
-                _errorMessage.value = "HTTP Error ${e.code()}: $errorBody"
-                _isLoading.value = false // Ensure loading stops on error
+                _errorMessage.value = "HTTP Error ${e.code()}: ${e.response()?.errorBody()?.string()}"
+                _isLoading.value = false
             } catch (e: IOException) {
                 _errorMessage.value = "Network Error: Please check your connection to the server."
-                _isLoading.value = false // Ensure loading stops on error
+                _isLoading.value = false
             } catch (e: Exception) {
                 _errorMessage.value = "Failed to initialize conversation: ${e.message}"
-                _isLoading.value = false // Ensure loading stops on critical failure
+                _isLoading.value = false
             }
         }
     }
@@ -78,77 +76,48 @@ class MessagingViewModel(
     private fun startPolling(conversationId: Int) {
         pollingJob = viewModelScope.launch {
             var isInitialFetch = true
-            while (isActive) { // 2. Loop only while the coroutine is active
+            while (isActive) {
                 try {
                     val lastMessageId = if (isInitialFetch) 0 else _messages.value.lastOrNull()?.id ?: 0
                     val fetchedMessages = messagingRepository.fetchMessages(conversationId, lastMessageId)
-
                     if (fetchedMessages.isNotEmpty()) {
-                        if (isInitialFetch) {
-                            _messages.value = fetchedMessages
-                        } else {
-                            _messages.value = (_messages.value + fetchedMessages).distinctBy { it.id }
-                        }
+                        _messages.value = (_messages.value + fetchedMessages).distinctBy { it.id }
                     }
                 } catch (e: Exception) {
                     _errorMessage.value = "Failed to load messages: ${e.message}"
-                    // Optional: stop polling on error
                     stopPolling()
                 } finally {
-                    if(isInitialFetch) {
-                        _isLoading.value = false // Stop loading indicator after first fetch
+                    if (isInitialFetch) {
+                        _isLoading.value = false
                         isInitialFetch = false
                     }
                 }
-                delay(3000) // 3. Wait for 3 seconds before the next poll
+                delay(3000)
             }
         }
     }
 
     private fun stopPolling() {
-        pollingJob?.cancel() // 4. Cancel the existing job
+        pollingJob?.cancel()
         pollingJob = null
     }
 
-    // 5. This is the most important part for fixing the ANR on back press
     override fun onCleared() {
         super.onCleared()
-        stopPolling() // Ensure polling is stopped when the ViewModel is destroyed
+        stopPolling()
     }
 
+    // For manually typed messages
     fun sendMessage(senderId: Int) {
-        if (_messageInput.value.isBlank()) {
-            _errorMessage.value = "Message cannot be empty"
-            return
-        }
-
-        val convId = _conversationId.value
-        if (convId == null || convId <= 0) {
-            _errorMessage.value = "Cannot send message: Invalid conversation ID."
-            return
-        }
+        if (_messageInput.value.isBlank()) return
+        val convId = _conversationId.value ?: return
 
         viewModelScope.launch {
             _isSending.value = true
+            _quickReplies.value = emptyList() // Clear replies on manual send
             try {
-                val success = messagingRepository.sendMessage(
-                    convId,
-                    senderId,
-                    _messageInput.value
-                )
-                if (success) {
-                    _messageInput.value = ""
-                    _errorMessage.value = null
-                    _quickReplies.value = emptyList()
-                    // The polling loop will fetch the sent message automatically
-                } else {
-                    _errorMessage.value = "Failed to send message. Server reported failure."
-                }
-            } catch (e: HttpException) {
-                val errorBody = e.response()?.errorBody()?.string()
-                _errorMessage.value = "Send Error ${e.code()}: $errorBody"
-            } catch (e: IOException) {
-                _errorMessage.value = "Network error while sending. Check connection."
+                messagingRepository.sendMessage(convId, senderId, _messageInput.value)
+                _messageInput.value = ""
             } catch (e: Exception) {
                 _errorMessage.value = "Error sending message: ${e.message}"
             } finally {
@@ -157,15 +126,68 @@ class MessagingViewModel(
         }
     }
 
-    fun onQuickReplyClicked(reply: QuickReply) {
-        updateMessageInput(reply.text)
+    // For quick reply clicks
+    fun onQuickReplyClicked(reply: QuickReply, userId: Int) {
+        viewModelScope.launch {
+            _isSending.value = true
+
+            val convId = _conversationId.value ?: return@launch
+            try {
+                // 1. Send the user's message
+                val success = messagingRepository.sendMessage(convId, userId, reply.text)
+
+                if (success) {
+                    // 2. Wait for polling to pick up the message, then show bot response
+                    delay(1200) // Simulate bot 'thinking'
+                    val botResponse = getBotResponse(reply.payload)
+                    addBotMessage(botResponse.first)
+                    _quickReplies.value = botResponse.second // 3. Show new replies
+                } else {
+                    _errorMessage.value = "Failed to send reply."
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = "Error sending message: ${e.message}"
+            } finally {
+                _isSending.value = false
+            }
+        }
+    }
+
+    private fun getBotResponse(payload: String): Pair<String, List<QuickReply>> {
+        return when (payload) {
+            "disaster_details" -> "This is a Typhoon alert for Signal #2. It means strong winds are expected." to getInitialOptions()
+            "disaster_time" -> "The alert was issued within the last hour. For real-time updates, please monitor official news channels." to getInitialOptions()
+            "news_source" -> "This information is from the National Disaster Risk Reduction and Management Council (NDRRMC)." to getInitialOptions()
+            "immediate_assistance" -> "For immediate help, contact the national emergency hotline at 911." to getAssistanceOptions()
+            "call_done" -> "Thank you for confirming. Is there anything else I can assist with?" to getInitialOptions()
+            "initial" -> "How else can I help you regarding this alert?" to getInitialOptions()
+            else -> "Sorry, I don't have information on that. Please select from the available options." to getInitialOptions()
+        }
+    }
+
+    private suspend fun addBotMessage(text: String) {
+        delay(500) // Short delay to make the bot response feel more natural
+        val botMessage = Message(
+            id = System.currentTimeMillis().toInt(), // Use timestamp for a unique-enough temporary ID
+            conversationId = _conversationId.value ?: 0,
+            senderId = 0, // 0 for bot
+            senderName = "Auto-Reply Bot",
+            messageText = text,
+            sentAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+        )
+        _messages.value = _messages.value + botMessage
     }
 
     private fun getInitialOptions() = listOf(
-        QuickReply("What is this specific disaster?", "disaster_details"),
-        QuickReply("What time was the alert issued?", "disaster_time"),
-        QuickReply("Where is this news from?", "news_source"),
-        QuickReply("I need immediate assistance!", "immediate_assistance")
+        QuickReply("🔎 What is this specific disaster?", "disaster_details"),
+        QuickReply("🕒 What time was the alert issued?", "disaster_time"),
+        QuickReply("📰 Where is this news from?", "news_source"),
+        QuickReply("🆘 I need immediate assistance!", "immediate_assistance")
+    )
+
+    private fun getAssistanceOptions() = listOf(
+        QuickReply("Okay, I will call 911.", "call_done"),
+        QuickReply("Take me back to the main menu.", "initial")
     )
 
     fun updateMessageInput(text: String) {
