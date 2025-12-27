@@ -3,11 +3,13 @@ package com.example.emergencycommunicationsystem.ui.screens
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.emergencycommunicationsystem.data.models.Message
+import com.example.emergencycommunicationsystem.data.models.QuickReply
 import com.example.emergencycommunicationsystem.data.repository.MessagingRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
@@ -35,6 +37,9 @@ class MessagingViewModel(
     private val _isSending = MutableStateFlow(false)
     val isSending: StateFlow<Boolean> = _isSending
 
+    private val _quickReplies = MutableStateFlow<List<QuickReply>>(emptyList())
+    val quickReplies: StateFlow<List<QuickReply>> = _quickReplies.asStateFlow()
+
     private var pollingJob: Job? = null // 1. Add a Job property
 
     fun initializeConversation(alertId: Int, userId: Int) {
@@ -51,6 +56,7 @@ class MessagingViewModel(
                     _conversationId.value = convId
                     // Start polling for messages
                     startPolling(convId)
+                    _quickReplies.value = getInitialOptions()
                 } else {
                     throw Exception("Failed to retrieve a valid conversation ID.")
                 }
@@ -133,6 +139,7 @@ class MessagingViewModel(
                 if (success) {
                     _messageInput.value = ""
                     _errorMessage.value = null
+                    _quickReplies.value = emptyList()
                     // The polling loop will fetch the sent message automatically
                 } else {
                     _errorMessage.value = "Failed to send message. Server reported failure."
@@ -149,6 +156,17 @@ class MessagingViewModel(
             }
         }
     }
+
+    fun onQuickReplyClicked(reply: QuickReply) {
+        updateMessageInput(reply.text)
+    }
+
+    private fun getInitialOptions() = listOf(
+        QuickReply("What is this specific disaster?", "disaster_details"),
+        QuickReply("What time was the alert issued?", "disaster_time"),
+        QuickReply("Where is this news from?", "news_source"),
+        QuickReply("I need immediate assistance!", "immediate_assistance")
+    )
 
     fun updateMessageInput(text: String) {
         _messageInput.value = text

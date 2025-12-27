@@ -12,6 +12,7 @@ sealed class Screen(val route: String, val title: String) {
     data object PrivacyPolicy : Screen("privacy_policy", "Privacy Policy")
     data object AboutApp : Screen("about_app", "About App") // Added AboutApp Screen
     data object Messaging : Screen("messaging", "Messaging") // Added Messaging Screen
+    data object AutoReplyChat : Screen("auto_reply_chat", "Auto-Reply Chat")
 
 
     companion object {
@@ -26,6 +27,7 @@ sealed class Screen(val route: String, val title: String) {
                 "privacy_policy" -> PrivacyPolicy
                 "about_app" -> AboutApp // Added AboutApp route handling
                 "messaging" -> Messaging // Added Messaging route handling
+                "auto_reply_chat" -> AutoReplyChat
                 else -> Home // Default screen
             }
         }

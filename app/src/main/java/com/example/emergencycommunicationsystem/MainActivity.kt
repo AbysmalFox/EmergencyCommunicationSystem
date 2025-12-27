@@ -30,6 +30,7 @@ import com.example.emergencycommunicationsystem.navigation.Screen
 import com.example.emergencycommunicationsystem.ui.components.AppBottomNavigation
 import com.example.emergencycommunicationsystem.ui.screens.AboutAppScreen
 import com.example.emergencycommunicationsystem.ui.screens.AlertsScreen
+import com.example.emergencycommunicationsystem.ui.screens.AutoReplyChatScreen
 import com.example.emergencycommunicationsystem.ui.screens.EmergencyContactsScreen
 import com.example.emergencycommunicationsystem.ui.screens.HomeScreen
 import com.example.emergencycommunicationsystem.ui.screens.LanguageSettingsScreen
@@ -128,7 +129,8 @@ fun EmergencyApp() {
                             } else {
                                 Toast.makeText(context, "Please log in to respond to alerts", Toast.LENGTH_SHORT).show()
                             }
-                        }
+                        },
+                        onGoToAutoReplyClick = { navController.navigate(Screen.AutoReplyChat.route) }
                     )
                 }
                 composable(Screen.Profile.route) {
@@ -210,6 +212,9 @@ fun EmergencyApp() {
                 }
                 composable(Screen.AboutApp.route) { // Added this block
                     AboutAppScreen(onBackPressed = { navController.popBackStack() })
+                }
+                composable(Screen.AutoReplyChat.route) {
+                    AutoReplyChatScreen()
                 }
                 composable(
                     "${Screen.Messaging.route}?alertId={alertId}&alertTitle={alertTitle}&userId={userId}&userName={userName}",

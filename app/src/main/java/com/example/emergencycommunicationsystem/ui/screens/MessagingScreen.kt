@@ -20,20 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -47,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.emergencycommunicationsystem.data.models.Message
+import com.example.emergencycommunicationsystem.data.models.QuickReply
 import java.text.SimpleDateFormat
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -67,6 +55,7 @@ fun MessagingScreen(
     val errorMessage by messagingViewModel.errorMessage.collectAsState()
     val messageInput by messagingViewModel.messageInput.collectAsState()
     val isSending by messagingViewModel.isSending.collectAsState()
+    val quickReplies by messagingViewModel.quickReplies.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
 
@@ -152,6 +141,11 @@ fun MessagingScreen(
                         }
                     }
 
+                    QuickReplyPanel(
+                        replies = quickReplies,
+                        onReplyClick = messagingViewModel::onQuickReplyClicked
+                    )
+
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Row(
@@ -213,6 +207,33 @@ fun MessagingScreen(
 }
 
 @Composable
+fun QuickReplyPanel(
+    replies: List<QuickReply>,
+    onReplyClick: (QuickReply) -> Unit
+) {
+    if (replies.isEmpty()) return
+
+    LazyColumn(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(replies) { reply ->
+            Button(
+                onClick = { onReplyClick(reply) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            ) {
+                Text(text = reply.text, modifier = Modifier.padding(vertical = 8.dp))
+            }
+        }
+    }
+}
+
+@Composable
 fun MessageBubble(message: Message, isCurrentUser: Boolean) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -243,10 +264,7 @@ fun MessageBubble(message: Message, isCurrentUser: Boolean) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = message.messageText,
-                    color = if (isCurrentUser)
-                        MaterialTheme.colorScheme.onPrimary
-                    else
-                        MaterialTheme.colorScheme.onBackground
+                    color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onBackground
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
@@ -278,4 +296,3 @@ fun formatTime(timestamp: String): String {
         timestamp // Fallback to raw timestamp
     }
 }
-
