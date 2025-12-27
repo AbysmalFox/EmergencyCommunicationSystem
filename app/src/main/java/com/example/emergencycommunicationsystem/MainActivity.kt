@@ -46,6 +46,7 @@ import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import java.net.URLEncoder
 
 class MainActivity : ComponentActivity() {
 
@@ -118,8 +119,9 @@ fun EmergencyApp() {
                             val userId = AuthManager.getUserId()
                             if (userId > 0) {
                                 val userName = AuthManager.getUsername() ?: "User"
+                                val encodedTitle = URLEncoder.encode(alert.title, "UTF-8")
                                 navController.navigate(
-                                    "${Screen.Messaging.route}?alertId=${alert.id.toInt()}&alertTitle=${alert.title}&userId=$userId&userName=$userName"
+                                    "${Screen.Messaging.route}?alertId=${alert.id.toInt()}&alertTitle=$encodedTitle&userId=$userId&userName=$userName"
                                 )
                             } else {
                                 Toast.makeText(context, "Please log in to respond to alerts", Toast.LENGTH_SHORT).show()

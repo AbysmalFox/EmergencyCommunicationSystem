@@ -235,12 +235,14 @@ fun AlertsScreen(
                     ) {
                         items(filteredAlerts) { alert ->
                             AlertItem(alert = alert, onMessageClick = { clickedAlert ->
-                                Log.d("AlertsScreen", "Message button clicked. Alert data: $clickedAlert, User ID: ${AuthManager.getUserId()}")
+                                val cleanedAlert = clickedAlert.copy(id = clickedAlert.id.trim())
+
+                                Log.d("AlertsScreen", "Message button clicked. Original ID: '${clickedAlert.id}', Cleaned ID: '${cleanedAlert.id}', User ID: ${AuthManager.getUserId()}")
 
                                 if (onMessageClick != null) {
-                                    onMessageClick(clickedAlert)
+                                    onMessageClick(cleanedAlert)
                                 } else {
-                                    Toast.makeText(context, "Message button for '${clickedAlert.title}' clicked. Check Logcat for details.", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Message button for '${cleanedAlert.title}' clicked. Check Logcat for details.", Toast.LENGTH_SHORT).show()
                                 }
                             })
                         }
