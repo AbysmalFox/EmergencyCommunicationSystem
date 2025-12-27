@@ -143,7 +143,7 @@ fun MessagingScreen(
 
                     QuickReplyPanel(
                         replies = quickReplies,
-                        onReplyClick = { reply -> messagingViewModel.onQuickReplyClicked(reply, userId) }
+                        onReplyClick = { reply -> messagingViewModel.onQuickReplyClicked(reply, userId, userName) }
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -174,7 +174,7 @@ fun MessagingScreen(
                         )
 
                         IconButton(
-                            onClick = { messagingViewModel.sendMessage(userId) },
+                            onClick = { messagingViewModel.sendMessage(userId, userName) },
                             modifier = Modifier
                                 .size(56.dp)
                                 .background(

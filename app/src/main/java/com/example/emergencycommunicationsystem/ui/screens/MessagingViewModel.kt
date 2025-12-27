@@ -78,10 +78,14 @@ class MessagingViewModel(
             var isInitialFetch = true
             while (isActive) {
                 try {
-                    val lastMessageId = if (isInitialFetch) 0 else _messages.value.lastOrNull()?.id ?: 0
+                    val lastMessageId = _messages.value.filter { it.id > 0 }.lastOrNull()?.id ?: 0
                     val fetchedMessages = messagingRepository.fetchMessages(conversationId, lastMessageId)
                     if (fetchedMessages.isNotEmpty()) {
-                        _messages.value = (_messages.value + fetchedMessages).distinctBy { it.id }
+                        val currentIds = _messages.value.map { it.id }.toSet()
+                        val newMessages = fetchedMessages.filterNot { currentIds.contains(it.id) }
+                        if (newMessages.isNotEmpty()) {
+                            _messages.value = (_messages.value + newMessages).sortedBy { it.sentAt }
+                        }
                     }
                 } catch (e: Exception) {
                     _errorMessage.value = "Failed to load messages: ${e.message}"
@@ -107,50 +111,93 @@ class MessagingViewModel(
         stopPolling()
     }
 
-    // For manually typed messages
-    fun sendMessage(senderId: Int) {
+    fun sendMessage(senderId: Int, userName: String) {
         if (_messageInput.value.isBlank()) return
         val convId = _conversationId.value ?: return
+        val messageText = _messageInput.value
+        _messageInput.value = "" // Clear input field immediately
 
+        // 1. Optimistically add user's message
+        val optimisticMessage = Message(
+            id = System.currentTimeMillis().toInt(),
+            conversationId = convId,
+            senderId = senderId,
+            senderName = userName,
+            messageText = messageText,
+            sentAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+        )
+        _messages.value = _messages.value + optimisticMessage
+        _quickReplies.value = emptyList() // Clear replies on manual send
+
+        // 2. Send the message to the server
         viewModelScope.launch {
             _isSending.value = true
-            _quickReplies.value = emptyList() // Clear replies on manual send
             try {
-                messagingRepository.sendMessage(convId, senderId, _messageInput.value)
-                _messageInput.value = ""
+                messagingRepository.sendMessage(convId, senderId, messageText)
+                // Polling will handle updating the message list from the server
             } catch (e: Exception) {
                 _errorMessage.value = "Error sending message: ${e.message}"
+                // On failure, remove the optimistic message and restore the input
+                _messages.value = _messages.value.filterNot { it.id == optimisticMessage.id }
+                _messageInput.value = messageText
             } finally {
                 _isSending.value = false
             }
         }
     }
 
-    // For quick reply clicks
-    fun onQuickReplyClicked(reply: QuickReply, userId: Int) {
+    fun onQuickReplyClicked(reply: QuickReply, userId: Int, userName: String) {
+        val convId = _conversationId.value ?: return
+
+        // 1. Optimistically add user's message to the UI
+        val optimisticMessage = Message(
+            id = System.currentTimeMillis().toInt(), // Temporary ID
+            conversationId = convId,
+            senderId = userId,
+            senderName = userName,
+            messageText = reply.text,
+            sentAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+        )
+        _messages.value = _messages.value + optimisticMessage
+        _quickReplies.value = emptyList() // Hide replies immediately
+
+        // 2. Send the message to the server and handle bot response
         viewModelScope.launch {
             _isSending.value = true
-
-            val convId = _conversationId.value ?: return@launch
             try {
-                // 1. Send the user's message
                 val success = messagingRepository.sendMessage(convId, userId, reply.text)
-
                 if (success) {
-                    // 2. Wait for polling to pick up the message, then show bot response
-                    delay(1200) // Simulate bot 'thinking'
+                    // Polling will replace the temporary message with the real one.
+                    // Now, get and show the bot's response.
                     val botResponse = getBotResponse(reply.payload)
                     addBotMessage(botResponse.first)
-                    _quickReplies.value = botResponse.second // 3. Show new replies
+                    _quickReplies.value = botResponse.second // Show new replies
                 } else {
                     _errorMessage.value = "Failed to send reply."
+                    _messages.value = _messages.value.filterNot { it.id == optimisticMessage.id } // Remove optimistic message
+                    _quickReplies.value = getInitialOptions() // Restore options
                 }
             } catch (e: Exception) {
                 _errorMessage.value = "Error sending message: ${e.message}"
+                _messages.value = _messages.value.filterNot { it.id == optimisticMessage.id }
+                _quickReplies.value = getInitialOptions()
             } finally {
                 _isSending.value = false
             }
         }
+    }
+
+    private suspend fun addBotMessage(text: String) {
+        delay(1000) // Delay to simulate bot typing
+        val botMessage = Message(
+            id = System.currentTimeMillis().toInt(),
+            conversationId = _conversationId.value ?: 0,
+            senderId = 0, // 0 for bot
+            senderName = "Auto-Reply Bot",
+            messageText = text,
+            sentAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+        )
+        _messages.value = _messages.value + botMessage
     }
 
     private fun getBotResponse(payload: String): Pair<String, List<QuickReply>> {
@@ -163,19 +210,6 @@ class MessagingViewModel(
             "initial" -> "How else can I help you regarding this alert?" to getInitialOptions()
             else -> "Sorry, I don't have information on that. Please select from the available options." to getInitialOptions()
         }
-    }
-
-    private suspend fun addBotMessage(text: String) {
-        delay(500) // Short delay to make the bot response feel more natural
-        val botMessage = Message(
-            id = System.currentTimeMillis().toInt(), // Use timestamp for a unique-enough temporary ID
-            conversationId = _conversationId.value ?: 0,
-            senderId = 0, // 0 for bot
-            senderName = "Auto-Reply Bot",
-            messageText = text,
-            sentAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
-        )
-        _messages.value = _messages.value + botMessage
     }
 
     private fun getInitialOptions() = listOf(
