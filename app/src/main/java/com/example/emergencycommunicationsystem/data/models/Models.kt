@@ -37,12 +37,21 @@ data class City(
 data class LatLng(val lat: Double, val lon: Double)
 data class Alert(
     val id: String,
-    val category: String,
+    @SerializedName("category") private val rawCategory: String,
     val title: String,
     val content: String,
     val timestamp: String,
     val source: String
-)
+) {
+    val category: String
+        get() = when (rawCategory) {
+            "1" -> "Weather"
+            "2" -> "Health"
+            "3" -> "Info"
+            "4" -> "General Inquiry"
+            else -> rawCategory // If it's already a name like "Weather", use it
+        }
+}
 
 sealed interface WeatherState {
     data object Loading : WeatherState

@@ -1,5 +1,6 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -161,6 +162,7 @@ fun AlertsScreen(
     onMessageClick: ((Alert) -> Unit)? = null
 ) {
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -232,7 +234,15 @@ fun AlertsScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(filteredAlerts) { alert ->
-                            AlertItem(alert = alert, onMessageClick = { onMessageClick?.invoke(alert) })
+                            AlertItem(alert = alert, onMessageClick = { clickedAlert ->
+                                Log.d("AlertsScreen", "Message button clicked. Alert data: $clickedAlert, User ID: ${AuthManager.getUserId()}")
+
+                                if (onMessageClick != null) {
+                                    onMessageClick(clickedAlert)
+                                } else {
+                                    Toast.makeText(context, "Message button for '${clickedAlert.title}' clicked. Check Logcat for details.", Toast.LENGTH_SHORT).show()
+                                }
+                            })
                         }
                     }
                 }
