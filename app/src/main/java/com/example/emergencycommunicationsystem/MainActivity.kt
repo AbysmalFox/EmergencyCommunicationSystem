@@ -103,8 +103,10 @@ fun EmergencyApp() {
                             val userId = AuthManager.getUserId()
                             if (userId > 0) {
                                 val userName = AuthManager.getUsername() ?: "User"
+                                val alertTitle = "General Inquiry"
+                                val encodedTitle = URLEncoder.encode(alertTitle, "UTF-8")
                                 navController.navigate(
-                                    "${Screen.Messaging.route}?alertId=1&alertTitle=Message Responder&userId=$userId&userName=$userName"
+                                    "${Screen.Messaging.route}?alertId=999&alertTitle=$encodedTitle&userId=$userId&userName=$userName"
                                 )
                             } else {
                                 Toast.makeText(context, "Please log in to send a message", Toast.LENGTH_SHORT).show()
