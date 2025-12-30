@@ -12,7 +12,7 @@ object RetrofitClient {
     // Define the possible base URLs
     private const val BASE_URL_EMULATOR = "http://10.0.2.2/PHP/api/"
     // vvv THIS IS THE LINE TO CHANGE vvv
-    private const val BASE_URL_PHYSICAL_DEVICE = "http://192.168.1.2/PHP/api/" // <-- YOUR CORRECT PHYSICAL NETWORK IP
+    private const val BASE_URL_PHYSICAL_DEVICE = "http://192.168.1.6/PHP/api/" // <-- YOUR CORRECT PHYSICAL NETWORK IP
     // ^^^ THIS IS THE LINE TO CHANGE ^^^
 
     /**

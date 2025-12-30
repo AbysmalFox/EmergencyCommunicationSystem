@@ -7,6 +7,7 @@
     </base-config>
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">10.0.2.2</domain> <!-- Android Emulator's loopback IP -->
-        <domain includeSubdomains="true">192.168.1.2</domain> <!-- Your computer's network IP -->
+        <domain includeSubdomains="true">192.168.1.2</domain> <!-- Your computer's old network IP -->
+        <domain includeSubdomains="true">192.168.1.6</domain> <!-- Your computer's new network IP -->
     </domain-config>
 </network-security-config>
