@@ -3,7 +3,7 @@ package com.example.emergencycommunicationsystem.ui.screens
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.emergencycommunicationsystem.data.RegisterRequest
-import com.example.emergencycommunicationsystem.network.RetrofitClient
+import com.example.emergencycommunicationsystem.data.network.ApiClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -52,7 +52,7 @@ class SignUpViewModel : ViewModel() {
                     email = email,
                     password = password
                 )
-                val response = RetrofitClient.authApiService.registerUser(request)
+                val response = ApiClient.authApiService.registerUser(request)
 
                 if (response.isSuccessful) {
                     val authResponse = response.body()

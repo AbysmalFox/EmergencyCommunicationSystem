@@ -1,6 +1,5 @@
 package com.example.emergencycommunicationsystem
 
-import android.content.Context
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -8,62 +7,52 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import androidx.navigation.NavType
 import com.example.emergencycommunicationsystem.data.UserPrefs
+import com.example.emergencycommunicationsystem.data.network.ApiClient
+import com.example.emergencycommunicationsystem.data.repository.MessagingRepository
+import com.example.emergencycommunicationsystem.navigation.BottomNavigationBar
 import com.example.emergencycommunicationsystem.navigation.Screen
-import com.example.emergencycommunicationsystem.ui.components.AppBottomNavigation
-import com.example.emergencycommunicationsystem.ui.screens.AboutAppScreen
-import com.example.emergencycommunicationsystem.ui.screens.AlertsScreen
-import com.example.emergencycommunicationsystem.ui.screens.EmergencyContactsScreen
-import com.example.emergencycommunicationsystem.ui.screens.HomeScreen
-import com.example.emergencycommunicationsystem.ui.screens.LanguageSettingsScreen
-import com.example.emergencycommunicationsystem.ui.screens.LoginScreen
-import com.example.emergencycommunicationsystem.ui.screens.MessagingScreen
-import com.example.emergencycommunicationsystem.ui.screens.PrivacyPolicyScreen
-import com.example.emergencycommunicationsystem.ui.screens.ProfileScreen
-import com.example.emergencycommunicationsystem.ui.screens.ReportIncidentScreen
-import com.example.emergencycommunicationsystem.ui.screens.SignUpScreen
-import com.example.emergencycommunicationsystem.ui.screens.SignUpState
-import com.example.emergencycommunicationsystem.ui.screens.SignUpViewModel
+import com.example.emergencycommunicationsystem.ui.screens.*
 import com.example.emergencycommunicationsystem.ui.theme.EmergencyCommunicationSystemTheme
 import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.net.URLEncoder
 
 class MainActivity : ComponentActivity() {
 
-    override fun attachBaseContext(newBase: Context) {
-        runBlocking {
-            val lang = UserPrefs.getLanguage(newBase).first()
-            super.attachBaseContext(LocaleHelper.setAppLocale(newBase, lang))
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ApiClient.initializeAndCheckConnection() // <-- ADD THIS LINE
         AuthManager.initialize(applicationContext)
         enableEdgeToEdge()
+
+        // Asynchronously set the language. This won't block the UI.
+        lifecycleScope.launch(Dispatchers.IO) {
+            val lang = UserPrefs.getLanguage(this@MainActivity).first()
+            LocaleHelper.setAppLocale(this@MainActivity, lang)
+        }
 
         setContent {
             EmergencyCommunicationSystemTheme {
@@ -82,6 +71,9 @@ fun EmergencyApp() {
     val activity = (LocalContext.current as? ComponentActivity)
     val coroutineScope = rememberCoroutineScope()
 
+    // Create a single instance of the repository to be reused.
+    val messagingRepository = remember { MessagingRepository() }
+
     val isLoggedIn by AuthManager.isLoggedInFlow.collectAsState()
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -90,30 +82,41 @@ fun EmergencyApp() {
     val mainScreens = listOf(Screen.Home.route, Screen.Alerts.route, Screen.Profile.route)
     val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
 
-    Scaffold(
-    ) { innerPadding ->
+    fun navigateToMessaging(alertIdStr: String, alertTitle: String) {
+        if (isLoggedIn) {
+            val alertId = alertIdStr.toIntOrNull()
+            if (alertId == null || alertId <= 0) {
+                Toast.makeText(context, "Invalid Alert Data", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            val userId = AuthManager.getUserId()
+            val userName = AuthManager.getUsername() ?: "User"
+            val encodedTitle = URLEncoder.encode(alertTitle, "UTF-8")
+
+            navController.navigate(
+                "${Screen.Messaging.route}?alertId=$alertId&alertTitle=$encodedTitle&userId=$userId&userName=$userName"
+            )
+        } else {
+            Toast.makeText(context, "Please log in to send a message", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    Scaffold { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
             NavHost(
                 navController = navController,
                 startDestination = Screen.Home.route,
-                modifier = Modifier.padding(innerPadding)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding) // Apply padding here
             ) {
                 composable(Screen.Home.route) {
                     HomeScreen(
                         onEmergencyCallClick = { navController.navigate(Screen.EmergencyContacts.route) },
                         onReportIncidentClick = { navController.navigate(Screen.ReportIncident.route) },
                         onMessageClick = {
-                            val userId = AuthManager.getUserId()
-                            if (userId > 0) {
-                                val userName = AuthManager.getUsername() ?: "User"
-                                val alertTitle = "General Inquiry"
-                                val encodedTitle = URLEncoder.encode(alertTitle, "UTF-8")
-                                navController.navigate(
-                                    "${Screen.Messaging.route}?alertId=999&alertTitle=$encodedTitle&userId=$userId&userName=$userName"
-                                )
-                            } else {
-                                Toast.makeText(context, "Please log in to send a message", Toast.LENGTH_SHORT).show()
-                            }
+                            navigateToMessaging(alertIdStr = "999", alertTitle = "General Inquiry")
                         },
                         weatherViewModel = weatherViewModel
                     )
@@ -121,29 +124,19 @@ fun EmergencyApp() {
                 composable(Screen.Alerts.route) {
                     AlertsScreen(
                         onMessageClick = { alert ->
-                            val userId = AuthManager.getUserId()
-                            if (userId > 0) {
-                                val userName = AuthManager.getUsername() ?: "User"
-                                val encodedTitle = URLEncoder.encode(alert.title, "UTF-8")
-                                navController.navigate(
-                                    "${Screen.Messaging.route}?alertId=${alert.id.toInt()}&alertTitle=$encodedTitle&userId=$userId&userName=$userName"
-                                )
-                            } else {
-                                Toast.makeText(context, "Please log in to respond to alerts", Toast.LENGTH_SHORT).show()
-                            }
+                            navigateToMessaging(alertIdStr = alert.id, alertTitle = alert.title)
                         }
                     )
                 }
                 composable(Screen.Profile.route) {
                     ProfileScreen(
-                        isLoggedIn = isLoggedIn, // <-- Pass the collected state here
-                        username = if (isLoggedIn) AuthManager.getUsername() else null, // <-- Get username only if logged in
-                        email = if (isLoggedIn) AuthManager.getEmail() else null,       // <-- Get email only if logged in
+                        isLoggedIn = isLoggedIn,
+                        username = if (isLoggedIn) AuthManager.getUsername() else null,
+                        email = if (isLoggedIn) AuthManager.getEmail() else null,
                         onLoginClick = { navController.navigate(Screen.Login.route) },
                         onSignUpClick = { navController.navigate(Screen.SignUp.route) },
                         onLogoutClick = {
                             AuthManager.logout()
-                            // Navigate back to the profile screen and clear the back stack
                             navController.navigate(Screen.Profile.route) {
                                 popUpTo(navController.graph.findStartDestination().id) {
                                     inclusive = true
@@ -153,7 +146,7 @@ fun EmergencyApp() {
                         },
                         onLanguageSettingsClick = { navController.navigate(Screen.LanguageSettings.route) },
                         onPrivacyPolicyClick = { navController.navigate(Screen.PrivacyPolicy.route) },
-                        onAboutAppClick = { navController.navigate(Screen.AboutApp.route) } // Added this line
+                        onAboutAppClick = { navController.navigate(Screen.AboutApp.route) }
                     )
                 }
                 composable(Screen.EmergencyContacts.route) {
@@ -211,7 +204,7 @@ fun EmergencyApp() {
                 composable(Screen.PrivacyPolicy.route) {
                     PrivacyPolicyScreen(onBackPressed = { navController.popBackStack() })
                 }
-                composable(Screen.AboutApp.route) { // Added this block
+                composable(Screen.AboutApp.route) {
                     AboutAppScreen(onBackPressed = { navController.popBackStack() })
                 }
                 composable(
@@ -223,57 +216,37 @@ fun EmergencyApp() {
                         navArgument("userName") { type = NavType.StringType; defaultValue = "" }
                     )
                 ) { backStackEntry ->
-                    val alertId = backStackEntry.arguments?.getInt("alertId") ?: 0
+                    val alertId = backStackEntry.arguments?.getInt("alertId") ?: -1
+                    val userId = backStackEntry.arguments?.getInt("userId") ?: -1
                     val alertTitle = backStackEntry.arguments?.getString("alertTitle") ?: ""
-                    val userId = backStackEntry.arguments?.getInt("userId") ?: 0
                     val userName = backStackEntry.arguments?.getString("userName") ?: ""
 
-                    // Final, definitive check to ensure IDs are positive, as required by the server.
                     if (alertId > 0 && userId > 0) {
+                        // Use the remembered repository instance here
+                        val factory = MessagingViewModelFactory(alertId, userId, messagingRepository)
+                        val messagingViewModel: MessagingViewModel = viewModel(key = "messaging_$alertId", factory = factory)
+
                         MessagingScreen(
-                            alertId = alertId,
+                            viewModel = messagingViewModel,
                             alertTitle = alertTitle,
-                            userId = userId,
                             userName = userName,
                             onBackPressed = { navController.popBackStack() }
                         )
                     } else {
-                        // This block should ideally not be reached if call-site checks are working,
-                        // but serves as a final safety net.
                         LaunchedEffect(Unit) {
-                            Toast.makeText(
-                                context,
-                                "Error: Invalid user or alert ID. Please log in and try again.",
-                                Toast.LENGTH_LONG
-                            ).show()
+                            Toast.makeText(context, "Invalid chat session.", Toast.LENGTH_SHORT).show()
                             navController.popBackStack()
                         }
                     }
                 }
             }
 
-            // Overlay the oval bottom nav so it does NOT reserve Scaffold padding
+            // Place the BottomNavigationBar inside the Box, aligned to the bottom
             if (currentRoute in mainScreens) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .navigationBarsPadding() // respect system nav/gesture area
-                        .padding(bottom = 20.dp), // lift the oval a bit higher
-                    contentAlignment = Alignment.BottomCenter
-                ) {
-                    AppBottomNavigation(
-                        selectedScreen = Screen.fromRoute(currentRoute),
-                        onScreenSelected = { screen ->
-                            navController.navigate(screen.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }
-                    )
-                }
+                BottomNavigationBar(
+                    navController = navController,
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
             }
         }
     }

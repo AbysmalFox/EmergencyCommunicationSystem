@@ -4,7 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.emergencycommunicationsystem.data.LoginRequest
-import com.example.emergencycommunicationsystem.network.RetrofitClient
+import com.example.emergencycommunicationsystem.data.network.ApiClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -35,7 +35,7 @@ class LoginViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val request = LoginRequest(email, password)
-                val response = RetrofitClient.authApiService.loginUser(request)
+                val response = ApiClient.authApiService.loginUser(request)
 
                 if (response.isSuccessful) {
                     val authResponse = response.body()

@@ -2,17 +2,14 @@ package com.example.emergencycommunicationsystem.data.repository
 
 import com.example.emergencycommunicationsystem.data.models.Conversation
 import com.example.emergencycommunicationsystem.data.models.Message
+import com.example.emergencycommunicationsystem.data.network.ApiClient
 import com.example.emergencycommunicationsystem.network.CreateConversationRequest
 import com.example.emergencycommunicationsystem.network.MessagingApiService
-import com.example.emergencycommunicationsystem.data.network.RetrofitClient
 import com.example.emergencycommunicationsystem.network.SendMessageRequest
 
 class MessagingRepository {
     private val apiService: MessagingApiService
-
-    init {
-        apiService = RetrofitClient.messagingService
-    }
+        get() = ApiClient.messagingApiService
 
     suspend fun createConversation(alertId: Int, userId: Int): Int {
         val request = CreateConversationRequest(alert_id = alertId, user_id = userId)

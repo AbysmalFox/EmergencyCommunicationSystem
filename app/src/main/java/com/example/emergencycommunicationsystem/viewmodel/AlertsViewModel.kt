@@ -3,7 +3,7 @@ package com.example.emergencycommunicationsystem.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.emergencycommunicationsystem.data.models.Alert
-import com.example.emergencycommunicationsystem.network.RetrofitClient
+import com.example.emergencycommunicationsystem.data.network.ApiClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -30,7 +30,7 @@ class AlertsViewModel : ViewModel() {
 
         viewModelScope.launch {
             try {
-                val response = RetrofitClient.alertsApiService.getAlerts()
+                val response = ApiClient.alertsApiService.getAlerts()
 
                 if (response.isSuccessful) {
                     val body = response.body()

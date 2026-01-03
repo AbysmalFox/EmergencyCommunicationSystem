@@ -10,7 +10,7 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.example.emergencycommunicationsystem.data.models.WeatherState
-import com.example.emergencycommunicationsystem.data.network.RetrofitClient
+import com.example.emergencycommunicationsystem.data.network.WeatherApiClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -87,9 +87,9 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
     suspend fun fetchWeatherByLocation(lat: Double, lon: Double) {
         // The loading state is already set by the calling function.
         try {
-            val weatherResponse = RetrofitClient.weatherService.getCurrentWeatherByLocation(lat, lon, apiKey)
+            val weatherResponse = WeatherApiClient.weatherService.getCurrentWeatherByLocation(lat, lon, apiKey)
             val forecastResponse = try {
-                RetrofitClient.weatherService.getForecastByLocation(lat, lon, apiKey)
+                WeatherApiClient.weatherService.getForecastByLocation(lat, lon, apiKey)
             } catch (_: Exception) {
                 // If forecast fails, continue with current weather only
                 null

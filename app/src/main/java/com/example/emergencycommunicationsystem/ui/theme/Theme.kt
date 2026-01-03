@@ -57,7 +57,9 @@ fun EmergencyCommunicationSystemTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb()
+            // With edge-to-edge, we make the status bar transparent to let the app's background show.
+            window.statusBarColor = Color.Transparent.toArgb()
+            // This controls whether the status bar icons (clock, battery) are light or dark.
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }

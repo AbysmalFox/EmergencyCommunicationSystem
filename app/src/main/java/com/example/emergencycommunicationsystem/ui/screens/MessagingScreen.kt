@@ -32,7 +32,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.emergencycommunicationsystem.data.models.Message
 import com.example.emergencycommunicationsystem.data.models.QuickReply
 import java.text.SimpleDateFormat
@@ -43,25 +42,19 @@ import java.util.TimeZone
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessagingScreen(
-    alertId: Int,
+    viewModel: MessagingViewModel,
     alertTitle: String,
-    userId: Int,
     userName: String,
-    onBackPressed: () -> Unit,
-    messagingViewModel: MessagingViewModel = viewModel()
+    onBackPressed: () -> Unit
 ) {
-    val messages by messagingViewModel.messages.collectAsState()
-    val isLoading by messagingViewModel.isLoading.collectAsState()
-    val errorMessage by messagingViewModel.errorMessage.collectAsState()
-    val messageInput by messagingViewModel.messageInput.collectAsState()
-    val isSending by messagingViewModel.isSending.collectAsState()
-    val quickReplies by messagingViewModel.quickReplies.collectAsState()
+    val messages by viewModel.messages.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+    val messageInput by viewModel.messageInput.collectAsState()
+    val isSending by viewModel.isSending.collectAsState()
+    val quickReplies by viewModel.quickReplies.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
-
-    LaunchedEffect(Unit) {
-        messagingViewModel.initializeConversation(alertId, userId)
-    }
 
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
@@ -75,7 +68,7 @@ fun MessagingScreen(
                 message = errorMessage!!,
                 duration = SnackbarDuration.Short
             )
-            messagingViewModel.clearError()
+            viewModel.clearError()
         }
     }
 
@@ -136,14 +129,14 @@ fun MessagingScreen(
                         items(messages, key = { it.id }) { message ->
                             MessageBubble(
                                 message = message,
-                                isCurrentUser = message.senderId == userId
+                                isCurrentUser = message.senderId == viewModel.userId
                             )
                         }
                     }
 
                     QuickReplyPanel(
                         replies = quickReplies,
-                        onReplyClick = { reply -> messagingViewModel.onQuickReplyClicked(reply, userId, userName) }
+                        onReplyClick = { reply -> viewModel.onQuickReplyClicked(reply, userName) }
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -157,7 +150,7 @@ fun MessagingScreen(
                     ) {
                         TextField(
                             value = messageInput,
-                            onValueChange = { messagingViewModel.updateMessageInput(it) },
+                            onValueChange = { viewModel.updateMessageInput(it) },
                             modifier = Modifier
                                 .weight(1f)
                                 .height(56.dp),
@@ -174,7 +167,7 @@ fun MessagingScreen(
                         )
 
                         IconButton(
-                            onClick = { messagingViewModel.sendMessage(userId, userName) },
+                            onClick = { viewModel.sendMessage(userName) },
                             modifier = Modifier
                                 .size(56.dp)
                                 .background(
