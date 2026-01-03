@@ -7,7 +7,8 @@ data class RegisterRequest(
     val name: String,
     val email: String,
     val phone: String,
-    val password: String
+    val password: String,
+    @SerializedName("share_location") val shareLocation: Boolean
 )
 
 // Request for user login
@@ -21,8 +22,12 @@ data class AuthResponse(
     val success: Boolean,
     val message: String,
     @SerializedName("user_id") val userId: Int? = null,
-    val user: User? = null,
-    val token: String? = null
+    val token: String? = null,
+    // Added fields to match the flat JSON from login.php
+    val username: String? = null,
+    val email: String? = null,
+    // The 'user' object is kept for other responses, but made nullable
+    val user: User? = null
 )
 
 // Request to get user-specific data
@@ -37,9 +42,9 @@ data class ProfileDataResponse(
     val user: User? = null
 )
 
-// Represents a user object returned by the API
+// Represents a user object.
 data class User(
     val name: String,
     val email: String,
-    val phone: String? = null // Phone can be optional
+    val phone: String? = null
 )

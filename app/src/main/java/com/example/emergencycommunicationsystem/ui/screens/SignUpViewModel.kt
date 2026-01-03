@@ -14,15 +14,8 @@ import java.io.IOException
 sealed class SignUpState {
     object Idle : SignUpState()
     object Loading : SignUpState()
-    // Updated Success state to include user data and location permission
-    data class Success(
-        val message: String,
-        val userId: Int,
-        val username: String,
-        val email: String,
-        val token: String,
-        val locationPermissionGranted: Boolean
-    ) : SignUpState()
+    // Simplified Success state - the detailed user data is no longer needed here.
+    data class Success(val message: String) : SignUpState()
     data class Error(val message: String) : SignUpState()
 }
 
@@ -32,10 +25,7 @@ class SignUpViewModel : ViewModel() {
     val signUpState: StateFlow<SignUpState> = _signUpState
 
     fun signUp(fullName: String, email: String, phone: String, password: String, confirmPassword: String, locationPermissionGranted: Boolean) {
-        Log.d("SignUpViewModel", "Received fullName: '$fullName'")
-        Log.d("SignUpViewModel", "Received email: '$email'")
-        Log.d("SignUpViewModel", "Received phone: '$phone'")
-        Log.d("SignUpViewModel", "Location permission granted: $locationPermissionGranted")
+        Log.d("SignUpViewModel", "Attempting to sign up user: $email with location permission: $locationPermissionGranted")
 
         if (password != confirmPassword) {
             _signUpState.value = SignUpState.Error("Passwords do not match.")
@@ -58,39 +48,42 @@ class SignUpViewModel : ViewModel() {
                     name = fullName,
                     email = email,
                     phone = phone,
-                    password = password
+                    password = password,
+                    shareLocation = locationPermissionGranted
                 )
                 val response = ApiClient.authApiService.registerUser(request)
 
                 if (response.isSuccessful) {
                     val authResponse = response.body()
-                    if (authResponse?.success == true && authResponse.userId != null && authResponse.user != null && authResponse.token != null) {
-                        _signUpState.value = SignUpState.Success(
-                            message = authResponse.message,
-                            userId = authResponse.userId,
-                            username = authResponse.user.name,
-                            email = authResponse.user.email,
-                            token = authResponse.token,
-                            locationPermissionGranted = locationPermissionGranted
-                        )
+                    // Simplified the success check. We only care if the backend confirms success.
+                    if (authResponse?.success == true) {
+                        Log.i("SignUpViewModel", "Sign-up successful for user: $email")
+                        _signUpState.value = SignUpState.Success(authResponse.message)
                     } else {
-                        _signUpState.value = SignUpState.Error(authResponse?.message ?: "Registration failed: Unknown reason.")
+                        val backendMessage = authResponse?.message ?: "Registration failed: Unknown reason from backend."
+                        Log.w("SignUpViewModel", "Backend rejected sign-up: $backendMessage")
+                        _signUpState.value = SignUpState.Error(backendMessage)
                     }
                 } else {
-                    val errorBodyString = response.errorBody()?.string()
-                    _signUpState.value = SignUpState.Error("Server error (${response.code()}): ${errorBodyString ?: "No specific error message."}")
+                    val errorBodyString = response.errorBody()?.string() ?: "No error body"
                     Log.e("SignUpViewModel", "HTTP Error ${response.code()}: $errorBodyString")
+                    if (response.code() in 500..599) {
+                        Log.e("SignUpViewModel", "This is a server-side error. Check your PHP/Apache 'error.log' in XAMPP for the detailed PDOException message.")
+                        _signUpState.value = SignUpState.Error("Server error (${response.code()}): Could not complete registration. Check Logcat for guidance.")
+                    } else {
+                        _signUpState.value = SignUpState.Error("Server error (${response.code()}): $errorBodyString")
+                    }
                 }
             } catch (e: HttpException) {
                 val errorBody = e.response()?.errorBody()?.string()
-                _signUpState.value = SignUpState.Error("HTTP Exception: ${e.code()} - ${errorBody ?: e.message}")
                 Log.e("SignUpViewModel", "HttpException: ${e.code()} - $errorBody", e)
+                _signUpState.value = SignUpState.Error("Network error: ${e.code()}. See Logcat for details.")
             } catch (e: IOException) {
-                _signUpState.value = SignUpState.Error("Network error: Could not connect to server. Check your connection and XAMPP.")
-                Log.e("SignUpViewModel", "IOException during signup: ${e.message}", e)
+                Log.e("SignUpViewModel", "IOException during sign-up. Check network connection and XAMPP server status.", e)
+                _signUpState.value = SignUpState.Error("Network error: Could not connect to the server.")
             } catch (e: Exception) {
-                _signUpState.value = SignUpState.Error("An unexpected error occurred: ${e.localizedMessage ?: "Unknown error"}")
-                Log.e("SignUpViewModel", "Unexpected error during signup: ${e.message}", e)
+                Log.e("SignUpViewModel", "An unexpected error occurred during sign-up.", e)
+                _signUpState.value = SignUpState.Error("An unexpected error occurred: ${e.localizedMessage}")
             }
         }
     }

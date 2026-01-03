@@ -49,11 +49,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        ApiClient.initializeAndCheckConnection() // <-- ADD THIS LINE
+        ApiClient.initializeAndCheckConnection()
         AuthManager.initialize(applicationContext)
         enableEdgeToEdge()
 
-        // Asynchronously set the language. This won't block the UI.
         lifecycleScope.launch(Dispatchers.IO) {
             val lang = UserPrefs.getLanguage(this@MainActivity).first()
             LocaleHelper.setAppLocale(this@MainActivity, lang)
@@ -76,7 +75,6 @@ fun EmergencyApp() {
     val activity = (LocalContext.current as? ComponentActivity)
     val coroutineScope = rememberCoroutineScope()
 
-    // Create a single instance of the repository to be reused.
     val messagingRepository = remember { MessagingRepository() }
     val settingsRepository = remember { SettingsRepository() }
 
@@ -115,7 +113,7 @@ fun EmergencyApp() {
                 startDestination = Screen.Home.route,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding) // Apply padding here
+                    .padding(innerPadding)
             ) {
                 composable(Screen.Home.route) {
                     HomeScreen(
@@ -182,33 +180,19 @@ fun EmergencyApp() {
                     val viewModel: SignUpViewModel = viewModel()
                     val state by viewModel.signUpState.collectAsState()
 
-                    LaunchedEffect(state) {
-                        if (state is SignUpState.Success) {
-                            val successState = state as SignUpState.Success
-                            AuthManager.saveLoginState(
-                                successState.userId,
-                                successState.username,
-                                successState.email,
-                                successState.token
-                            )
-
-                            if (successState.locationPermissionGranted) {
-                                // TODO: Implement location fetching and update logic here
-                            }
-
-                            navController.navigate(Screen.Profile.route) {
-                                popUpTo(Screen.SignUp.route) { inclusive = true }
-                            }
-                        }
-                    }
-
                     SignUpScreen(
                         state = state,
                         onSignUpClick = { fullName, email, phone, password, confirmPassword, locationPermissionGranted ->
                             viewModel.signUp(fullName, email, phone, password, confirmPassword, locationPermissionGranted)
                         },
                         onLoginClick = { navController.navigate(Screen.Login.route) },
-                        onBackPressed = { navController.popBackStack() }
+                        onBackPressed = { navController.popBackStack() },
+                        onRegistrationSuccess = {
+                            navController.navigate(Screen.Login.route) {
+                                popUpTo(Screen.SignUp.route) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
                     )
                 }
                 composable(Screen.LanguageSettings.route) {
@@ -245,7 +229,6 @@ fun EmergencyApp() {
                     val userName = backStackEntry.arguments?.getString("userName") ?: ""
 
                     if (alertId > 0 && userId > 0) {
-                        // Use the remembered repository instance here
                         val factory = MessagingViewModelFactory(alertId, userId, messagingRepository)
                         val messagingViewModel: MessagingViewModel = viewModel(key = "messaging_$alertId", factory = factory)
 
@@ -264,7 +247,6 @@ fun EmergencyApp() {
                 }
             }
 
-            // Place the BottomNavigationBar inside the Box, aligned to the bottom
             if (currentRoute in mainScreens) {
                 BottomNavigationBar(
                     navController = navController,
