@@ -30,10 +30,13 @@ import androidx.navigation.navArgument
 import com.example.emergencycommunicationsystem.data.UserPrefs
 import com.example.emergencycommunicationsystem.data.network.ApiClient
 import com.example.emergencycommunicationsystem.data.repository.MessagingRepository
+import com.example.emergencycommunicationsystem.data.repository.SettingsRepository
 import com.example.emergencycommunicationsystem.navigation.BottomNavigationBar
 import com.example.emergencycommunicationsystem.navigation.Screen
 import com.example.emergencycommunicationsystem.ui.screens.*
 import com.example.emergencycommunicationsystem.ui.theme.EmergencyCommunicationSystemTheme
+import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModel
+import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModelFactory
 import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -73,6 +76,7 @@ fun EmergencyApp() {
 
     // Create a single instance of the repository to be reused.
     val messagingRepository = remember { MessagingRepository() }
+    val settingsRepository = remember { SettingsRepository() }
 
     val isLoggedIn by AuthManager.isLoggedInFlow.collectAsState()
 
@@ -129,6 +133,10 @@ fun EmergencyApp() {
                     )
                 }
                 composable(Screen.Profile.route) {
+                    val userId = AuthManager.getUserId()
+                    val factory = remember(userId, settingsRepository) { ProfileViewModelFactory(userId, settingsRepository) }
+                    val profileViewModel: ProfileViewModel = viewModel(key = "profile_$userId", factory = factory)
+
                     ProfileScreen(
                         isLoggedIn = isLoggedIn,
                         username = if (isLoggedIn) AuthManager.getUsername() else null,
@@ -146,7 +154,8 @@ fun EmergencyApp() {
                         },
                         onLanguageSettingsClick = { navController.navigate(Screen.LanguageSettings.route) },
                         onPrivacyPolicyClick = { navController.navigate(Screen.PrivacyPolicy.route) },
-                        onAboutAppClick = { navController.navigate(Screen.AboutApp.route) }
+                        onAboutAppClick = { navController.navigate(Screen.AboutApp.route) },
+                        profileViewModel = profileViewModel
                     )
                 }
                 composable(Screen.EmergencyContacts.route) {

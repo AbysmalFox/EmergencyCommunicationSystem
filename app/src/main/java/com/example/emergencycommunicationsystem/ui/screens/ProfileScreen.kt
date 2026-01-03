@@ -3,7 +3,6 @@ package com.example.emergencycommunicationsystem.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,6 +28,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,6 +54,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.emergencycommunicationsystem.R
+import com.example.emergencycommunicationsystem.network.UserPreferences
+import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -66,7 +69,8 @@ fun ProfileScreen(
     onLogoutClick: () -> Unit,
     onLanguageSettingsClick: () -> Unit,
     onPrivacyPolicyClick: () -> Unit,
-    onAboutAppClick: () -> Unit
+    onAboutAppClick: () -> Unit,
+    profileViewModel: ProfileViewModel
 ) {
     var showNotificationSettings by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
@@ -149,28 +153,42 @@ fun ProfileScreen(
                 onDismissRequest = { showNotificationSettings = false },
                 sheetState = sheetState
             ) {
-                NotificationSettingsSheet(onDoneClick = {
-                    scope.launch {
-                        sheetState.hide()
-                    }.invokeOnCompletion {
-                        if (!sheetState.isVisible) {
-                            showNotificationSettings = false
+                val settingsState by profileViewModel.uiState.collectAsState()
+                if (settingsState != null) {
+                    NotificationSettingsSheet(
+                        preferences = settingsState!!,
+                        onPreferenceChange = {
+                            profileViewModel.onPreferenceChange(it)
+                        },
+                        onDoneClick = {
+                            scope.launch {
+                                sheetState.hide()
+                            }.invokeOnCompletion {
+                                if (!sheetState.isVisible) {
+                                    showNotificationSettings = false
+                                }
+                            }
                         }
+                    )
+                } else {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator()
                     }
-                })
+                }
             }
         }
     }
 }
 
 @Composable
-private fun NotificationSettingsSheet(onDoneClick: () -> Unit) {
-    var receiveNotifications by remember { mutableStateOf(true) }
-    var crimeAlerts by remember { mutableStateOf(true) }
-    var disasterWarnings by remember { mutableStateOf(true) }
-    var fireAlerts by remember { mutableStateOf(true) }
-    var weatherAdvisories by remember { mutableStateOf(true) }
-
+private fun NotificationSettingsSheet(
+    preferences: UserPreferences,
+    onPreferenceChange: (UserPreferences) -> Unit,
+    onDoneClick: () -> Unit
+) {
     Column(
         modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp)
     ) {
@@ -184,39 +202,49 @@ private fun NotificationSettingsSheet(onDoneClick: () -> Unit) {
         ProfileItem(
             icon = Icons.Default.Notifications,
             text = "Receive Notifications",
-            checked = receiveNotifications,
-            onCheckedChange = { receiveNotifications = it }
+            checked = preferences.receive_notifications,
+            onCheckedChange = { isEnabled ->
+                onPreferenceChange(preferences.copy(receive_notifications = isEnabled))
+            }
         )
 
         AnimatedVisibility(
-            visible = receiveNotifications,
+            visible = preferences.receive_notifications,
             enter = expandVertically(),
             exit = shrinkVertically()
         ) {
             Column(modifier = Modifier.padding(start = 16.dp, top = 8.dp)) {
                 ProfileItem(
-                    icon = Icons.Default.LocalPolice, 
+                    icon = Icons.Default.LocalPolice,
                     text = "Crime Alerts",
-                    checked = crimeAlerts,
-                    onCheckedChange = { crimeAlerts = it }
+                    checked = preferences.crime_alerts,
+                    onCheckedChange = { isEnabled ->
+                        onPreferenceChange(preferences.copy(crime_alerts = isEnabled))
+                    }
                 )
                 ProfileItem(
                     icon = Icons.Default.Warning,
                     text = "Disaster Warnings",
-                    checked = disasterWarnings,
-                    onCheckedChange = { disasterWarnings = it }
+                    checked = preferences.disaster_warnings,
+                    onCheckedChange = { isEnabled ->
+                        onPreferenceChange(preferences.copy(disaster_warnings = isEnabled))
+                    }
                 )
                 ProfileItem(
                     icon = Icons.Default.LocalFireDepartment,
                     text = "Fire Alerts",
-                    checked = fireAlerts,
-                    onCheckedChange = { fireAlerts = it }
+                    checked = preferences.fire_alerts,
+                    onCheckedChange = { isEnabled ->
+                        onPreferenceChange(preferences.copy(fire_alerts = isEnabled))
+                    }
                 )
                 ProfileItem(
                     icon = Icons.Default.Air,
                     text = "Weather Advisories",
-                    checked = weatherAdvisories,
-                    onCheckedChange = { weatherAdvisories = it }
+                    checked = preferences.weather_advisories,
+                    onCheckedChange = { isEnabled ->
+                        onPreferenceChange(preferences.copy(weather_advisories = isEnabled))
+                    }
                 )
             }
         }
@@ -282,7 +310,7 @@ private fun LoggedInUserCard(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
-                .fillMaxWidth() 
+                .fillMaxWidth()
                 .padding(vertical = 24.dp, horizontal = 16.dp),
             verticalArrangement = Arrangement.Center
         ) {
@@ -324,9 +352,9 @@ fun ProfileItem(
     val isSwitchItem = checked != null && onCheckedChange != null
 
     Card(
-        onClick = { 
-            if (onClick != null) onClick() 
-            else if (isSwitchItem) onCheckedChange?.invoke(checked.not()) 
+        onClick = {
+            if (onClick != null) onClick()
+            else if (isSwitchItem) onCheckedChange?.invoke(checked.not())
         },
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
