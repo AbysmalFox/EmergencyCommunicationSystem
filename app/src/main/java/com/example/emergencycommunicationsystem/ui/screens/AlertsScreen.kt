@@ -121,7 +121,7 @@ fun AlertItem(alert: Alert, onMessageClick: (Alert) -> Unit = {}) {
             ) {
                 Column {
                     Text(
-                        text = alert.source,
+                        text = alert.source ?: "Community",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
