@@ -1,5 +1,6 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.emergencycommunicationsystem.data.RegisterRequest
@@ -9,12 +10,19 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
-import android.util.Log
 
 sealed class SignUpState {
     object Idle : SignUpState()
     object Loading : SignUpState()
-    data class Success(val message: String) : SignUpState()
+    // Updated Success state to include user data and location permission
+    data class Success(
+        val message: String,
+        val userId: Int,
+        val username: String,
+        val email: String,
+        val token: String,
+        val locationPermissionGranted: Boolean
+    ) : SignUpState()
     data class Error(val message: String) : SignUpState()
 }
 
@@ -23,18 +31,17 @@ class SignUpViewModel : ViewModel() {
     private val _signUpState = MutableStateFlow<SignUpState>(SignUpState.Idle)
     val signUpState: StateFlow<SignUpState> = _signUpState
 
-    fun signUp(fullName: String, email: String, password: String, confirmPassword: String) {
-        // Add logging here to check received values
-        Log.d("SignUpViewModel", "Received fullName: '" + fullName + "'")
-        Log.d("SignUpViewModel", "Received email: '" + email + "'")
-        Log.d("SignUpViewModel", "Received password: '" + password + "'")
-        Log.d("SignUpViewModel", "Received confirmPassword: '" + confirmPassword + "'")
+    fun signUp(fullName: String, email: String, phone: String, password: String, confirmPassword: String, locationPermissionGranted: Boolean) {
+        Log.d("SignUpViewModel", "Received fullName: '$fullName'")
+        Log.d("SignUpViewModel", "Received email: '$email'")
+        Log.d("SignUpViewModel", "Received phone: '$phone'")
+        Log.d("SignUpViewModel", "Location permission granted: $locationPermissionGranted")
 
         if (password != confirmPassword) {
             _signUpState.value = SignUpState.Error("Passwords do not match.")
             return
         }
-        if (fullName.isBlank() || email.isBlank() || password.isBlank()) {
+        if (fullName.isBlank() || email.isBlank() || password.isBlank() || phone.isBlank()) {
             _signUpState.value = SignUpState.Error("All fields are required.")
             return
         }
@@ -50,14 +57,22 @@ class SignUpViewModel : ViewModel() {
                 val request = RegisterRequest(
                     name = fullName,
                     email = email,
+                    phone = phone,
                     password = password
                 )
                 val response = ApiClient.authApiService.registerUser(request)
 
                 if (response.isSuccessful) {
                     val authResponse = response.body()
-                    if (authResponse?.success == true) {
-                        _signUpState.value = SignUpState.Success(authResponse.message)
+                    if (authResponse?.success == true && authResponse.userId != null && authResponse.user != null && authResponse.token != null) {
+                        _signUpState.value = SignUpState.Success(
+                            message = authResponse.message,
+                            userId = authResponse.userId,
+                            username = authResponse.user.name,
+                            email = authResponse.user.email,
+                            token = authResponse.token,
+                            locationPermissionGranted = locationPermissionGranted
+                        )
                     } else {
                         _signUpState.value = SignUpState.Error(authResponse?.message ?: "Registration failed: Unknown reason.")
                     }

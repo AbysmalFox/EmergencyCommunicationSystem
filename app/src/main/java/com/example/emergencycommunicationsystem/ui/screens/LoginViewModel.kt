@@ -48,23 +48,21 @@ class LoginViewModel : ViewModel() {
 
                     if (authResponse.success) {
                         val userId = authResponse.userId
-                        val username = authResponse.username
-                        val responseEmail = authResponse.email
+                        val user = authResponse.user
                         val token = authResponse.token
 
-                        if (userId != null && username != null && responseEmail != null && token != null) {
+                        if (userId != null && user != null && token != null) {
                             _loginState.value = LoginState.Success(
                                 authResponse.message,
                                 userId,
-                                username,
-                                responseEmail,
+                                user.name,
+                                user.email,
                                 token
                             )
                         } else {
                             val missingFields = mutableListOf<String>()
                             if (userId == null) missingFields.add("userId")
-                            if (username == null) missingFields.add("username")
-                            if (responseEmail == null) missingFields.add("email")
+                            if (user == null) missingFields.add("user")
                             if (token == null) missingFields.add("token")
                             val errorMsg = "Login succeeded, but the server response was incomplete. Missing fields: ${missingFields.joinToString()}"
                             Log.e("LoginViewModel", "$errorMsg. Full response: $authResponse")

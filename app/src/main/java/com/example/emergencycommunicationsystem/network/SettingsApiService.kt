@@ -14,8 +14,18 @@ data class UserPreferences(
     val weather_advisories: Boolean
 )
 
+// Request body for updating location
+data class LocationUpdateRequest(
+    val user_id: Int,
+    val latitude: Double,
+    val longitude: Double,
+    val accuracy: Float? = null,
+    val source: String? = "gps"
+)
+
 data class PreferencesResponse(val success: Boolean, val preferences: UserPreferences)
 data class UpdatePreferencesResponse(val success: Boolean, val message: String)
+data class LocationUpdateResponse(val success: Boolean, val message: String)
 
 interface SettingsApiService {
     @GET("user/get_preferences.php")
@@ -23,4 +33,7 @@ interface SettingsApiService {
 
     @POST("user/update_preferences.php")
     suspend fun updateUserPreferences(@Body preferences: UserPreferences): UpdatePreferencesResponse
+
+    @POST("user/update_location.php")
+    suspend fun updateUserLocation(@Body request: LocationUpdateRequest): LocationUpdateResponse
 }

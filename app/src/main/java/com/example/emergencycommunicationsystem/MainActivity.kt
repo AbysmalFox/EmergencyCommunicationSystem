@@ -37,6 +37,8 @@ import com.example.emergencycommunicationsystem.ui.screens.*
 import com.example.emergencycommunicationsystem.ui.theme.EmergencyCommunicationSystemTheme
 import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModel
 import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModelFactory
+import com.example.emergencycommunicationsystem.ui.screens.SignUpViewModel
+import com.example.emergencycommunicationsystem.ui.screens.SignUpState
 import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -182,6 +184,18 @@ fun EmergencyApp() {
 
                     LaunchedEffect(state) {
                         if (state is SignUpState.Success) {
+                            val successState = state as SignUpState.Success
+                            AuthManager.saveLoginState(
+                                successState.userId,
+                                successState.username,
+                                successState.email,
+                                successState.token
+                            )
+
+                            if (successState.locationPermissionGranted) {
+                                // TODO: Implement location fetching and update logic here
+                            }
+
                             navController.navigate(Screen.Profile.route) {
                                 popUpTo(Screen.SignUp.route) { inclusive = true }
                             }
@@ -190,8 +204,8 @@ fun EmergencyApp() {
 
                     SignUpScreen(
                         state = state,
-                        onSignUpClick = { fullName, email, password, confirmPassword ->
-                            viewModel.signUp(fullName, email, password, confirmPassword)
+                        onSignUpClick = { fullName, email, phone, password, confirmPassword, locationPermissionGranted ->
+                            viewModel.signUp(fullName, email, phone, password, confirmPassword, locationPermissionGranted)
                         },
                         onLoginClick = { navController.navigate(Screen.Login.route) },
                         onBackPressed = { navController.popBackStack() }
