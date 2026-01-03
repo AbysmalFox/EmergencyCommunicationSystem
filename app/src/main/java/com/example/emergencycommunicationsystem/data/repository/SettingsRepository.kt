@@ -1,6 +1,7 @@
 package com.example.emergencycommunicationsystem.data.repository
 
 import com.example.emergencycommunicationsystem.data.network.ApiClient
+import com.example.emergencycommunicationsystem.network.LocationUpdateRequest
 import com.example.emergencycommunicationsystem.network.SettingsApiService
 import com.example.emergencycommunicationsystem.network.UserPreferences
 
@@ -21,6 +22,14 @@ class SettingsRepository {
         if (!response.success) {
             // Use the message from the server if available
             throw Exception(response.message ?: "Failed to update preferences on the server.")
+        }
+    }
+
+    suspend fun updateUserLocation(userId: Int, latitude: Double, longitude: Double, accuracy: Float?) {
+        val request = LocationUpdateRequest(userId, latitude, longitude, accuracy)
+        val response = apiService.updateUserLocation(request)
+        if (!response.success) {
+            throw Exception(response.message ?: "Failed to update location on the server.")
         }
     }
 }

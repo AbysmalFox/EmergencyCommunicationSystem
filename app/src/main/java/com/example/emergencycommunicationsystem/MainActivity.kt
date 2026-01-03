@@ -1,6 +1,7 @@
 package com.example.emergencycommunicationsystem
 
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -35,6 +36,7 @@ import com.example.emergencycommunicationsystem.navigation.BottomNavigationBar
 import com.example.emergencycommunicationsystem.navigation.Screen
 import com.example.emergencycommunicationsystem.ui.screens.*
 import com.example.emergencycommunicationsystem.ui.theme.EmergencyCommunicationSystemTheme
+import com.example.emergencycommunicationsystem.util.LocationUpdater
 import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModel
 import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModelFactory
 import com.example.emergencycommunicationsystem.ui.screens.SignUpViewModel
@@ -85,6 +87,26 @@ fun EmergencyApp() {
 
     val mainScreens = listOf(Screen.Home.route, Screen.Alerts.route, Screen.Profile.route)
     val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
+
+    // --- Location Update Logic ---
+    if (isLoggedIn) {
+        LocationUpdater {
+            latitude, longitude, accuracy ->
+            coroutineScope.launch {
+                try {
+                    val userId = AuthManager.getUserId()
+                    if (userId != -1) {
+                        settingsRepository.updateUserLocation(userId, latitude, longitude, accuracy)
+                        Log.d("MainActivity", "Location updated successfully for user $userId")
+                    }
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "Failed to update location on server", e)
+                    // Optionally, show a subtle toast or snackbar
+                    // Toast.makeText(context, "Could not update location", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
 
     fun navigateToMessaging(alertIdStr: String, alertTitle: String) {
         if (isLoggedIn) {
