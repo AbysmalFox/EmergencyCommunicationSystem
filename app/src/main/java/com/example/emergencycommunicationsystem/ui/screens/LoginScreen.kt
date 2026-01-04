@@ -46,7 +46,7 @@ fun LoginScreen(
     onBackPressed: () -> Unit,
     viewModel: LoginViewModel = viewModel()
 ) {
-    var email by remember { mutableStateOf("") }
+    var emailOrPhone by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -88,12 +88,12 @@ fun LoginScreen(
             )
             Spacer(modifier = Modifier.height(32.dp))
             OutlinedTextField(
-                value = email,
+                value = emailOrPhone,
                 onValueChange = {
-                    email = it
+                    emailOrPhone = it
                     errorMessage = null
                 },
-                label = { Text("Email Address") },
+                label = { Text("Email/Phone Number:") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 modifier = Modifier.fillMaxWidth(),
                 enabled = loginState !is LoginState.Loading
@@ -130,7 +130,7 @@ fun LoginScreen(
 
             Button(
                 onClick = {
-                    viewModel.login(email, password)
+                    viewModel.login(emailOrPhone, password)
                 },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = loginState !is LoginState.Loading

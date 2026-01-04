@@ -13,7 +13,8 @@ data class RegisterRequest(
 
 // Request for user login
 data class LoginRequest(
-    val email: String,
+    val email: String? = null,
+    val phone: String? = null,
     val password: String
 )
 

@@ -1,6 +1,7 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
 import android.util.Log
+import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.emergencycommunicationsystem.data.LoginRequest
@@ -24,9 +25,9 @@ class LoginViewModel : ViewModel() {
     private val _loginState = MutableStateFlow<LoginState>(LoginState.Idle)
     val loginState: StateFlow<LoginState> = _loginState
 
-    fun login(email: String, password: String) {
-        if (email.isBlank() || password.isBlank()) {
-            _loginState.value = LoginState.Error("Email and password are required.")
+    fun login(emailOrPhone: String, password: String) {
+        if (emailOrPhone.isBlank() || password.isBlank()) {
+            _loginState.value = LoginState.Error("Email/Phone and password are required.")
             return
         }
 
@@ -34,7 +35,13 @@ class LoginViewModel : ViewModel() {
 
         viewModelScope.launch {
             try {
-                val request = LoginRequest(email, password)
+                val isEmail = Patterns.EMAIL_ADDRESS.matcher(emailOrPhone).matches()
+                val request = if (isEmail) {
+                    LoginRequest(email = emailOrPhone, password = password)
+                } else {
+                    LoginRequest(phone = emailOrPhone, password = password)
+                }
+
                 val response = ApiClient.authApiService.loginUser(request)
 
                 if (response.isSuccessful) {
