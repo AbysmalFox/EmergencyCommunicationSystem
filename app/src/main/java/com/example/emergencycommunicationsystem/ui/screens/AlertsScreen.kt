@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -51,27 +52,34 @@ import com.example.emergencycommunicationsystem.AuthManager
 import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.viewmodel.AlertsUiState
 import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
+import java.util.Locale
 
 @Composable
-fun getIconForCategory(category: String): ImageVector {
-    return when (category) {
-        "Weather" -> Icons.Default.Cloud
-        "Health" -> Icons.Default.LocalHospital
-        "Security" -> Icons.Default.Security
-        "Earthquake" -> Icons.Default.House
-        "Fire" -> Icons.Default.Fireplace
+fun getIconForCategory(alert: Alert): ImageVector {
+    val category = alert.category?.lowercase(Locale.getDefault()) ?: ""
+    val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
+    return when {
+        "weather" in category || "typhoon" in title || "storm" in title || "rain" in title -> Icons.Default.Cloud
+        "health" in category -> Icons.Default.LocalHospital
+        "security" in category -> Icons.Default.Security
+        "earthquake" in category || "tremor" in title -> Icons.Default.House
+        "fire" in category || "wildfire" in title -> Icons.Default.Fireplace
+        "water" in category || "water" in title || "flood" in title -> Icons.Default.WaterDrop
         else -> Icons.Default.Info
     }
 }
 
 @Composable
-fun getColorForCategory(category: String): Color {
-    return when (category) {
-        "Weather" -> Color(0xFF4A90E2) // Blue
-        "Health" -> Color(0xFF50E3C2) // Teal
-        "Security" -> Color(0xFFD0021B) // Red
-        "Earthquake" -> Color(0xFF7B4F2C) // Brown
-        "Fire" -> Color(0xFFF5A623) // Orange
+fun getColorForCategory(alert: Alert): Color {
+    val category = alert.category?.lowercase(Locale.getDefault()) ?: ""
+    val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
+    return when {
+        "weather" in category || "typhoon" in title || "storm" in title || "rain" in title -> Color(0xFF4A90E2) // Blue
+        "health" in category -> Color(0xFF50E3C2) // Teal
+        "security" in category -> Color(0xFFD0021B) // Red
+        "earthquake" in category || "tremor" in title -> Color(0xFF7B4F2C) // Brown
+        "fire" in category || "wildfire" in title -> Color(0xFFF5A623) // Orange
+        "water" in category || "water" in title || "flood" in title -> Color(0xFF4A90E2) // Blue
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 }
@@ -90,16 +98,16 @@ fun AlertItem(
         Column(modifier = Modifier.padding(16.dp)) {
             Row {
                 Icon(
-                    imageVector = getIconForCategory(alert.category ?: "Info"),
+                    imageVector = getIconForCategory(alert),
                     contentDescription = alert.category ?: "Alert Category",
                     modifier = Modifier.size(40.dp).align(Alignment.Top),
-                    tint = getColorForCategory(alert.category ?: "Info")
+                    tint = getColorForCategory(alert)
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = (alert.category ?: "General").uppercase(),
-                        color = getColorForCategory(alert.category ?: "Info"),
+                        color = getColorForCategory(alert),
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp
                     )

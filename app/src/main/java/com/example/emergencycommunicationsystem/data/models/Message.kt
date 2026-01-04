@@ -22,8 +22,6 @@ data class Message(
     @SerializedName("icon")
     val icon: String? = null,
 
-    // THE FIX: Add a nullable nonce field.
-    // This will be a unique random string for optimistic messages.
     @SerializedName("nonce")
     val nonce: String? = null
 )
@@ -33,7 +31,6 @@ data class MessageResponse(
     val message: String
 )
 
-// This class correctly models the response from messages/list.php
 data class MessagesResponse(
     val success: Boolean,
     val messages: List<Message>,
