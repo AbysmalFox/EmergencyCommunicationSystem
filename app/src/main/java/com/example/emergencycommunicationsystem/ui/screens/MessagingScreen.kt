@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.emergencycommunicationsystem.data.models.Message
 import com.example.emergencycommunicationsystem.data.models.QuickReply
+import kotlinx.coroutines.flow.collectLatest
 import java.text.SimpleDateFormat
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -44,9 +45,12 @@ import java.util.TimeZone
 @Composable
 fun MessagingScreen(
     viewModel: MessagingViewModel,
+    alertId: Int,
     alertTitle: String?,
     userName: String?,
-    onBackPressed: () -> Unit
+    onBackPressed: () -> Unit,
+    onNavigateToPersistentChat: () -> Unit,
+    onNavigateToEmergencyContacts: () -> Unit
 ) {
     val messages by viewModel.messages.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -73,6 +77,15 @@ fun MessagingScreen(
         }
     }
 
+    LaunchedEffect(Unit) {
+        viewModel.navigationChannel.collectLatest {
+            when(it) {
+                is NavigationRequest.ToPersistentChat -> onNavigateToPersistentChat()
+                is NavigationRequest.ToEmergencyContacts -> onNavigateToEmergencyContacts()
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -84,7 +97,7 @@ fun MessagingScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Alert Discussion",
+                            text = if (alertId != 999) "Automated Assistant" else "Live Responder",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -137,7 +150,13 @@ fun MessagingScreen(
 
                     QuickReplyPanel(
                         replies = quickReplies,
-                        onReplyClick = { reply -> viewModel.onQuickReplyClicked(reply, userName ?: "User") }
+                        onReplyClick = { reply ->
+                            if (alertId == 999) {
+                                viewModel.onPersistentQuickReplyClicked(reply, userName ?: "User")
+                            } else {
+                                viewModel.onTemporaryQuickReplyClicked(reply)
+                            }
+                        }
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -168,17 +187,23 @@ fun MessagingScreen(
                         )
 
                         IconButton(
-                            onClick = { viewModel.sendMessage(userName ?: "User") },
+                            onClick = {
+                                if (alertId == 999) {
+                                    viewModel.sendPersistentMessage(userName ?: "User")
+                                } else {
+                                    viewModel.sendTemporaryMessage(messageInput)
+                                }
+                            },
                             modifier = Modifier
                                 .size(56.dp)
                                 .background(
-                                    color = if (isSending)
+                                    color = if (isSending || messageInput.isBlank())
                                         MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                                     else
                                         MaterialTheme.colorScheme.primary,
                                     shape = RoundedCornerShape(12.dp)
                                 ),
-                            enabled = !isSending
+                            enabled = !isSending && messageInput.isNotBlank()
                         ) {
                             if (isSending) {
                                 CircularProgressIndicator(

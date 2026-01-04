@@ -45,6 +45,7 @@ import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.net.URLDecoder
 import java.net.URLEncoder
 
 class MainActivity : ComponentActivity() {
@@ -266,18 +267,25 @@ fun EmergencyApp() {
                 ) { backStackEntry ->
                     val alertId = backStackEntry.arguments?.getInt("alertId") ?: -1
                     val userId = backStackEntry.arguments?.getInt("userId") ?: -1
-                    val alertTitle = backStackEntry.arguments?.getString("alertTitle") ?: ""
+                    val alertTitle = URLDecoder.decode(backStackEntry.arguments?.getString("alertTitle") ?: "Chat", "UTF-8")
                     val userName = backStackEntry.arguments?.getString("userName") ?: ""
 
                     if (alertId > 0 && userId > 0) {
-                        val factory = MessagingViewModelFactory(alertId, userId, messagingRepository)
+                        val factory = MessagingViewModelFactory(alertId, userId, alertTitle, messagingRepository)
                         val messagingViewModel: MessagingViewModel = viewModel(key = "messaging_$alertId", factory = factory)
 
                         MessagingScreen(
                             viewModel = messagingViewModel,
+                            alertId = alertId,
                             alertTitle = alertTitle,
                             userName = userName,
-                            onBackPressed = { navController.popBackStack() }
+                            onBackPressed = { navController.popBackStack() },
+                            onNavigateToPersistentChat = {
+                                navigateToMessaging(alertId = 999, alertTitle = "General Inquiry")
+                            },
+                            onNavigateToEmergencyContacts = {
+                                navController.navigate(Screen.EmergencyContacts.route)
+                            }
                         )
                     } else {
                         LaunchedEffect(Unit) {

@@ -8,10 +8,12 @@ import com.example.emergencycommunicationsystem.data.models.Message
 import com.example.emergencycommunicationsystem.data.models.QuickReply
 import com.example.emergencycommunicationsystem.data.repository.MessagingRepository
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -20,10 +22,16 @@ import java.util.Locale
 import java.util.UUID
 import kotlin.random.Random
 
+sealed class NavigationRequest {
+    object ToPersistentChat : NavigationRequest()
+    object ToEmergencyContacts : NavigationRequest()
+}
+
 class MessagingViewModel(
-    private val alertId: Int,
+    private val alertId: Int, // The ViewModel already receives this
     val userId: Int, // Public so the screen can access it
-    private val messagingRepository: MessagingRepository
+    private val messagingRepository: MessagingRepository,
+    private val alertTitle: String // Add alertTitle to use in bot messages
 ) : ViewModel() {
 
     private val _messages = MutableStateFlow<List<Message>>(emptyList())
@@ -49,11 +57,111 @@ class MessagingViewModel(
 
     private var pollingJob: Job? = null
 
+    private val _navigationChannel = Channel<NavigationRequest>()
+    val navigationChannel = _navigationChannel.receiveAsFlow()
+
+    // THIS IS THE KEY: A flag to determine the mode.
+    private val isTemporaryChat = (alertId != 999) // 999 is persistent, all others are temporary
+
     init {
-        initializeConversation()
+        if (isTemporaryChat) {
+            // Start the temporary chatbot session
+            initializeTemporaryChat()
+        } else {
+            // Start the existing persistent chat session
+            initializePersistentConversation()
+        }
     }
 
-    private fun initializeConversation() {
+    // --- Temporary Chat Logic ---
+    private fun initializeTemporaryChat() {
+        _isLoading.value = false
+        // Start the conversation with a dynamic bot greeting
+        val initialBotMessage = createBotMessage(
+            "Hello 👋 I am an automated assistant for the '$alertTitle' alert. Please select an option below."
+        )
+        _messages.value = listOf(initialBotMessage)
+        _quickReplies.value = getTemporaryInitialOptions()
+    }
+
+    fun onTemporaryQuickReplyClicked(reply: QuickReply) {
+        val text = reply.text ?: return
+
+        // Handle special navigation cases
+        when (reply.payload) {
+            "contact_responder" -> {
+                viewModelScope.launch { _navigationChannel.send(NavigationRequest.ToPersistentChat) }
+                val userMessage = createUserMessage(text)
+                _messages.value += userMessage
+                _quickReplies.value = emptyList()
+                viewModelScope.launch {
+                    delay(600)
+                    _messages.value += createBotMessage("You are being connected to a live responder.")
+                }
+                return
+            }
+            "emergency_contacts" -> {
+                viewModelScope.launch { _navigationChannel.send(NavigationRequest.ToEmergencyContacts) }
+                val userMessage = createUserMessage(text)
+                _messages.value += userMessage
+                _quickReplies.value = emptyList()
+                viewModelScope.launch {
+                    delay(600)
+                    _messages.value += createBotMessage("Navigating to emergency contacts.")
+                }
+                return
+            }
+        }
+
+        // For regular replies, just send the message.
+        sendTemporaryMessage(text)
+    }
+
+    fun sendTemporaryMessage(text: String) {
+        if (text.isBlank()) return
+
+        // 1. Add the user's message to the UI
+        val userMessage = createUserMessage(text)
+        _messages.value += userMessage
+        _messageInput.value = ""
+        _quickReplies.value = emptyList() // Hide replies while bot is "thinking"
+
+        // 2. Add the bot's response after a short delay
+        viewModelScope.launch {
+            delay(600) // Natural delay
+            val botResponse = getTemporaryBotResponse(text)
+            _messages.value += createBotMessage(botResponse)
+            _quickReplies.value = getTemporaryInitialOptions() // Restore the options
+        }
+    }
+
+    private fun getTemporaryBotResponse(userMessage: String): String {
+        return when {
+            "disaster" in userMessage.lowercase() -> "This is a Level 3 disaster alert regarding '$alertTitle'."
+            "issued" in userMessage.lowercase() -> "This alert was issued recently. Please check official channels for precise timing."
+            "source" in userMessage.lowercase() -> "The source for this type of alert is usually the local government or a national agency."
+            "assistance" in userMessage.lowercase() -> "If you need immediate assistance, please use the 'EMERGENCY CALL' button on the main dashboard."
+            else -> "I can only provide basic information. For more details, please contact emergency services."
+        }
+    }
+
+    private fun getTemporaryInitialOptions() = listOf(
+        QuickReply("What is this disaster?", "disaster", "🔎"),
+        QuickReply("When was this issued?", "issued", "🕒"),
+        QuickReply("What is the source?", "source", "📰"),
+        QuickReply("I need assistance", "assistance", "🆘"),
+        QuickReply("Contact a responder", "contact_responder", "💬"),
+        QuickReply("Go to Emergency Contacts", "emergency_contacts", "📞")
+    )
+
+    // Helper functions to create messages in memory
+    private fun createBotMessage(text: String) = Message(-Random.nextInt(), 0, 0, "Auto-Reply Bot", text, getCurrentTimestamp(), null)
+    private fun createUserMessage(text: String) = Message(-Random.nextInt(), 0, userId, "You", text, getCurrentTimestamp(), null)
+    private fun getCurrentTimestamp(): String = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+
+
+    // --- Persistent Chat Logic (Your Existing Code) ---
+    private fun initializePersistentConversation() {
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
@@ -66,9 +174,6 @@ class MessagingViewModel(
                     loadInitialMessages(convId)
                     // THEN, start polling for new messages
                     startPolling(convId)
-                    if (alertId != 999 && messages.value.isEmpty()) {
-                        handleBotLogic("initial_greeting")
-                    }
                 } else {
                     throw Exception("Failed to create or retrieve a valid conversation.")
                 }
@@ -132,7 +237,7 @@ class MessagingViewModel(
         pollingJob = null
     }
 
-    fun sendMessage(userName: String) {
+    fun sendPersistentMessage(userName: String) {
         val convId = _conversationId.value ?: return
         if (messageInput.value.isBlank()) return
 
@@ -164,7 +269,7 @@ class MessagingViewModel(
         }
     }
 
-    fun onQuickReplyClicked(reply: QuickReply, userName: String) {
+    fun onPersistentQuickReplyClicked(reply: QuickReply, userName: String) {
         val convId = _conversationId.value ?: return
         val replyText = reply.text ?: return
 
@@ -245,12 +350,18 @@ class MessagingViewModel(
 class MessagingViewModelFactory(
     private val alertId: Int,
     private val userId: Int,
+    private val alertTitle: String, // <-- ADD THIS
     private val repository: MessagingRepository
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(MessagingViewModel::class.java)) {
-            return MessagingViewModel(alertId, userId, repository) as T
+            return MessagingViewModel(
+                alertId = alertId,
+                userId = userId,
+                alertTitle = alertTitle, // <-- PASS IT HERE
+                messagingRepository = repository
+            ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
