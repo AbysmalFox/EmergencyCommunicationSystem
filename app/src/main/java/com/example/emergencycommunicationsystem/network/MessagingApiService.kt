@@ -12,7 +12,8 @@ import retrofit2.http.Query
 
 // Data classes to represent the JSON request bodies
 data class CreateConversationRequest(val alert_id: Int, val user_id: Int)
-data class SendMessageRequest(val conversation_id: Int, val sender_id: Int, val content: String, val nonce: String?)
+// THE FIX: The parameter name is now "user_id" to match the repository and the backend script.
+data class SendMessageRequest(val conversation_id: Int, val user_id: Int, val content: String, val nonce: String?)
 
 interface MessagingApiService {
     @POST("conversations/create.php")

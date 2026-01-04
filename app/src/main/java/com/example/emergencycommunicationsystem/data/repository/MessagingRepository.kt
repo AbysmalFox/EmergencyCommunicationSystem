@@ -18,8 +18,9 @@ class MessagingRepository {
         return response.conversation?.id ?: 0
     }
 
-    suspend fun sendMessage(conversationId: Int, senderId: Int, messageText: String, nonce: String): Boolean {
-        val request = SendMessageRequest(conversation_id = conversationId, sender_id = senderId, content = messageText, nonce = nonce)
+    suspend fun sendMessage(conversationId: Int, userId: Int, messageText: String, nonce: String): Boolean {
+        // THE FIX: The key for the user's ID must be "user_id" to match the backend script.
+        val request = SendMessageRequest(conversation_id = conversationId, user_id = userId, content = messageText, nonce = nonce)
         val response = apiService.sendMessage(request)
         return response.success
     }
