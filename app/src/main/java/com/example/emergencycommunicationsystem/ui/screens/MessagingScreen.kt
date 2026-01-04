@@ -43,8 +43,8 @@ import java.util.TimeZone
 @Composable
 fun MessagingScreen(
     viewModel: MessagingViewModel,
-    alertTitle: String,
-    userName: String,
+    alertTitle: String?,
+    userName: String?,
     onBackPressed: () -> Unit
 ) {
     val messages by viewModel.messages.collectAsState()
@@ -78,7 +78,7 @@ fun MessagingScreen(
                 title = {
                     Column {
                         Text(
-                            text = alertTitle,
+                            text = alertTitle ?: "Chat",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -136,7 +136,7 @@ fun MessagingScreen(
 
                     QuickReplyPanel(
                         replies = quickReplies,
-                        onReplyClick = { reply -> viewModel.onQuickReplyClicked(reply, userName) }
+                        onReplyClick = { reply -> viewModel.onQuickReplyClicked(reply, userName ?: "User") }
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -167,7 +167,7 @@ fun MessagingScreen(
                         )
 
                         IconButton(
-                            onClick = { viewModel.sendMessage(userName) },
+                            onClick = { viewModel.sendMessage(userName ?: "User") },
                             modifier = Modifier
                                 .size(56.dp)
                                 .background(
@@ -220,7 +220,7 @@ fun QuickReplyPanel(
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                 )
             ) {
-                Text(text = reply.text, modifier = Modifier.padding(vertical = 8.dp))
+                Text(text = reply.text ?: "", modifier = Modifier.padding(vertical = 8.dp))
             }
         }
     }
@@ -246,7 +246,7 @@ fun MessageBubble(message: Message, isCurrentUser: Boolean) {
         ) {
             Column {
                 Text(
-                    text = message.senderName,
+                    text = message.senderName ?: "",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = if (isCurrentUser)
@@ -256,12 +256,12 @@ fun MessageBubble(message: Message, isCurrentUser: Boolean) {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = message.messageText,
+                    text = message.messageText ?: "",
                     color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onBackground
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = formatTime(message.sentAt),
+                    text = formatTime(message.sentAt ?: ""),
                     fontSize = 9.sp,
                     color = if (isCurrentUser)
                         MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)

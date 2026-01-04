@@ -35,13 +35,25 @@ data class City(
 
 @Suppress("unused")
 data class LatLng(val lat: Double, val lon: Double)
+
 data class Alert(
-    val id: String,
-    val category: String,
-    val title: String,
-    val content: String,
-    val timestamp: String,
-    val source: String? = "Community"
+    @SerializedName("id")
+    val id: Int,
+
+    @SerializedName("category")
+    val category: String?,
+
+    @SerializedName("title")
+    val title: String?,
+
+    @SerializedName("content")
+    val content: String?,
+
+    @SerializedName("source")
+    val source: String?,
+
+    @SerializedName("timestamp")
+    val timestamp: String?
 )
 
 sealed interface WeatherState {

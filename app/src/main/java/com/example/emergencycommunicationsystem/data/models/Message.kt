@@ -10,16 +10,14 @@ data class Message(
     @SerializedName("sender_id")
     val senderId: Int,
 
-    // This now matches the "AS senderName" alias from the PHP script
     @SerializedName("senderName")
-    val senderName: String,
+    val senderName: String?,
 
-    // This now matches the "AS messageText" alias from the PHP script
     @SerializedName("messageText")
-    val messageText: String,
+    val messageText: String?,
 
     @SerializedName("sent_at")
-    val sentAt: String
+    val sentAt: String?
 )
 
 data class MessageResponse(

@@ -77,8 +77,12 @@ fun getColorForCategory(category: String): Color {
 }
 
 @Composable
-fun AlertItem(alert: Alert, onMessageClick: (Alert) -> Unit = {}) {
+fun AlertItem(
+    alert: Alert,
+    onMessageClick: (id: String, title: String) -> Unit = { _, _ -> }
+) {
     val context = LocalContext.current
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -86,28 +90,28 @@ fun AlertItem(alert: Alert, onMessageClick: (Alert) -> Unit = {}) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row {
                 Icon(
-                    imageVector = getIconForCategory(alert.category),
-                    contentDescription = alert.category,
+                    imageVector = getIconForCategory(alert.category ?: "Info"),
+                    contentDescription = alert.category ?: "Alert Category",
                     modifier = Modifier.size(40.dp).align(Alignment.Top),
-                    tint = getColorForCategory(alert.category)
+                    tint = getColorForCategory(alert.category ?: "Info")
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = alert.category.uppercase(),
-                        color = getColorForCategory(alert.category),
+                        text = (alert.category ?: "General").uppercase(),
+                        color = getColorForCategory(alert.category ?: "Info"),
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp
                     )
                     Text(
-                        text = alert.title,
+                        text = alert.title ?: "No Title",
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = alert.content,
+                        text = alert.content ?: "",
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -121,22 +125,24 @@ fun AlertItem(alert: Alert, onMessageClick: (Alert) -> Unit = {}) {
             ) {
                 Column {
                     Text(
-                        text = alert.source ?: "Community",
+                        text = alert.source ?: "Unknown Source",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = alert.timestamp,
+                        text = alert.timestamp ?: "",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Button(
                     onClick = {
-                        if (AuthManager.getUserId() != -1) {
-                            onMessageClick(alert)
+                        val userId = AuthManager.getUserId()
+                        if (userId > 0) {
+                            onMessageClick(alert.id.toString(), alert.title ?: "Chat")
                         } else {
+                            Log.w("AlertItemClick", "User is not logged in (userId: $userId). Showing toast.")
                             Toast.makeText(context, "Please log in to send a message", Toast.LENGTH_SHORT).show()
                         }
                     },
@@ -159,10 +165,9 @@ fun AlertItem(alert: Alert, onMessageClick: (Alert) -> Unit = {}) {
 @Composable
 fun AlertsScreen(
     viewModel: AlertsViewModel = viewModel(),
-    onMessageClick: ((Alert) -> Unit)? = null
+    onMessageClick: ((alertId: String, alertTitle: String) -> Unit)? = null
 ) {
     val state by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -230,21 +235,13 @@ fun AlertsScreen(
                         contentPadding = PaddingValues(
                             16.dp,
                             bottom = 136.dp + 16.dp
-                        ), // Reserve space for floating bottom nav (136.dp) + original bottom padding (16.dp)
+                        ),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(filteredAlerts) { alert ->
-                            AlertItem(alert = alert, onMessageClick = { clickedAlert ->
-                                val cleanedAlert = clickedAlert.copy(id = clickedAlert.id.trim())
-
-                                Log.d("AlertsScreen", "Message button clicked. Original ID: '${clickedAlert.id}', Cleaned ID: '${cleanedAlert.id}', User ID: ${AuthManager.getUserId()}")
-
-                                if (onMessageClick != null) {
-                                    onMessageClick(cleanedAlert)
-                                } else {
-                                    Toast.makeText(context, "Message button for '${cleanedAlert.title}' clicked. Check Logcat for details.", Toast.LENGTH_SHORT).show()
-                                }
-                            })
+                        items(filteredAlerts, key = { it.id }) { alert ->
+                            AlertItem(alert = alert) { alertId, alertTitle ->
+                                onMessageClick?.invoke(alertId, alertTitle)
+                            }
                         }
                     }
                 }
@@ -266,7 +263,7 @@ fun AlertsScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = uiState.message,
+                        text = uiState.message ?: "An unknown error occurred.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(16.dp))

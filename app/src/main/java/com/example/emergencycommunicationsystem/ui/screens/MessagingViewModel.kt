@@ -126,17 +126,20 @@ class MessagingViewModel(
 
     fun onQuickReplyClicked(reply: QuickReply, userName: String) {
         val convId = _conversationId.value ?: return
+        val replyText = reply.text ?: return
+        val replyPayload = reply.payload ?: return
+
         val tempId = Random.nextInt(Int.MIN_VALUE, 0)
-        val optimisticMessage = Message(tempId, convId, userId, userName, reply.text, SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()))
+        val optimisticMessage = Message(tempId, convId, userId, userName, replyText, SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()))
 
         _messages.value += optimisticMessage
         _quickReplies.value = emptyList()
 
         viewModelScope.launch {
             try {
-                val success = messagingRepository.sendMessage(convId, userId, reply.text)
+                val success = messagingRepository.sendMessage(convId, userId, replyText)
                 if (success) {
-                    val (responseText, newReplies) = getBotResponse(reply.payload)
+                    val (responseText, newReplies) = getBotResponse(replyPayload)
                     addBotMessage(responseText)
                     _quickReplies.value = newReplies
                 } else {

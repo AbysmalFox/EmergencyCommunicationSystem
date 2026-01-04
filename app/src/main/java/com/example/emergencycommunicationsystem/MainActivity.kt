@@ -105,10 +105,9 @@ fun EmergencyApp() {
         }
     }
 
-    fun navigateToMessaging(alertIdStr: String, alertTitle: String) {
+    fun navigateToMessaging(alertId: Int, alertTitle: String) {
         if (isLoggedIn) {
-            val alertId = alertIdStr.toIntOrNull()
-            if (alertId == null || alertId <= 0) {
+            if (alertId <= 0) {
                 Toast.makeText(context, "Invalid Alert Data", Toast.LENGTH_SHORT).show()
                 return
             }
@@ -139,15 +138,37 @@ fun EmergencyApp() {
                         onEmergencyCallClick = { navController.navigate(Screen.EmergencyContacts.route) },
                         onReportIncidentClick = { navController.navigate(Screen.ReportIncident.route) },
                         onMessageClick = {
-                            navigateToMessaging(alertIdStr = "999", alertTitle = "General Inquiry")
+                            navigateToMessaging(alertId = 999, alertTitle = "General Inquiry")
                         },
                         weatherViewModel = weatherViewModel
                     )
                 }
                 composable(Screen.Alerts.route) {
                     AlertsScreen(
-                        onMessageClick = { alert ->
-                            navigateToMessaging(alertIdStr = alert.id, alertTitle = alert.title)
+                        onMessageClick = { alertId, alertTitle ->
+                            try { // <-- PROPER ERROR HANDLING
+                                Log.d("Navigation", "Attempting to navigate for alertId: '''$alertId'''")
+                                val userId = AuthManager.getUserId()
+                                if (userId > 0) {
+                                    val alertIdInt = alertId.toInt() // The risky operation
+                                    val encodedTitle = URLEncoder.encode(alertTitle, "UTF-8")
+                                    val userName = AuthManager.getUsername() ?: "User"
+                                    navController.navigate("${Screen.Messaging.route}?alertId=$alertIdInt&alertTitle=$encodedTitle&userId=$userId&userName=$userName")
+                                    Log.i("Navigation", "Successfully navigated to MessagingScreen for alertId: $alertIdInt.")
+                                } else {
+                                    Log.w("Navigation", "Navigation blocked: User is not logged in (userId: $userId).")
+                                    Toast.makeText(context, "Please log in to send a message", Toast.LENGTH_SHORT).show()
+                                }
+                            } catch (e: NumberFormatException) {
+                                // THIS IS THE LOGCAT MESSAGE YOU NEED
+                                Log.e("NavigationError", "Failed to navigate. The alert ID '''$alertId''' is not a valid integer.", e)
+                                // Also show a user-friendly message
+                                Toast.makeText(context, "Error: Invalid alert data. Cannot open message.", Toast.LENGTH_LONG).show()
+                            } catch (e: Exception) {
+                                // Catch any other unexpected errors during navigation
+                                Log.e("NavigationError", "An unexpected error occurred during navigation for alert: $alertTitle", e)
+                                Toast.makeText(context, "An unexpected error occurred.", Toast.LENGTH_LONG).show()
+                            }
                         }
                     )
                 }
