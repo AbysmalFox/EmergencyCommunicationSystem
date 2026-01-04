@@ -64,6 +64,7 @@ fun ProfileScreen(
     isLoggedIn: Boolean,
     username: String?,
     email: String?,
+    phone: String?, // Added phone parameter
     onLoginClick: () -> Unit,
     onSignUpClick: () -> Unit,
     onLogoutClick: () -> Unit,
@@ -100,7 +101,7 @@ fun ProfileScreen(
 
             item {
                 if (isLoggedIn) {
-                    LoggedInUserCard(username = username, email = email, onLogoutClick = onLogoutClick)
+                    LoggedInUserCard(username = username, email = email, phone = phone, onLogoutClick = onLogoutClick)
                 } else {
                     AnonymousUserCard(onLoginClick = onLoginClick, onSignUpClick = onSignUpClick)
                 }
@@ -301,6 +302,7 @@ private fun AnonymousUserCard(
 private fun LoggedInUserCard(
     username: String?,
     email: String?,
+    phone: String?,
     onLogoutClick: () -> Unit
 ) {
     Card(
@@ -333,6 +335,14 @@ private fun LoggedInUserCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            if (!phone.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = phone,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             Spacer(modifier = Modifier.height(16.dp))
             TextButton(onClick = onLogoutClick) {
                 Text("Logout")

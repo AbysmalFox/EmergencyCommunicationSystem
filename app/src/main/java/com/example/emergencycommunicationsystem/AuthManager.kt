@@ -11,6 +11,7 @@ object AuthManager {
     private const val KEY_USER_ID = "user_id"
     private const val KEY_USERNAME = "username"
     private const val KEY_EMAIL = "email"
+    private const val KEY_PHONE = "phone" // Added phone key
     private const val KEY_TOKEN = "auth_token"
 
     private lateinit var sharedPrefs: SharedPreferences
@@ -23,12 +24,13 @@ object AuthManager {
         _isLoggedIn.value = sharedPrefs.getBoolean(KEY_IS_LOGGED_IN, false)
     }
 
-    fun saveLoginState(userId: Int, username: String, email: String, token: String) {
+    fun saveLoginState(userId: Int, username: String, email: String, phone: String, token: String) {
         sharedPrefs.edit().apply {
             putBoolean(KEY_IS_LOGGED_IN, true)
             putInt(KEY_USER_ID, userId)
             putString(KEY_USERNAME, username)
             putString(KEY_EMAIL, email)
+            putString(KEY_PHONE, phone) // Save phone number
             putString(KEY_TOKEN, token)
             apply()
         }
@@ -43,5 +45,6 @@ object AuthManager {
     fun getUserId(): Int = sharedPrefs.getInt(KEY_USER_ID, -1)
     fun getUsername(): String? = sharedPrefs.getString(KEY_USERNAME, null)
     fun getEmail(): String? = sharedPrefs.getString(KEY_EMAIL, null)
+    fun getPhone(): String? = sharedPrefs.getString(KEY_PHONE, null) // Retrieve phone number
     fun getToken(): String? = sharedPrefs.getString(KEY_TOKEN, null)
 }

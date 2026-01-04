@@ -15,7 +15,7 @@ import java.io.IOException
 sealed class LoginState {
     object Idle : LoginState()
     object Loading : LoginState()
-    data class Success(val message: String, val userId: Int, val username: String, val email: String, val token: String) : LoginState()
+    data class Success(val message: String, val userId: Int, val username: String, val email: String, val phone: String, val token: String) : LoginState()
     data class Error(val message: String) : LoginState()
 }
 
@@ -48,16 +48,18 @@ class LoginViewModel : ViewModel() {
 
                     if (authResponse.success) {
                         val userId = authResponse.userId
-                        val username = authResponse.username // Correctly read from the top-level field
-                        val responseEmail = authResponse.email // Correctly read from the top-level field
+                        val username = authResponse.username
+                        val responseEmail = authResponse.email
+                        val phone = authResponse.phone
                         val token = authResponse.token
 
-                        if (userId != null && username != null && responseEmail != null && token != null) {
+                        if (userId != null && username != null && responseEmail != null && phone != null && token != null) {
                             _loginState.value = LoginState.Success(
                                 authResponse.message,
                                 userId,
                                 username,
                                 responseEmail,
+                                phone,
                                 token
                             )
                         } else {
@@ -65,6 +67,7 @@ class LoginViewModel : ViewModel() {
                             if (userId == null) missingFields.add("userId")
                             if (username == null) missingFields.add("username")
                             if (responseEmail == null) missingFields.add("email")
+                            if (phone == null) missingFields.add("phone")
                             if (token == null) missingFields.add("token")
                             val errorMsg = "Login succeeded, but the server response was incomplete. Missing fields: ${missingFields.joinToString()}"
                             Log.e("LoginViewModel", "$errorMsg. Full response: $authResponse")

@@ -88,7 +88,6 @@ fun EmergencyApp() {
     val mainScreens = listOf(Screen.Home.route, Screen.Alerts.route, Screen.Profile.route)
     val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
 
-    // --- Location Update Logic ---
     if (isLoggedIn) {
         LocationUpdater {
             latitude, longitude, accuracy ->
@@ -101,8 +100,6 @@ fun EmergencyApp() {
                     }
                 } catch (e: Exception) {
                     Log.e("MainActivity", "Failed to update location on server", e)
-                    // Optionally, show a subtle toast or snackbar
-                    // Toast.makeText(context, "Could not update location", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -163,6 +160,7 @@ fun EmergencyApp() {
                         isLoggedIn = isLoggedIn,
                         username = if (isLoggedIn) AuthManager.getUsername() else null,
                         email = if (isLoggedIn) AuthManager.getEmail() else null,
+                        phone = if (isLoggedIn) AuthManager.getPhone() else null,
                         onLoginClick = { navController.navigate(Screen.Login.route) },
                         onSignUpClick = { navController.navigate(Screen.SignUp.route) },
                         onLogoutClick = {
@@ -191,8 +189,8 @@ fun EmergencyApp() {
                 composable(Screen.Login.route) {
                     LoginScreen(
                         onBackPressed = { navController.popBackStack() },
-                        onLoginSuccess = { userId, username, email, token ->
-                            AuthManager.saveLoginState(userId, username, email, token)
+                        onLoginSuccess = { userId, username, email, phone, token ->
+                            AuthManager.saveLoginState(userId, username, email, phone, token)
                             navController.popBackStack()
                         },
                         onSignUpClick = { navController.navigate(Screen.SignUp.route) }

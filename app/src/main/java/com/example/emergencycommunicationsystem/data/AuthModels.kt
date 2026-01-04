@@ -23,10 +23,9 @@ data class AuthResponse(
     val message: String,
     @SerializedName("user_id") val userId: Int? = null,
     val token: String? = null,
-    // Added fields to match the flat JSON from login.php
     val username: String? = null,
     val email: String? = null,
-    // The 'user' object is kept for other responses, but made nullable
+    val phone: String? = null, // Added phone to the response
     val user: User? = null
 )
 

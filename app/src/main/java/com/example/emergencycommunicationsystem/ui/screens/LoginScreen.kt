@@ -41,33 +41,31 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: (userId: Int, username: String, email: String, token: String) -> Unit, // Callback with user data
+    onLoginSuccess: (userId: Int, username: String, email: String, phone: String, token: String) -> Unit, // Corrected callback
     onSignUpClick: () -> Unit,
     onBackPressed: () -> Unit,
-    viewModel: LoginViewModel = viewModel() // Get the ViewModel instance
+    viewModel: LoginViewModel = viewModel()
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf<String?>(null) } // State to hold the error message string
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val context = LocalContext.current
     val loginState by viewModel.loginState.collectAsState()
 
-    // Handle side effects based on loginState
     LaunchedEffect(loginState) {
-        when (val state = loginState) { // Use 'val state' to avoid casting
+        when (val state = loginState) {
             is LoginState.Success -> {
                 Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
-                viewModel.resetLoginState() // Reset state
-                // Navigate on success, passing user data
-                onLoginSuccess(state.userId, state.username, state.email, state.token)
+                viewModel.resetLoginState()
+                // Pass all 5 arguments to the callback
+                onLoginSuccess(state.userId, state.username, state.email, state.phone, state.token)
             }
             is LoginState.Error -> {
-                // **CHANGED:** Instead of a toast, set the errorMessage state
                 errorMessage = state.message
-                viewModel.resetLoginState() // Reset state to allow new attempts
+                viewModel.resetLoginState()
             }
-            else -> { /* Do nothing for Idle or Loading states here */ }
+            else -> {}
         }
     }
 
@@ -93,7 +91,7 @@ fun LoginScreen(
                 value = email,
                 onValueChange = {
                     email = it
-                    errorMessage = null // Clear error when user starts typing
+                    errorMessage = null
                 },
                 label = { Text("Email Address") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -105,7 +103,7 @@ fun LoginScreen(
                 value = password,
                 onValueChange = {
                     password = it
-                    errorMessage = null // Clear error when user starts typing
+                    errorMessage = null
                 },
                 label = { Text("Password") },
                 visualTransformation = PasswordVisualTransformation(),
@@ -115,8 +113,6 @@ fun LoginScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // **NEW: Error Message Display**
-            // This Text composable will only be visible when there is an error.
             AnimatedVisibility(
                 visible = errorMessage != null,
                 enter = fadeIn(),
