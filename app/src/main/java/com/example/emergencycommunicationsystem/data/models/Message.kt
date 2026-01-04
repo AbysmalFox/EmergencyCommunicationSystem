@@ -17,7 +17,15 @@ data class Message(
     val messageText: String?,
 
     @SerializedName("sent_at")
-    val sentAt: String?
+    val sentAt: String?,
+
+    @SerializedName("icon")
+    val icon: String? = null,
+
+    // THE FIX: Add a nullable nonce field.
+    // This will be a unique random string for optimistic messages.
+    @SerializedName("nonce")
+    val nonce: String? = null
 )
 
 data class MessageResponse(

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -220,7 +221,11 @@ fun QuickReplyPanel(
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                 )
             ) {
-                Text(text = reply.text ?: "", modifier = Modifier.padding(vertical = 8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = reply.icon ?: "")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = reply.text ?: "", modifier = Modifier.padding(vertical = 8.dp))
+                }
             }
         }
     }
@@ -245,20 +250,28 @@ fun MessageBubble(message: Message, isCurrentUser: Boolean) {
                 .widthIn(max = 280.dp)
         ) {
             Column {
-                Text(
-                    text = message.senderName ?: "",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (isCurrentUser)
-                        MaterialTheme.colorScheme.onPrimary
-                    else
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = message.messageText ?: "",
-                    color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onBackground
-                )
+                if (!isCurrentUser) {
+                    Text(
+                        text = message.senderName ?: "",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isCurrentUser)
+                            MaterialTheme.colorScheme.onPrimary
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (message.icon != null && !isCurrentUser) {
+                        Text(text = message.icon)
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Text(
+                        text = message.messageText ?: "",
+                        color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onBackground
+                    )
+                }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = formatTime(message.sentAt ?: ""),

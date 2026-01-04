@@ -1,5 +1,6 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -13,11 +14,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import retrofit2.HttpException
-import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 import kotlin.random.Random
 
 class MessagingViewModel(
@@ -58,43 +58,74 @@ class MessagingViewModel(
             _isLoading.value = true
             _errorMessage.value = null
             try {
+                // This now correctly gets a UNIQUE conversation ID from the fixed backend
                 val convId = messagingRepository.createConversation(alertId, userId)
                 if (convId > 0) {
                     _conversationId.value = convId
+                    // FIRST, load the full history for this conversation
+                    loadInitialMessages(convId)
+                    // THEN, start polling for new messages
                     startPolling(convId)
-                    if (alertId != 999) {
-                        addBotMessage("Hello 👋 I am an automated assistant. Please select an option below.")
-                        _quickReplies.value = getInitialOptions()
+                    if (alertId != 999 && messages.value.isEmpty()) {
+                        handleBotLogic("initial_greeting")
                     }
                 } else {
-                    throw Exception("Failed to create conversation.")
+                    throw Exception("Failed to create or retrieve a valid conversation.")
                 }
             } catch (e: Exception) {
                 _errorMessage.value = "Error: ${e.message}"
             } finally {
-                _isLoading.value = false
+                _isLoading.value = false // This will be set false after initial load
             }
         }
     }
 
+    // NEW FUNCTION to load the full history once.
+    private fun loadInitialMessages(conversationId: Int) {
+        viewModelScope.launch {
+            try {
+                // This fetches ALL messages for this specific conversation.
+                // Your backend messages/list.php MUST filter by conversation_id.
+                val history = messagingRepository.fetchMessages(conversationId, 0) // lastId = 0 fetches all
+                _messages.value = history.sortedBy { it.id }
+            } catch (e: Exception) {
+                _errorMessage.value = "Failed to load message history."
+            }
+        }
+    }
+
+    // SIMPLIFIED AND CORRECTED POLLING LOGIC
     private fun startPolling(conversationId: Int) {
         pollingJob?.cancel()
         pollingJob = viewModelScope.launch {
             while (isActive) {
+                delay(3000) // Poll every 3 seconds
                 try {
-                    val lastId = _messages.value.filter { it.id > 0 }.lastOrNull()?.id ?: 0
+                    // Get the ID of the latest message we have from the server
+                    val lastId = _messages.value.filter { it.id > 0 }.maxOfOrNull { it.id } ?: 0
                     val newMessages = messagingRepository.fetchMessages(conversationId, lastId)
+
                     if (newMessages.isNotEmpty()) {
-                        val currentIds = _messages.value.map { it.id }.toSet()
-                        _messages.value += newMessages.filterNot { currentIds.contains(it.id) }
+                        val currentMessages = _messages.value.toMutableList()
+
+                        // A much safer way to merge optimistic and new messages
+                        // 1. Remove all optimistic messages
+                        currentMessages.removeAll { it.id < 0 }
+
+                        // 2. Add all new messages from the server
+                        currentMessages.addAll(newMessages)
+
+                        // 3. Set the new state, ensuring no duplicates and correct order
+                        _messages.value = currentMessages.distinctBy { it.id }.sortedBy { it.id }
                     }
                 } catch (e: Exception) {
-                    stopPolling()
+                    // Don't stop polling on a single network failure
+                    Log.e("MessagingViewModel", "Polling failed: ${e.message}")
                 }
-                delay(3000)
             }
         }
     }
+
 
     private fun stopPolling() {
         pollingJob?.cancel()
@@ -107,7 +138,16 @@ class MessagingViewModel(
 
         val tempId = Random.nextInt(Int.MIN_VALUE, 0)
         val text = messageInput.value
-        val optimisticMessage = Message(tempId, convId, userId, userName, text, SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()))
+        val nonce = UUID.randomUUID().toString()
+        val optimisticMessage = Message(
+            tempId,
+            convId,
+            userId,
+            userName,
+            text,
+            SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()),
+            nonce = nonce
+        )
 
         _messageInput.value = ""
         _messages.value += optimisticMessage
@@ -115,11 +155,11 @@ class MessagingViewModel(
 
         viewModelScope.launch {
             try {
-                messagingRepository.sendMessage(convId, userId, text)
+                messagingRepository.sendMessage(convId, userId, text, nonce)
             } catch (e: Exception) {
                 _errorMessage.value = "Failed to send message."
-                _messages.value = _messages.value.filterNot { it.id == tempId } 
-                _messageInput.value = text 
+                _messages.value = _messages.value.filterNot { it.id == tempId }
+                _messageInput.value = text
             }
         }
     }
@@ -127,44 +167,60 @@ class MessagingViewModel(
     fun onQuickReplyClicked(reply: QuickReply, userName: String) {
         val convId = _conversationId.value ?: return
         val replyText = reply.text ?: return
-        val replyPayload = reply.payload ?: return
 
         val tempId = Random.nextInt(Int.MIN_VALUE, 0)
-        val optimisticMessage = Message(tempId, convId, userId, userName, replyText, SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()))
-
+        val nonce = UUID.randomUUID().toString()
+        val optimisticMessage = Message(
+            id = tempId,
+            conversationId = convId,
+            senderId = userId,
+            senderName = userName,
+            messageText = replyText,
+            sentAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()),
+            nonce = nonce
+        )
         _messages.value += optimisticMessage
         _quickReplies.value = emptyList()
 
         viewModelScope.launch {
             try {
-                val success = messagingRepository.sendMessage(convId, userId, replyText)
-                if (success) {
-                    val (responseText, newReplies) = getBotResponse(replyPayload)
-                    addBotMessage(responseText)
-                    _quickReplies.value = newReplies
-                } else {
-                     throw Exception("API returned false")
-                }
+                messagingRepository.sendMessage(convId, userId, replyText, nonce)
+                handleBotLogic(reply.payload)
             } catch (e: Exception) {
-                _errorMessage.value = "Failed to process reply."
+                _errorMessage.value = "Failed to send message."
                 _messages.value = _messages.value.filterNot { it.id == tempId }
                 _quickReplies.value = getInitialOptions()
             }
         }
     }
 
-    private suspend fun addBotMessage(text: String) {
-        delay(500) 
-        val botMessage = Message(Random.nextInt(Int.MIN_VALUE, 0), _conversationId.value ?: 0, 0, "Auto-Reply Bot", text, SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()))
+    private suspend fun handleBotLogic(payload: String?) {
+        payload ?: return
+
+        delay(750)
+
+        val (responseText, newReplies) = getBotResponse(payload)
+
+        val botMessage = Message(
+            id = Random.nextInt(Int.MIN_VALUE, 0),
+            conversationId = _conversationId.value ?: 0,
+            senderId = 0,
+            senderName = "Auto-Reply Bot",
+            messageText = responseText,
+            sentAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+        )
+
         _messages.value += botMessage
+        _quickReplies.value = newReplies
     }
 
     fun updateMessageInput(text: String) { _messageInput.value = text }
     fun clearError() { _errorMessage.value = null }
     override fun onCleared() { super.onCleared(); stopPolling() }
-    
+
     private fun getBotResponse(payload: String): Pair<String, List<QuickReply>> {
         return when (payload) {
+            "initial_greeting" -> "Hello 👋 I am an automated assistant. Please select an option below." to getInitialOptions()
             "disaster_details" -> "This is a Typhoon alert for Signal #2. Strong winds are expected." to getInitialOptions()
             "disaster_time" -> "The alert was issued within the last hour." to getInitialOptions()
             "news_source" -> "Source: National Disaster Risk Reduction and Management Council (NDRRMC)." to getInitialOptions()
@@ -175,10 +231,10 @@ class MessagingViewModel(
         }
     }
     private fun getInitialOptions() = listOf(
-        QuickReply("🔎 What is this disaster?", "disaster_details"),
-        QuickReply("🕒 When was this issued?", "disaster_time"),
-        QuickReply("📰 What is the source?", "news_source"),
-        QuickReply("🆘 I need immediate assistance!", "immediate_assistance")
+        QuickReply("What is this disaster?", "disaster_details", "🔎"),
+        QuickReply("When was this issued?", "disaster_time", "🕒"),
+        QuickReply("What is the source?", "news_source", "📰"),
+        QuickReply("I need immediate assistance!", "immediate_assistance", "🆘")
     )
     private fun getAssistanceOptions() = listOf(
         QuickReply("Okay, I will call 911.", "call_done"),

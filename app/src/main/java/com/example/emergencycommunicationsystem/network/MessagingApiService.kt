@@ -12,7 +12,7 @@ import retrofit2.http.Query
 
 // Data classes to represent the JSON request bodies
 data class CreateConversationRequest(val alert_id: Int, val user_id: Int)
-data class SendMessageRequest(val conversation_id: Int, val sender_id: Int, val content: String)
+data class SendMessageRequest(val conversation_id: Int, val sender_id: Int, val content: String, val nonce: String?)
 
 interface MessagingApiService {
     @POST("conversations/create.php")
@@ -27,8 +27,7 @@ interface MessagingApiService {
 
     @GET("messages/list.php")
     suspend fun fetchMessages(
-        // THE FIX: Changed "conversation_id" to the correct "conversationId" to match the PHP script.
-        @Query("conversationId") conversationId: Int,
+        @Query("conversation_id") conversationId: Int, // Use "conversation_id" to match PHP
         @Query("last_message_id") lastMessageId: Int = 0
     ): MessagesResponse
 
