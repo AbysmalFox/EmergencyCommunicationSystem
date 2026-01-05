@@ -56,7 +56,7 @@ fun BottomNavigationBar(
     modifier: Modifier = Modifier,
     navController: NavController
 ) {
-    val screens = listOf(Screen.Home, Screen.Alerts, Screen.Profile)
+    val screens = listOf(Screen.Home, Screen.Alerts, Screen.Map, Screen.Profile)
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 

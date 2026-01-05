@@ -92,7 +92,7 @@ fun EmergencyApp() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val mainScreens = listOf(Screen.Home.route, Screen.Alerts.route, Screen.Profile.route)
+    val mainScreens = listOf(Screen.Home.route, Screen.Alerts.route, Screen.Map.route, Screen.Profile.route)
     val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
 
     if (isLoggedIn) {
@@ -179,6 +179,9 @@ fun EmergencyApp() {
                             }
                         }
                     )
+                }
+                composable(Screen.Map.route) {
+                    MapScreen()
                 }
                 composable(Screen.Profile.route) {
                     val userId = AuthManager.getUserId()
