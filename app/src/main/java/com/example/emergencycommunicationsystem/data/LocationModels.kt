@@ -10,6 +10,7 @@ data class LocationUpdateRequest(
     val userId: Int,
     val latitude: Double,
     val longitude: Double,
+    val address: String?,
     val accuracy: Float?
 )
 

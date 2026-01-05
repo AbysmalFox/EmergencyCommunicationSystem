@@ -9,8 +9,8 @@ import com.example.emergencycommunicationsystem.network.SettingsApiService
 class SettingsRepository {
     private val apiService: SettingsApiService = ApiClient.settingsApiService
 
-    suspend fun updateUserLocation(userId: Int, latitude: Double, longitude: Double, accuracy: Float?) {
-        val request = LocationUpdateRequest(userId, latitude, longitude, accuracy)
+    suspend fun updateUserLocation(userId: Int, latitude: Double, longitude: Double, address: String?, accuracy: Float?) {
+        val request = LocationUpdateRequest(userId, latitude, longitude, address, accuracy)
         val response = apiService.updateUserLocation(request)
         if (!response.success) {
             throw Exception(response.message ?: "Failed to update location on the server.")

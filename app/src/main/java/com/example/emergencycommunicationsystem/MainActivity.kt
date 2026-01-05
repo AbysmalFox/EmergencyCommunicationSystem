@@ -37,6 +37,7 @@ import com.example.emergencycommunicationsystem.navigation.Screen
 import com.example.emergencycommunicationsystem.ui.screens.*
 import com.example.emergencycommunicationsystem.ui.theme.EmergencyCommunicationSystemTheme
 import com.example.emergencycommunicationsystem.util.LocationUpdater
+import com.example.emergencycommunicationsystem.util.LocationUtils
 import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModel
 import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModelFactory
 import com.example.emergencycommunicationsystem.ui.screens.SignUpViewModel
@@ -96,7 +97,8 @@ fun EmergencyApp() {
                 try {
                     val userId = AuthManager.getUserId()
                     if (userId != -1) {
-                        settingsRepository.updateUserLocation(userId, latitude, longitude, accuracy)
+                        val address = LocationUtils.getAddressFromCoordinates(context, latitude, longitude)
+                        settingsRepository.updateUserLocation(userId, latitude, longitude, address, accuracy)
                         Log.d("MainActivity", "Location updated successfully for user $userId")
                     }
                 } catch (e: Exception) {
@@ -226,8 +228,8 @@ fun EmergencyApp() {
 
                     SignUpScreen(
                         state = state,
-                        onSignUpClick = { fullName, email, phone, password, confirmPassword, locationPermissionGranted ->
-                            viewModel.signUp(fullName, email, phone, password, confirmPassword, locationPermissionGranted)
+                        onSignUpClick = { fullName, email, phone, password, confirmPassword, locationPermissionGranted, latitude, longitude, address ->
+                            viewModel.signUp(fullName, email, phone, password, confirmPassword, locationPermissionGranted, latitude, longitude, address)
                         },
                         onLoginClick = { navController.navigate(Screen.Login.route) },
                         onBackPressed = { navController.popBackStack() },

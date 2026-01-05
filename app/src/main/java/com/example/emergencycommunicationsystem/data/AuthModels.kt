@@ -8,7 +8,10 @@ data class RegisterRequest(
     val email: String,
     val phone: String,
     val password: String,
-    @SerializedName("share_location") val shareLocation: Boolean
+    @SerializedName("share_location") val shareLocation: Boolean,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val address: String? = null
 )
 
 // Request for user login

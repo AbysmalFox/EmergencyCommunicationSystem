@@ -14,15 +14,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.example.emergencycommunicationsystem.util.LocationUtils
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun SignUpScreen(
     state: SignUpState,
-    onSignUpClick: (String, String, String, String, String, Boolean) -> Unit,
+    onSignUpClick: (String, String, String, String, String, Boolean, Double?, Double?, String?) -> Unit,
     onLoginClick: () -> Unit,
     onBackPressed: () -> Unit,
     onRegistrationSuccess: () -> Unit // New callback for redirection
@@ -33,6 +36,12 @@ fun SignUpScreen(
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var locationPermissionGranted by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    var latitude by remember { mutableStateOf<Double?>(null) }
+    var longitude by remember { mutableStateOf<Double?>(null) }
+    var address by remember { mutableStateOf<String?>(null) }
 
     // Handle the redirection after a delay
     LaunchedEffect(state) {
@@ -128,7 +137,18 @@ fun SignUpScreen(
                     }
 
                     Button(
-                        onClick = { onSignUpClick(fullName, email, "+63$phoneNumber", password, confirmPassword, locationPermissionGranted) },
+                        onClick = {
+                            scope.launch {
+                                if (locationPermissionGranted) {
+                                    // You would have a way to get the current location here.
+                                    // For now, we'll use a placeholder. You would replace this with a call to your location provider.
+                                    latitude = 14.5995
+                                    longitude = 120.9842
+                                    address = LocationUtils.getAddressFromCoordinates(context, latitude!!, longitude!!)
+                                }
+                                onSignUpClick(fullName, email, "+63$phoneNumber", password, confirmPassword, locationPermissionGranted, latitude, longitude, address)
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = state !is SignUpState.Loading
                     ) {

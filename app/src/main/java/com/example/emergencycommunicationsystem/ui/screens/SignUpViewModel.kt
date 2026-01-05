@@ -25,7 +25,17 @@ class SignUpViewModel(application: Application) : AndroidViewModel(application) 
     private val _signUpState = MutableStateFlow<SignUpState>(SignUpState.Idle)
     val signUpState: StateFlow<SignUpState> = _signUpState
 
-    fun signUp(fullName: String, email: String, phone: String, password: String, confirmPassword: String, locationPermissionGranted: Boolean) {
+    fun signUp(
+        fullName: String,
+        email: String,
+        phone: String,
+        password: String,
+        confirmPassword: String,
+        locationPermissionGranted: Boolean,
+        latitude: Double?,
+        longitude: Double?,
+        address: String?
+    ) {
         Log.d("SignUpViewModel", "Attempting to sign up user: $email with location permission: $locationPermissionGranted")
 
         if (password != confirmPassword) {
@@ -50,7 +60,10 @@ class SignUpViewModel(application: Application) : AndroidViewModel(application) 
                     email = email,
                     phone = phone,
                     password = password,
-                    shareLocation = locationPermissionGranted
+                    shareLocation = locationPermissionGranted,
+                    latitude = latitude,
+                    longitude = longitude,
+                    address = address
                 )
                 val response = authRepository.register(getApplication(), request)
 
@@ -68,7 +81,7 @@ class SignUpViewModel(application: Application) : AndroidViewModel(application) 
                         // Assuming you have a standard error response model
                         // val errorResponse = Gson().fromJson(errorBody, ErrorResponse::class.java)
                         // errorResponse.message ?: res.message()
-                         res.message()
+                        res.message()
                     } catch (jsonE: Exception) {
                         res.message()
                     }

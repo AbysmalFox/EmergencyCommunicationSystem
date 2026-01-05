@@ -8,6 +8,7 @@ import com.example.emergencycommunicationsystem.data.RegisterRequest
 import com.example.emergencycommunicationsystem.data.network.ApiClient
 import com.example.emergencycommunicationsystem.network.AuthApiService
 import com.example.emergencycommunicationsystem.util.DeviceManager
+import com.example.emergencycommunicationsystem.util.LocationUtils
 import retrofit2.HttpException
 import retrofit2.Response
 
@@ -49,13 +50,17 @@ class AuthRepository {
         registerData["email"] = request.email
         registerData["password"] = request.password
         registerData["phone"] = request.phone
-        // Corrected property name from the data class
         registerData["share_location"] = request.shareLocation
 
         registerData["device_id"] = DeviceManager.getDeviceId(context)
         registerData["device_type"] = "android"
         registerData["device_name"] = DeviceManager.getDeviceName()
         registerData["push_token"] = DeviceManager.getPushToken()
+
+        // Add location data if available
+        request.latitude?.let { registerData["latitude"] = it }
+        request.longitude?.let { registerData["longitude"] = it }
+        request.address?.let { registerData["address"] = it }
 
         return executeApiCall { apiService.registerUser(registerData) }
     }
