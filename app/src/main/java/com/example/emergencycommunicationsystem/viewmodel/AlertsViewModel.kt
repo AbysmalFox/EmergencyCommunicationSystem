@@ -2,6 +2,7 @@ package com.example.emergencycommunicationsystem.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.emergencycommunicationsystem.AuthManager
 import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.data.network.ApiClient
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,7 +31,8 @@ class AlertsViewModel : ViewModel() {
 
         viewModelScope.launch {
             try {
-                val response = ApiClient.alertsApiService.getAlerts()
+                val userId = AuthManager.getUserId().takeIf { it > 0 } // Get user ID, but only if they're logged in
+                val response = ApiClient.alertsApiService.getAlerts(userId)
 
                 if (response.isSuccessful) {
                     val body = response.body()

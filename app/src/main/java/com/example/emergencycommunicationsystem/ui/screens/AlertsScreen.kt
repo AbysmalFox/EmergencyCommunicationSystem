@@ -37,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -176,6 +177,11 @@ fun AlertsScreen(
     onMessageClick: ((alertId: String, alertTitle: String) -> Unit)? = null
 ) {
     val state by viewModel.uiState.collectAsState()
+
+    // This LaunchedEffect will re-run the loadAlerts function every time the screen is displayed.
+    LaunchedEffect(Unit) {
+        viewModel.loadAlerts()
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,

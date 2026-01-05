@@ -1,5 +1,6 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -15,12 +16,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.LocalFireDepartment
-import androidx.compose.material.icons.filled.LocalPolice
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Security
@@ -51,11 +49,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.emergencycommunicationsystem.R
-import com.example.emergencycommunicationsystem.network.UserPreferences
+import com.example.emergencycommunicationsystem.data.SubscriptionCategory
 import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModel
 import kotlinx.coroutines.launch
 
@@ -78,6 +77,7 @@ fun ProfileScreen(
     var showLogoutDialog by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     if (showLogoutDialog) {
         AlertDialog(
@@ -155,7 +155,13 @@ fun ProfileScreen(
                 ProfileItem(
                     icon = Icons.Default.Notifications,
                     text = stringResource(R.string.receive_notifications),
-                    onClick = { showNotificationSettings = true }
+                    onClick = { 
+                        if (isLoggedIn) {
+                            showNotificationSettings = true 
+                        } else {
+                            Toast.makeText(context, "Please log in to manage notifications", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 )
             }
             item {
@@ -189,9 +195,9 @@ fun ProfileScreen(
                 val settingsState by profileViewModel.uiState.collectAsState()
                 if (settingsState != null) {
                     NotificationSettingsSheet(
-                        preferences = settingsState!!,
-                        onPreferenceChange = {
-                            profileViewModel.onPreferenceChange(it)
+                        categories = settingsState!!,
+                        onSubscriptionChange = { categoryId, isEnabled ->
+                            profileViewModel.onSubscriptionChange(categoryId, isEnabled)
                         },
                         onDoneClick = {
                             scope.launch {
@@ -218,8 +224,8 @@ fun ProfileScreen(
 
 @Composable
 private fun NotificationSettingsSheet(
-    preferences: UserPreferences,
-    onPreferenceChange: (UserPreferences) -> Unit,
+    categories: List<SubscriptionCategory>,
+    onSubscriptionChange: (Int, Boolean) -> Unit,
     onDoneClick: () -> Unit
 ) {
     Column(
@@ -232,51 +238,15 @@ private fun NotificationSettingsSheet(
             modifier = Modifier.padding(bottom = 24.dp)
         )
 
-        ProfileItem(
-            icon = Icons.Default.Notifications,
-            text = "Receive Notifications",
-            checked = preferences.receive_notifications,
-            onCheckedChange = { isEnabled ->
-                onPreferenceChange(preferences.copy(receive_notifications = isEnabled))
-            }
-        )
-
-        AnimatedVisibility(
-            visible = preferences.receive_notifications,
-            enter = expandVertically(),
-            exit = shrinkVertically()
-        ) {
-            Column(modifier = Modifier.padding(start = 16.dp, top = 8.dp)) {
+        LazyColumn {
+            items(categories.size) { index ->
+                val category = categories[index]
                 ProfileItem(
-                    icon = Icons.Default.LocalPolice,
-                    text = "Crime Alerts",
-                    checked = preferences.crime_alerts,
+                    icon = Icons.Default.Warning, // You can make this dynamic later
+                    text = category.name,
+                    checked = category.isSubscribed == 1,
                     onCheckedChange = { isEnabled ->
-                        onPreferenceChange(preferences.copy(crime_alerts = isEnabled))
-                    }
-                )
-                ProfileItem(
-                    icon = Icons.Default.Warning,
-                    text = "Disaster Warnings",
-                    checked = preferences.disaster_warnings,
-                    onCheckedChange = { isEnabled ->
-                        onPreferenceChange(preferences.copy(disaster_warnings = isEnabled))
-                    }
-                )
-                ProfileItem(
-                    icon = Icons.Default.LocalFireDepartment,
-                    text = "Fire Alerts",
-                    checked = preferences.fire_alerts,
-                    onCheckedChange = { isEnabled ->
-                        onPreferenceChange(preferences.copy(fire_alerts = isEnabled))
-                    }
-                )
-                ProfileItem(
-                    icon = Icons.Default.Air,
-                    text = "Weather Advisories",
-                    checked = preferences.weather_advisories,
-                    onCheckedChange = { isEnabled ->
-                        onPreferenceChange(preferences.copy(weather_advisories = isEnabled))
+                        onSubscriptionChange(category.categoryId, isEnabled)
                     }
                 )
             }

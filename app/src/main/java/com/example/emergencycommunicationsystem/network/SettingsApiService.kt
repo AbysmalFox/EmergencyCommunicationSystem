@@ -1,39 +1,24 @@
 package com.example.emergencycommunicationsystem.network
 
+import com.example.emergencycommunicationsystem.data.LocationUpdateRequest
+import com.example.emergencycommunicationsystem.data.LocationUpdateResponse
+import com.example.emergencycommunicationsystem.data.SubscriptionSettingsResponse
+import com.example.emergencycommunicationsystem.data.UpdateSubscriptionRequest
+import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Query
 
-// Data class to match the JSON response from get_preferences.php
-data class UserPreferences(
-    val receive_notifications: Boolean,
-    val crime_alerts: Boolean,
-    val disaster_warnings: Boolean,
-    val fire_alerts: Boolean,
-    val weather_advisories: Boolean
-)
-
-// Request body for updating location
-data class LocationUpdateRequest(
-    val user_id: Int,
-    val latitude: Double,
-    val longitude: Double,
-    val accuracy: Float? = null,
-    val source: String? = "gps"
-)
-
-data class PreferencesResponse(val success: Boolean, val preferences: UserPreferences)
-data class UpdatePreferencesResponse(val success: Boolean, val message: String)
-data class LocationUpdateResponse(val success: Boolean, val message: String)
-
 interface SettingsApiService {
-    @GET("user/get_preferences.php")
-    suspend fun getUserPreferences(@Query("user_id") userId: Int): PreferencesResponse
 
-    @POST("user/update_preferences.php")
-    suspend fun updateUserPreferences(@Body preferences: UserPreferences): UpdatePreferencesResponse
+    @GET("subscription_settings.php")
+    suspend fun getSubscriptionSettings(@Query("user_id") userId: Int): SubscriptionSettingsResponse
 
-    @POST("user/update_location.php")
+    @POST("subscription_settings.php")
+    suspend fun updateSubscription(@Body request: UpdateSubscriptionRequest): Response<Unit> // A simple success/fail response
+
+    @POST("update_location.php")
     suspend fun updateUserLocation(@Body request: LocationUpdateRequest): LocationUpdateResponse
+
 }

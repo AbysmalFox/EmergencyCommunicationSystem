@@ -4,6 +4,7 @@ import com.example.emergencycommunicationsystem.data.models.Alert
 import com.google.gson.annotations.SerializedName
 import retrofit2.Response
 import retrofit2.http.GET
+import retrofit2.http.Query
 
 /**
  * DTO for the alerts list response coming from your PHP backend.
@@ -21,7 +22,5 @@ interface AlertsApiService {
 
     // Matches PHP endpoint: http://<server>/PHP/api/alerts.php
     @GET("alerts.php")
-    suspend fun getAlerts(): Response<AlertsResponse>
+    suspend fun getAlerts(@Query("user_id") userId: Int?): Response<AlertsResponse>
 }
-
-

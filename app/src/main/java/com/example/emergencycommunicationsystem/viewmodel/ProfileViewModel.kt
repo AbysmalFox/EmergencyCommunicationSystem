@@ -1,46 +1,56 @@
 package com.example.emergencycommunicationsystem.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.emergencycommunicationsystem.data.SubscriptionCategory
 import com.example.emergencycommunicationsystem.data.repository.SettingsRepository
-import com.example.emergencycommunicationsystem.network.UserPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class ProfileViewModel(
     private val userId: Int,
-    private val settingsRepository: SettingsRepository = SettingsRepository()
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<UserPreferences?>(null)
+    private val _uiState = MutableStateFlow<List<SubscriptionCategory>?>(null)
     val uiState = _uiState.asStateFlow()
 
     init {
         if (userId > 0) {
-            loadUserPreferences()
+            loadSubscriptionSettings()
         }
     }
 
-    private fun loadUserPreferences() {
+    private fun loadSubscriptionSettings() {
         viewModelScope.launch {
             try {
-                val prefs = settingsRepository.getUserPreferences(userId)
-                _uiState.value = prefs
+                val settings = settingsRepository.getSubscriptionSettings(userId)
+                _uiState.value = settings
             } catch (e: Exception) {
-                // Handle error, maybe show a toast
+                // Handle error, maybe show a toast or log the error
             }
         }
     }
 
-    fun onPreferenceChange(newPrefs: UserPreferences) {
-        _uiState.value = newPrefs
+    fun onSubscriptionChange(categoryId: Int, isEnabled: Boolean) {
+        // Optimistically update the UI
+        val currentSettings = _uiState.value?.toMutableList() ?: return
+        val index = currentSettings.indexOfFirst { it.categoryId == categoryId }
+        if (index != -1) {
+            currentSettings[index] = currentSettings[index].copy(isSubscribed = if (isEnabled) 1 else 0)
+            _uiState.value = currentSettings
+        }
+
+        // Update the backend
         viewModelScope.launch {
             try {
-                settingsRepository.updateUserPreferences(newPrefs)
+                settingsRepository.updateSubscription(userId, categoryId, isEnabled)
             } catch (e: Exception) {
-                // Handle error, maybe revert the UI state or show a toast
+                // If backend fails, revert the UI change and show an error
+                loadSubscriptionSettings() // Reload from server to get the true state
+                // Optionally, show a toast to the user
             }
         }
     }

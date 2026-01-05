@@ -6,12 +6,12 @@ import com.example.emergencycommunicationsystem.data.repository.SettingsReposito
 
 class ProfileViewModelFactory(
     private val userId: Int,
-    private val settingsRepository: SettingsRepository
+    private val repository: SettingsRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ProfileViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return ProfileViewModel(userId, settingsRepository) as T
+            return ProfileViewModel(userId, repository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
