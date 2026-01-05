@@ -70,7 +70,8 @@ sealed interface WeatherState {
         val humidity: String,
         val windSpeed: String,
         val visibility: String,
-        val forecastData: List<ForecastItem> = emptyList()
+        val forecastData: List<ForecastItem> = emptyList(),
+        var address: String? = null // Added mutable address property
     ) : WeatherState
     data class Error(val message: String) : WeatherState
 }

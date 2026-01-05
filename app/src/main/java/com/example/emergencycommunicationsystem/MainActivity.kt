@@ -46,6 +46,7 @@ import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import org.osmdroid.config.Configuration
 import java.net.URLDecoder
 import java.net.URLEncoder
 
@@ -53,6 +54,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Required OSMDroid configuration
+        Configuration.getInstance().userAgentValue = packageName
+
         ApiClient.initializeAndCheckConnection()
         AuthManager.initialize(applicationContext)
         enableEdgeToEdge()

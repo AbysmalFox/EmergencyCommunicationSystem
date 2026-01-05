@@ -3,6 +3,7 @@ package com.example.emergencycommunicationsystem.data.network
 import com.example.emergencycommunicationsystem.BuildConfig
 import com.example.emergencycommunicationsystem.network.AlertsApiService
 import com.example.emergencycommunicationsystem.network.AuthApiService
+import com.example.emergencycommunicationsystem.network.IncidentApiService
 import com.example.emergencycommunicationsystem.network.MessagingApiService
 import com.example.emergencycommunicationsystem.network.SettingsApiService
 import kotlinx.coroutines.CoroutineScope
@@ -58,6 +59,10 @@ object ApiClient {
     val settingsApiService: SettingsApiService
         get() = if (_useLocalServer.value) localRetrofit.create(SettingsApiService::class.java)
         else productionRetrofit.create(SettingsApiService::class.java)
+
+    val incidentApiService: IncidentApiService
+        get() = if (_useLocalServer.value) localRetrofit.create(IncidentApiService::class.java)
+        else productionRetrofit.create(IncidentApiService::class.java)
 
     /**
      * Pings the production server to check for connectivity at app startup.

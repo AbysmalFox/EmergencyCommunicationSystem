@@ -1,8 +1,12 @@
-
 package com.example.emergencycommunicationsystem.ui.screens
 
+import android.graphics.Color as AndroidColor
+import android.graphics.drawable.AnimationDrawable
+import android.graphics.drawable.ShapeDrawable
+import android.graphics.drawable.shapes.OvalShape
 import android.location.Geocoder
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -26,12 +30,12 @@ import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Flood
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.LocalPolice
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,7 +48,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,15 +63,25 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.example.emergencycommunicationsystem.AuthManager
 import com.example.emergencycommunicationsystem.data.models.WeatherState
+import com.example.emergencycommunicationsystem.viewmodel.ReportIncidentViewModel
+import com.example.emergencycommunicationsystem.viewmodel.ReportState
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportIncidentScreen(
     weatherState: WeatherState,
-    onBackPressed: () -> Unit
+    onBackPressed: () -> Unit,
+    reportViewModel: ReportIncidentViewModel = viewModel()
 ) {
     var incidentDetails by remember { mutableStateOf("") }
     var reporterName by remember { mutableStateOf("") }
@@ -86,6 +102,24 @@ fun ReportIncidentScreen(
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri: Uri? -> imageUri = uri }
     )
+
+    val reportState by reportViewModel.reportState.collectAsState()
+    val context = LocalContext.current
+
+    LaunchedEffect(reportState) {
+        when (val state = reportState) {
+            is ReportState.Success -> {
+                Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
+                reportViewModel.resetState()
+                onBackPressed()
+            }
+            is ReportState.Error -> {
+                Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
+                reportViewModel.resetState()
+            }
+            else -> {}
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -119,7 +153,7 @@ fun ReportIncidentScreen(
                 verticalArrangement = Arrangement.spacedBy(24.dp),
                 contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp) // Adjusted padding
             ) {
-                item { MapPreview(weatherState) }
+                item { MapView(weatherState) }
 
                 item {
                     IncidentTypeSelector(
@@ -165,7 +199,23 @@ fun ReportIncidentScreen(
             }
 
             Button(
-                onClick = { /* TODO: Submit Report */ },
+                onClick = {
+                    val userId = AuthManager.getUserId()
+                    if (userId > 0 && weatherState is WeatherState.Success) {
+                        reportViewModel.submitReport(
+                            context = context,
+                            userId = userId,
+                            incidentType = selectedIncidentType,
+                            urgency = selectedUrgency,
+                            details = incidentDetails,
+                            latitude = weatherState.lat,
+                            longitude = weatherState.lon,
+                            address = weatherState.address,
+                            reporterName = reporterName,
+                            imageUri = imageUri
+                        )
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
@@ -173,22 +223,53 @@ fun ReportIncidentScreen(
                 shape = MaterialTheme.shapes.extraLarge,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary
-                )
+                ),
+                enabled = reportState !is ReportState.Loading
             ) {
-                Text(
-                    text = "Submit Report",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                if (reportState is ReportState.Loading) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
+                } else {
+                    Text(
+                        text = "Submit Report",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-fun MapPreview(weatherState: WeatherState) {
+fun MapView(weatherState: WeatherState) {
     val context = LocalContext.current
     var address by remember { mutableStateOf("Detecting location...") }
+    var mapView by remember { mutableStateOf<MapView?>(null) }
+
+    val locationPoint = if (weatherState is WeatherState.Success) {
+        GeoPoint(weatherState.lat, weatherState.lon)
+    } else {
+        GeoPoint(0.0, 0.0) // Default location
+    }
+
+    val blinkingDrawable = remember {
+        val redDot = ShapeDrawable(OvalShape()).apply {
+            paint.color = AndroidColor.RED
+            intrinsicWidth = 32
+            intrinsicHeight = 32
+        }
+        val transparentDot = ShapeDrawable(OvalShape()).apply {
+            paint.color = AndroidColor.TRANSPARENT
+            intrinsicWidth = 32
+            intrinsicHeight = 32
+        }
+
+        AnimationDrawable().apply {
+            addFrame(redDot, 500)
+            addFrame(transparentDot, 500)
+            isOneShot = false
+        }
+    }
 
     LaunchedEffect(weatherState) {
         if (weatherState is WeatherState.Success) {
@@ -198,11 +279,10 @@ fun MapPreview(weatherState: WeatherState) {
                 @Suppress("DEPRECATION")
                 val results = geocoder.getFromLocation(weatherState.lat, weatherState.lon, 1)
                 address = results?.firstOrNull()?.getAddressLine(0) ?: "Address not found"
+                weatherState.address = address
             } catch (e: Exception) {
                 address = "Could not determine address"
             }
-        } else {
-            address = "Location not available"
         }
     }
 
@@ -215,29 +295,42 @@ fun MapPreview(weatherState: WeatherState) {
         )
         Spacer(modifier = Modifier.height(8.dp))
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp),
             shape = MaterialTheme.shapes.large,
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
         ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.LocationOn,
-                    contentDescription = "Location Pin",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(36.dp)
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Text(
-                    text = address,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            AndroidView(
+                factory = {
+                    MapView(it).apply {
+                        setTileSource(TileSourceFactory.MAPNIK)
+                        setMultiTouchControls(true)
+                        controller.setZoom(15.0)
+                        controller.setCenter(locationPoint)
+                        mapView = this
+                    }
+                },
+                update = {
+                    it.controller.setCenter(locationPoint)
+                    val marker = Marker(it).apply {
+                        position = locationPoint
+                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                        icon = blinkingDrawable
+                    }
+                    it.overlays.clear()
+                    it.overlays.add(marker)
+                    it.invalidate()
+                    blinkingDrawable.start()
+                }
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(text = address, style = MaterialTheme.typography.bodyMedium)
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            mapView?.onPause()
         }
     }
 }
