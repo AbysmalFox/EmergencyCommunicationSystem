@@ -1,10 +1,11 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
+import android.app.Application
 import android.util.Log
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.emergencycommunicationsystem.data.RegisterRequest
-import com.example.emergencycommunicationsystem.data.network.ApiClient
+import com.example.emergencycommunicationsystem.data.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -14,13 +15,13 @@ import java.io.IOException
 sealed class SignUpState {
     object Idle : SignUpState()
     object Loading : SignUpState()
-    // Simplified Success state - the detailed user data is no longer needed here.
     data class Success(val message: String) : SignUpState()
     data class Error(val message: String) : SignUpState()
 }
 
-class SignUpViewModel : ViewModel() {
+class SignUpViewModel(application: Application) : AndroidViewModel(application) {
 
+    private val authRepository = AuthRepository()
     private val _signUpState = MutableStateFlow<SignUpState>(SignUpState.Idle)
     val signUpState: StateFlow<SignUpState> = _signUpState
 
@@ -51,39 +52,36 @@ class SignUpViewModel : ViewModel() {
                     password = password,
                     shareLocation = locationPermissionGranted
                 )
-                val response = ApiClient.authApiService.registerUser(request)
+                val response = authRepository.register(getApplication(), request)
 
-                if (response.isSuccessful) {
-                    val authResponse = response.body()
-                    // Simplified the success check. We only care if the backend confirms success.
-                    if (authResponse?.success == true) {
-                        Log.i("SignUpViewModel", "Sign-up successful for user: $email")
-                        _signUpState.value = SignUpState.Success(authResponse.message)
-                    } else {
-                        val backendMessage = authResponse?.message ?: "Registration failed: Unknown reason from backend."
-                        Log.w("SignUpViewModel", "Backend rejected sign-up: $backendMessage")
-                        _signUpState.value = SignUpState.Error(backendMessage)
-                    }
+                if (response.success) {
+                    Log.i("SignUpViewModel", "Sign-up successful for user: $email")
+                    _signUpState.value = SignUpState.Success(response.message)
                 } else {
-                    val errorBodyString = response.errorBody()?.string() ?: "No error body"
-                    Log.e("SignUpViewModel", "HTTP Error ${response.code()}: $errorBodyString")
-                    if (response.code() in 500..599) {
-                        Log.e("SignUpViewModel", "This is a server-side error. Check your PHP/Apache 'error.log' in XAMPP for the detailed PDOException message.")
-                        _signUpState.value = SignUpState.Error("Server error (${response.code()}): Could not complete registration. Check Logcat for guidance.")
-                    } else {
-                        _signUpState.value = SignUpState.Error("Server error (${response.code()}): $errorBodyString")
-                    }
+                    Log.w("SignUpViewModel", "Backend rejected sign-up: ${response.message}")
+                    _signUpState.value = SignUpState.Error(response.message)
                 }
             } catch (e: HttpException) {
                 val errorBody = e.response()?.errorBody()?.string()
+                val errorMsg = e.response()?.let { res ->
+                    try {
+                        // Assuming you have a standard error response model
+                        // val errorResponse = Gson().fromJson(errorBody, ErrorResponse::class.java)
+                        // errorResponse.message ?: res.message()
+                         res.message()
+                    } catch (jsonE: Exception) {
+                        res.message()
+                    }
+                } ?: e.message()
+                _signUpState.value = SignUpState.Error("HTTP Error ${e.code()}: $errorMsg")
                 Log.e("SignUpViewModel", "HttpException: ${e.code()} - $errorBody", e)
-                _signUpState.value = SignUpState.Error("Network error: ${e.code()}. See Logcat for details.")
+
             } catch (e: IOException) {
-                Log.e("SignUpViewModel", "IOException during sign-up. Check network connection and XAMPP server status.", e)
-                _signUpState.value = SignUpState.Error("Network error: Could not connect to the server.")
+                _signUpState.value = SignUpState.Error("Network error: Could not connect to server. Check your connection.")
+                Log.e("SignUpViewModel", "IOException during sign-up: ${e.message}", e)
             } catch (e: Exception) {
-                Log.e("SignUpViewModel", "An unexpected error occurred during sign-up.", e)
                 _signUpState.value = SignUpState.Error("An unexpected error occurred: ${e.localizedMessage}")
+                Log.e("SignUpViewModel", "Unexpected error during sign-up", e)
             }
         }
     }

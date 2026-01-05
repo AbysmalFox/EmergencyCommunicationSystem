@@ -2,6 +2,7 @@ package com.example.emergencycommunicationsystem
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.example.emergencycommunicationsystem.data.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -15,6 +16,7 @@ object AuthManager {
     private const val KEY_TOKEN = "auth_token"
 
     private lateinit var sharedPrefs: SharedPreferences
+    private val authRepository = AuthRepository()
 
     private val _isLoggedIn = MutableStateFlow(false)
     val isLoggedInFlow: StateFlow<Boolean> get() = _isLoggedIn
@@ -37,7 +39,15 @@ object AuthManager {
         _isLoggedIn.value = true
     }
 
-    fun logout() {
+    suspend fun logout(context: Context) {
+        val userId = getUserId()
+        if (userId != -1) {
+            try {
+                authRepository.logout(context, userId)
+            } catch (e: Exception) {
+                // Log the exception, but proceed with local logout
+            }
+        }
         sharedPrefs.edit().clear().apply()
         _isLoggedIn.value = false
     }

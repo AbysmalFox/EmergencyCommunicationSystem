@@ -186,12 +186,14 @@ fun EmergencyApp() {
                         onLoginClick = { navController.navigate(Screen.Login.route) },
                         onSignUpClick = { navController.navigate(Screen.SignUp.route) },
                         onLogoutClick = {
-                            AuthManager.logout()
-                            navController.navigate(Screen.Profile.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    inclusive = true
+                            coroutineScope.launch {
+                                AuthManager.logout(context)
+                                navController.navigate(Screen.Profile.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        inclusive = true
+                                    }
+                                    launchSingleTop = true
                                 }
-                                launchSingleTop = true
                             }
                         },
                         onLanguageSettingsClick = { navController.navigate(Screen.LanguageSettings.route) },
