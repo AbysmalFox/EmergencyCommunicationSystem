@@ -29,6 +29,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.emergencycommunicationsystem.data.UserPrefs
+import com.example.emergencycommunicationsystem.data.network.ApiClient
 import com.example.emergencycommunicationsystem.data.repository.MessagingRepository
 import com.example.emergencycommunicationsystem.data.repository.SettingsRepository
 import com.example.emergencycommunicationsystem.navigation.BottomNavigationBar
@@ -57,7 +58,17 @@ class MainActivity : ComponentActivity() {
         // Required OSMDroid configuration
         Configuration.getInstance().userAgentValue = packageName
 
+        // Initialize network client and AuthManager
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                ApiClient.initializeAndCheckConnection()
+                Log.i("NetworkStatus", "Connection established. Check ApiClient logs for specific URL.")
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Network initialization failed", e)
+            }
+        }
         AuthManager.initialize(applicationContext)
+        
         enableEdgeToEdge()
 
         lifecycleScope.launch(Dispatchers.IO) {

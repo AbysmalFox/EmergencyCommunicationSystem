@@ -32,7 +32,7 @@ class AlertsViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val userId = AuthManager.getUserId().takeIf { it > 0 } // Get user ID, but only if they're logged in
-                val response = ApiClient.alertsApiService.getAlerts(userId)
+                val response = ApiClient.alertsApiService().getAlerts(userId)
 
                 if (response.isSuccessful) {
                     val body = response.body()
@@ -72,5 +72,3 @@ class AlertsViewModel : ViewModel() {
         }
     }
 }
-
-

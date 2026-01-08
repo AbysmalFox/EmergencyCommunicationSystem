@@ -1,34 +1,31 @@
 package com.example.emergencycommunicationsystem.data.network
 
+import android.util.Log
 import com.example.emergencycommunicationsystem.BuildConfig
 import com.example.emergencycommunicationsystem.network.AlertsApiService
 import com.example.emergencycommunicationsystem.network.AuthApiService
 import com.example.emergencycommunicationsystem.network.IncidentApiService
 import com.example.emergencycommunicationsystem.network.MessagingApiService
 import com.example.emergencycommunicationsystem.network.SettingsApiService
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import okhttp3.Request
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import java.net.InetAddress
 
-/**
- * Manages API services and implements the dynamic fallback from production to local.
- */
 object ApiClient {
-    // State to track if we should use the local server as a fallback
     private val _useLocalServer = MutableStateFlow(false)
+    private val isInitialized = CompletableDeferred<Unit>()
 
-    // --- Client and Factory Setup ---
     private val loggingInterceptor = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
     private val okHttpClient = OkHttpClient.Builder().addInterceptor(loggingInterceptor).build()
     private val gsonConverterFactory = GsonConverterFactory.create()
 
-    // --- Retrofit Instances for Both Environments ---
     private val productionRetrofit = Retrofit.Builder()
         .baseUrl(NetworkConfig.PRODUCTION_API_URL)
         .client(okHttpClient)
@@ -41,44 +38,65 @@ object ApiClient {
         .addConverterFactory(gsonConverterFactory)
         .build()
 
-    // --- Dynamic Service Providers ---
-    val authApiService: AuthApiService
-        get() = if (_useLocalServer.value) localRetrofit.create(AuthApiService::class.java)
-                else productionRetrofit.create(AuthApiService::class.java)
+    // --- Service Providers are now suspend functions ---
+    suspend fun authApiService(): AuthApiService {
+        isInitialized.await()
+        return if (_useLocalServer.value) localRetrofit.create(AuthApiService::class.java)
+        else productionRetrofit.create(AuthApiService::class.java)
+    }
 
-    val alertsApiService: AlertsApiService
-        get() = if (_useLocalServer.value) localRetrofit.create(AlertsApiService::class.java)
-                else productionRetrofit.create(AlertsApiService::class.java)
+    suspend fun alertsApiService(): AlertsApiService {
+        isInitialized.await()
+        return if (_useLocalServer.value) localRetrofit.create(AlertsApiService::class.java)
+        else productionRetrofit.create(AlertsApiService::class.java)
+    }
 
-    val messagingApiService: MessagingApiService
-        get() = if (_useLocalServer.value) localRetrofit.create(MessagingApiService::class.java)
-                else productionRetrofit.create(MessagingApiService::class.java)
+    suspend fun messagingApiService(): MessagingApiService {
+        isInitialized.await()
+        return if (_useLocalServer.value) localRetrofit.create(MessagingApiService::class.java)
+        else productionRetrofit.create(MessagingApiService::class.java)
+    }
 
-    val settingsApiService: SettingsApiService
-        get() = if (_useLocalServer.value) localRetrofit.create(SettingsApiService::class.java)
+    suspend fun settingsApiService(): SettingsApiService {
+        isInitialized.await()
+        return if (_useLocalServer.value) localRetrofit.create(SettingsApiService::class.java)
         else productionRetrofit.create(SettingsApiService::class.java)
+    }
 
-    val incidentApiService: IncidentApiService
-        get() = if (_useLocalServer.value) localRetrofit.create(IncidentApiService::class.java)
+    suspend fun incidentApiService(): IncidentApiService {
+        isInitialized.await()
+        return if (_useLocalServer.value) localRetrofit.create(IncidentApiService::class.java)
         else productionRetrofit.create(IncidentApiService::class.java)
+    }
 
-    /**
-     * Pings the production server to check for connectivity at app startup.
-     * If it fails, it sets the flag to use the local server as a fallback.
-     */
     fun initializeAndCheckConnection() {
+        if (isInitialized.isCompleted) return
+
         if (BuildConfig.DEBUG) {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    val host = NetworkConfig.PRODUCTION_HOST.removePrefix("https://").removeSuffix("/")
-                    InetAddress.getByName(host)
-                    _useLocalServer.value = false // Success, use production server
+                    val request = Request.Builder()
+                        .url(NetworkConfig.PRODUCTION_API_URL + "alerts.php")
+                        .head()
+                        .build()
+                    val response = okHttpClient.newCall(request).execute()
+                    if (response.isSuccessful) {
+                        _useLocalServer.value = false
+                        Log.i("ApiClient", "Production server is reachable. Using ONLINE mode.")
+                    } else {
+                        _useLocalServer.value = true
+                        Log.w("ApiClient", "Production server returned ${response.code}. Falling back to LOCAL mode.")
+                    }
                 } catch (e: Exception) {
                     _useLocalServer.value = true
+                    Log.e("ApiClient", "Production server unreachable. Falling back to LOCAL mode.", e)
+                } finally {
+                    isInitialized.complete(Unit)
                 }
             }
         } else {
             _useLocalServer.value = false
+            isInitialized.complete(Unit)
         }
     }
 }

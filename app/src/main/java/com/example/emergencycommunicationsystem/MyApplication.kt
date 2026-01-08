@@ -2,7 +2,6 @@ package com.example.emergencycommunicationsystem
 
 import android.app.Application
 import android.content.Context
-import com.example.emergencycommunicationsystem.data.network.ApiClient
 import org.osmdroid.config.Configuration
 
 class MyApplication : Application() {
@@ -17,7 +16,7 @@ class MyApplication : Application() {
         Configuration.getInstance().userAgentValue = BuildConfig.APPLICATION_ID
         // --- END OSMDROID CONFIGURATION ---
 
-        ApiClient.initializeAndCheckConnection()
+        // The ApiClient is now initialized in MainActivity to prevent race conditions.
         AuthManager.initialize(this)
     }
 }

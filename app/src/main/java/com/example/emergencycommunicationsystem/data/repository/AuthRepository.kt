@@ -13,8 +13,8 @@ import retrofit2.HttpException
 import retrofit2.Response
 
 class AuthRepository {
-    private val apiService: AuthApiService
-        get() = ApiClient.authApiService
+
+    private suspend fun apiService(): AuthApiService = ApiClient.authApiService()
 
     private suspend fun <T> executeApiCall(call: suspend () -> Response<T>): T {
         try {
@@ -41,7 +41,7 @@ class AuthRepository {
         loginData["device_name"] = DeviceManager.getDeviceName()
         loginData["push_token"] = DeviceManager.getPushToken()
 
-        return executeApiCall { apiService.loginUser(loginData) }
+        return executeApiCall { apiService().loginUser(loginData) }
     }
 
     suspend fun register(context: Context, request: RegisterRequest): AuthResponse {
@@ -62,12 +62,12 @@ class AuthRepository {
         request.longitude?.let { registerData["longitude"] = it }
         request.address?.let { registerData["address"] = it }
 
-        return executeApiCall { apiService.registerUser(registerData) }
+        return executeApiCall { apiService().registerUser(registerData) }
     }
 
     suspend fun logout(context: Context, userId: Int): AuthResponse {
         val deviceId = DeviceManager.getDeviceId(context)
         val request = LogoutRequest(userId = userId, deviceId = deviceId)
-        return executeApiCall { apiService.logout(request) }
+        return executeApiCall { apiService().logout(request) }
     }
 }

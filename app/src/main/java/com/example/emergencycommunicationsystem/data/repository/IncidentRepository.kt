@@ -13,7 +13,7 @@ import java.io.File
 
 class IncidentRepository {
 
-    private val apiService: IncidentApiService = ApiClient.incidentApiService
+    private suspend fun apiService(): IncidentApiService = ApiClient.incidentApiService()
 
     suspend fun submitIncident(
         context: Context,
@@ -49,7 +49,7 @@ class IncidentRepository {
             }
         }
 
-        return apiService.submitIncident(
+        return apiService().submitIncident(
             userId = userIdBody,
             incidentType = incidentTypeBody,
             urgency = urgencyBody,
