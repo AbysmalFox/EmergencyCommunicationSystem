@@ -29,7 +29,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.emergencycommunicationsystem.data.UserPrefs
-import com.example.emergencycommunicationsystem.data.network.ApiClient
 import com.example.emergencycommunicationsystem.data.repository.MessagingRepository
 import com.example.emergencycommunicationsystem.data.repository.SettingsRepository
 import com.example.emergencycommunicationsystem.navigation.BottomNavigationBar
@@ -58,7 +57,6 @@ class MainActivity : ComponentActivity() {
         // Required OSMDroid configuration
         Configuration.getInstance().userAgentValue = packageName
 
-        ApiClient.initializeAndCheckConnection()
         AuthManager.initialize(applicationContext)
         enableEdgeToEdge()
 

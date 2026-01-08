@@ -9,7 +9,6 @@ import com.example.emergencycommunicationsystem.network.SettingsApiService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -43,7 +42,6 @@ object ApiClient {
         .build()
 
     // --- Dynamic Service Providers ---
-    // These getters check the fallback state *every time* a service is requested.
     val authApiService: AuthApiService
         get() = if (_useLocalServer.value) localRetrofit.create(AuthApiService::class.java)
                 else productionRetrofit.create(AuthApiService::class.java)
@@ -69,21 +67,17 @@ object ApiClient {
      * If it fails, it sets the flag to use the local server as a fallback.
      */
     fun initializeAndCheckConnection() {
-        // Only run this logic in DEBUG builds. Release builds will always use production.
         if (BuildConfig.DEBUG) {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     val host = NetworkConfig.PRODUCTION_HOST.removePrefix("https://").removeSuffix("/")
-                    // A quick DNS lookup is enough to check for internet connectivity.
                     InetAddress.getByName(host)
                     _useLocalServer.value = false // Success, use production server
                 } catch (e: Exception) {
-                    // Failure (no internet, DNS issue), fall back to local server
                     _useLocalServer.value = true
                 }
             }
         } else {
-            // For RELEASE builds, never fall back to local.
             _useLocalServer.value = false
         }
     }
