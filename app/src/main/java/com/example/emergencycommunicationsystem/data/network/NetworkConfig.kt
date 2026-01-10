@@ -8,7 +8,7 @@ object NetworkConfig {
 
     // 2. Local Development
     private const val EMULATOR_HOST = "10.0.2.2"
-    private const val DEVICE_HOST = "192.168.1.6"  // Replace if your PC's IP changes
+    private const val DEVICE_HOST = "192.168.1.7"  // Updated to your new local IP
 
     // Publicly accessible URLs for both environments
     val PRODUCTION_API_URL: String = "$PRODUCTION_HOST/PHP/api/"
