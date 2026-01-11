@@ -47,6 +47,8 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.animation.animateContentSize
+import com.example.emergencycommunicationsystem.R
+import com.example.emergencycommunicationsystem.util.getLocaleContext
 
 const val navOverlayHeight = 92
 const val navOverlayLift = 36

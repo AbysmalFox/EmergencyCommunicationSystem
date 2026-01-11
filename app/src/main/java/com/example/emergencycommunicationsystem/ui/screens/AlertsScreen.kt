@@ -24,8 +24,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.emergencycommunicationsystem.AuthManager
+import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.util.Resource
+import com.example.emergencycommunicationsystem.util.getLocaleContext
 import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
 import java.util.Locale
 
@@ -65,6 +67,7 @@ fun AlertItem(
     onMessageClick: (id: String, title: String) -> Unit = { _, _ -> }
 ) {
     val context = LocalContext.current
+    val localeContext = getLocaleContext()
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -74,20 +77,20 @@ fun AlertItem(
             Row {
                 Icon(
                     imageVector = getIconForCategory(alert),
-                    contentDescription = alert.category ?: "Alert Category",
+                    contentDescription = alert.category ?: localeContext.getString(R.string.general),
                     modifier = Modifier.size(40.dp).align(Alignment.Top),
                     tint = getColorForCategory(alert)
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = (alert.category ?: "General").uppercase(),
+                        text = (alert.category ?: localeContext.getString(R.string.general)).uppercase(),
                         color = getColorForCategory(alert),
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp
                     )
                     Text(
-                        text = alert.title ?: "No Title",
+                        text = alert.title ?: localeContext.getString(R.string.no_title),
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
                         color = MaterialTheme.colorScheme.onSurface
@@ -108,7 +111,7 @@ fun AlertItem(
             ) {
                 Column {
                     Text(
-                        text = alert.source ?: "Unknown Source",
+                        text = alert.source ?: localeContext.getString(R.string.unknown_source),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -125,18 +128,18 @@ fun AlertItem(
                         if (userId > 0) {
                             onMessageClick(alert.id.toString(), alert.title ?: "Chat")
                         } else {
-                            Toast.makeText(context, "Please log in to send a message", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, localeContext.getString(R.string.please_login_to_send_message), Toast.LENGTH_SHORT).show()
                         }
                     },
                     modifier = Modifier.height(40.dp)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Message,
-                        contentDescription = "Message",
+                        contentDescription = localeContext.getString(R.string.message),
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Message")
+                    Text(localeContext.getString(R.string.message))
                 }
             }
         }
@@ -149,6 +152,7 @@ fun AlertsScreen(
     viewModel: AlertsViewModel = viewModel(),
     onMessageClick: ((alertId: String, alertTitle: String) -> Unit)? = null
 ) {
+    val localeContext = getLocaleContext()
     val state by viewModel.uiState.collectAsState()
     val isRefreshing = state is Resource.Loading
     val pullRefreshState = rememberPullRefreshState(
@@ -160,7 +164,7 @@ fun AlertsScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Alerts & Notifications") },
+                title = { Text(localeContext.getString(R.string.alerts_and_notifications)) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
                     titleContentColor = MaterialTheme.colorScheme.onBackground
@@ -219,6 +223,7 @@ fun AlertsScreen(
 
 @Composable
 fun EmptyAlertsView() {
+    val localeContext = getLocaleContext()
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -226,18 +231,18 @@ fun EmptyAlertsView() {
     ) {
         Icon(
             imageVector = Icons.Default.NotificationsOff,
-            contentDescription = "No Alerts",
+            contentDescription = localeContext.getString(R.string.no_new_alerts),
             modifier = Modifier.size(64.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            "No new alerts",
+            localeContext.getString(R.string.no_new_alerts),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground
         )
         Text(
-            "Your community alerts will appear here.",
+            localeContext.getString(R.string.community_alerts_will_appear_here),
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
@@ -245,13 +250,14 @@ fun EmptyAlertsView() {
 
 @Composable
 fun ErrorView(message: String, onRetry: () -> Unit) {
+    val localeContext = getLocaleContext()
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Failed to load alerts",
+            text = localeContext.getString(R.string.failed_to_load_alerts),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.error
         )
@@ -262,7 +268,7 @@ fun ErrorView(message: String, onRetry: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = onRetry) {
-            Text("Retry")
+            Text(localeContext.getString(R.string.retry))
         }
     }
 }

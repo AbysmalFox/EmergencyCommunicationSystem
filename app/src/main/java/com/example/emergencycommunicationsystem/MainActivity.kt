@@ -38,6 +38,7 @@ import com.example.emergencycommunicationsystem.ui.screens.*
 import com.example.emergencycommunicationsystem.ui.theme.EmergencyCommunicationSystemTheme
 import com.example.emergencycommunicationsystem.util.LocationUpdater
 import com.example.emergencycommunicationsystem.util.LocationUtils
+import com.example.emergencycommunicationsystem.util.LocaleProvider
 import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModel
 import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModelFactory
 import com.example.emergencycommunicationsystem.ui.screens.SignUpViewModel
@@ -46,6 +47,7 @@ import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.osmdroid.config.Configuration
 import java.net.URLDecoder
 import java.net.URLEncoder
@@ -74,14 +76,12 @@ class MainActivity : ComponentActivity() {
         
         enableEdgeToEdge()
 
-        lifecycleScope.launch(Dispatchers.IO) {
-            val lang = UserPrefs.getLanguage(this@MainActivity).first()
-            LocaleHelper.setAppLocale(this@MainActivity, lang)
-        }
-
         setContent {
             EmergencyCommunicationSystemTheme {
-                EmergencyApp()
+                // Wrap with LocaleProvider to provide locale-aware context to all screens
+                LocaleProvider {
+                    EmergencyApp()
+                }
             }
         }
     }
@@ -264,11 +264,14 @@ fun EmergencyApp() {
                 composable(Screen.LanguageSettings.route) {
                     LanguageSettingsScreen(
                         currentLanguage = currentLanguage,
-                        onConfirm = {
-                            lang ->
-                            coroutineScope.launch {
+                        onConfirm = { lang ->
+                            coroutineScope.launch(Dispatchers.IO) {
                                 UserPrefs.saveLanguage(context, lang)
-                                activity?.recreate()
+                                // Option 1: Recreate activity for full locale update (recommended)
+                                // This ensures all system-level locale changes are applied
+                                withContext(Dispatchers.Main) {
+                                    activity?.recreate()
+                                }
                             }
                         },
                         onBackPressed = { navController.popBackStack() }

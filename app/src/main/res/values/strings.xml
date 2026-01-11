@@ -23,6 +23,17 @@
     <string name="home">Home</string>
     <string name="alerts">Alerts</string>
     <string name="profile">Profile</string>
+    <!-- Alerts Screen -->
+    <string name="alerts_and_notifications">Alerts &amp; Notifications</string>
+    <string name="message">Message</string>
+    <string name="please_login_to_send_message">Please log in to send a message</string>
+    <string name="no_new_alerts">No new alerts</string>
+    <string name="community_alerts_will_appear_here">Your community alerts will appear here.</string>
+    <string name="failed_to_load_alerts">Failed to load alerts</string>
+    <string name="retry">Retry</string>
+    <string name="unknown_source">Unknown Source</string>
+    <string name="general">General</string>
+    <string name="no_title">No Title</string>
     <string name="privacy_policy_content">This is a placeholder for the privacy policy. You should replace this with your own privacy policy.</string>
     <!-- Language settings -->
     <string name="language_settings_title">Choose Language</string>

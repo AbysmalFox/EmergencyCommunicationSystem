@@ -20,14 +20,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.emergencycommunicationsystem.R
+import com.example.emergencycommunicationsystem.util.getLocaleContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AboutAppScreen(onBackPressed: () -> Unit) {
+    val localeContext = getLocaleContext()
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.about_app)) },
+                title = { Text(localeContext.getString(R.string.about_app)) },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -47,7 +49,7 @@ fun AboutAppScreen(onBackPressed: () -> Unit) {
             Spacer(modifier = Modifier.height(8.dp))
             Text("Version 1.0.0", style = MaterialTheme.typography.bodySmall)
             Spacer(modifier = Modifier.height(16.dp))
-            Text(stringResource(R.string.about_app_content))
+            Text(localeContext.getString(R.string.about_app_content))
         }
     }
 }

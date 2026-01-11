@@ -24,6 +24,17 @@
     <string name="home">Home</string>
     <string name="alerts">Mga Alerto</string>
     <string name="profile">Profile</string>
+    <!-- Alerts Screen -->
+    <string name="alerts_and_notifications">Mga Alerto at Abiso</string>
+    <string name="message">Mensahe</string>
+    <string name="please_login_to_send_message">Mangyaring mag-log in upang magpadala ng mensahe</string>
+    <string name="no_new_alerts">Walang bagong alerto</string>
+    <string name="community_alerts_will_appear_here">Ang mga alerto ng inyong komunidad ay lilitaw dito.</string>
+    <string name="failed_to_load_alerts">Nabigo sa pag-load ng mga alerto</string>
+    <string name="retry">Subukan muli</string>
+    <string name="unknown_source">Hindi Kilalang Pinagmulan</string>
+    <string name="general">Pangkalahatan</string>
+    <string name="no_title">Walang Pamagat</string>
     <string name="privacy_policy_content">Ito ay isang placeholder para sa patakaran sa privacy. Dapat mong palitan ito ng iyong sariling patakaran sa privacy.</string>
     <!-- Language settings -->
     <string name="language_settings_title">Pumili ng Wika</string>

@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.data.SubscriptionCategory
+import com.example.emergencycommunicationsystem.util.getLocaleContext
 import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModel
 import kotlinx.coroutines.launch
 
@@ -78,6 +79,7 @@ fun ProfileScreen(
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val localeContext = getLocaleContext()
 
     if (showLogoutDialog) {
         AlertDialog(
@@ -119,7 +121,7 @@ fun ProfileScreen(
         ) {
             item {
                 Text(
-                    stringResource(R.string.profile_and_settings),
+                    localeContext.getString(R.string.profile_and_settings),
                     style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.padding(bottom = 16.dp)
@@ -142,7 +144,7 @@ fun ProfileScreen(
 
             item {
                 Text(
-                    stringResource(R.string.settings),
+                    localeContext.getString(R.string.settings),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier
@@ -154,7 +156,7 @@ fun ProfileScreen(
             item {
                 ProfileItem(
                     icon = Icons.Default.Notifications,
-                    text = stringResource(R.string.receive_notifications),
+                    text = localeContext.getString(R.string.receive_notifications),
                     onClick = { 
                         if (isLoggedIn) {
                             showNotificationSettings = true 
@@ -167,21 +169,21 @@ fun ProfileScreen(
             item {
                 ProfileItem(
                     icon = Icons.Default.Language,
-                    text = stringResource(R.string.language_preference),
+                    text = localeContext.getString(R.string.language_preference),
                     onClick = onLanguageSettingsClick
                 )
             }
             item {
                 ProfileItem(
                     icon = Icons.Default.Security,
-                    text = stringResource(R.string.privacy_policy),
+                    text = localeContext.getString(R.string.privacy_policy),
                     onClick = onPrivacyPolicyClick
                 )
             }
             item {
                 ProfileItem(
                     icon = Icons.Default.Info,
-                    text = stringResource(R.string.about_app),
+                    text = localeContext.getString(R.string.about_app),
                     onClick = onAboutAppClick
                 )
             }

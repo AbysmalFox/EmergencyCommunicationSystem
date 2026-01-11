@@ -24,6 +24,17 @@
     <string name="home">Inicio</string>
     <string name="alerts">Alertas</string>
     <string name="profile">Perfil</string>
+    <!-- Alerts Screen -->
+    <string name="alerts_and_notifications">Alertas y Notificaciones</string>
+    <string name="message">Mensaje</string>
+    <string name="please_login_to_send_message">Por favor, inicia sesión para enviar un mensaje</string>
+    <string name="no_new_alerts">No hay nuevas alertas</string>
+    <string name="community_alerts_will_appear_here">Las alertas de tu comunidad aparecerán aquí.</string>
+    <string name="failed_to_load_alerts">Error al cargar las alertas</string>
+    <string name="retry">Reintentar</string>
+    <string name="unknown_source">Fuente Desconocida</string>
+    <string name="general">General</string>
+    <string name="no_title">Sin Título</string>
     <string name="privacy_policy_content">Este es un marcador de posición para la política de privacidad. Debe reemplazar esto con su propia política de privacidad.</string>
     <!-- Language settings -->
     <string name="language_settings_title">Elegir idioma</string>

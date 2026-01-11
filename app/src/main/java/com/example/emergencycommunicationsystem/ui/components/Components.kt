@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.emergencycommunicationsystem.R
+import com.example.emergencycommunicationsystem.util.getLocaleContext
 import com.example.emergencycommunicationsystem.data.models.WeatherState
 import com.example.emergencycommunicationsystem.navigation.Screen
 import kotlinx.coroutines.delay
@@ -138,6 +139,7 @@ fun SegmentedButtonRow(options: List<String>, selectedOption: String, onOptionSe
 
 @Composable
 fun EmergencyCallButton(onClick: () -> Unit) {
+    val localeContext = getLocaleContext()
     val shape = RoundedCornerShape(24.dp)
     Button(
         onClick = onClick,
@@ -162,21 +164,21 @@ fun EmergencyCallButton(onClick: () -> Unit) {
         ) {
             Icon(
                 imageVector = Icons.Filled.Call,
-                contentDescription = stringResource(R.string.emergency_call_label),
+                contentDescription = localeContext.getString(R.string.emergency_call_label),
                 tint = Color.White,
                 modifier = Modifier.size(32.dp) // Reduced icon size
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column {
                 Text(
-                    text = stringResource(R.string.emergency_call_label),
+                    text = localeContext.getString(R.string.emergency_call_label),
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp, // Reduced font size
                     letterSpacing = 1.5.sp
                 )
                 Text(
-                    text = stringResource(R.string.call_button),
+                    text = localeContext.getString(R.string.call_button),
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     fontSize = 24.sp, // Reduced font size
@@ -195,11 +197,12 @@ fun ActionGrid(
     onSafeClick: () -> Unit,
     onMessageClick: () -> Unit = {}
 ) {
+    val localeContext = getLocaleContext()
     Column(verticalArrangement = Arrangement.spacedBy(15.dp)) { // Reduced spacing
         EmergencyCallButton(onClick = onEmergencyCallClick)
         Row(horizontalArrangement = Arrangement.spacedBy(15.dp)) {
-            ActionGridItem(stringResource(R.string.report_incident), Icons.Filled.Warning, onClick = onReportClick, modifier = Modifier.weight(1f))
-            ActionGridItem(stringResource(R.string.i_am_safe), Icons.Filled.CheckCircle, onClick = onSafeClick, modifier = Modifier.weight(1f))
+            ActionGridItem(localeContext.getString(R.string.report_incident), Icons.Filled.Warning, onClick = onReportClick, modifier = Modifier.weight(1f))
+            ActionGridItem(localeContext.getString(R.string.i_am_safe), Icons.Filled.CheckCircle, onClick = onSafeClick, modifier = Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(15.dp)) {
             ActionGridItem(
@@ -340,10 +343,11 @@ fun WeatherWidget(state: WeatherState) {
                     modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val localeContext = getLocaleContext()
                     Icon(Icons.Filled.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.onError)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        stringResource(R.string.gps_signal_lost),
+                        localeContext.getString(R.string.gps_signal_lost),
                         color = MaterialTheme.colorScheme.onError,
                     )
                 }
@@ -354,28 +358,29 @@ fun WeatherWidget(state: WeatherState) {
 
 @Composable
 fun WeatherDetailsRow(state: WeatherState.Success) {
+    val localeContext = getLocaleContext()
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceAround
     ) {
         WeatherDetailItem(
             icon = Icons.Default.Thermostat,
-            label = stringResource(R.string.feels_like),
+            label = localeContext.getString(R.string.feels_like),
             value = state.feelsLike
         )
         WeatherDetailItem(
             icon = Icons.Default.WaterDrop,
-            label = stringResource(R.string.humidity),
+            label = localeContext.getString(R.string.humidity),
             value = state.humidity
         )
         WeatherDetailItem(
             icon = Icons.Default.Air,
-            label = stringResource(R.string.wind),
+            label = localeContext.getString(R.string.wind),
             value = state.windSpeed
         )
         WeatherDetailItem(
             icon = Icons.Default.Visibility,
-            label = stringResource(R.string.visibility),
+            label = localeContext.getString(R.string.visibility),
             value = state.visibility
         )
     }
@@ -427,8 +432,9 @@ fun WeatherAdvice(advice: String) {
                 .padding(end = 12.dp, top = 4.dp)
                 .size(24.dp)
         )
+        val localeContext = getLocaleContext()
         Text(
-            text = displayedText.ifEmpty { stringResource(R.string.weather_widget_message) },
+            text = displayedText.ifEmpty { localeContext.getString(R.string.weather_widget_message) },
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium
         )
@@ -537,10 +543,11 @@ fun RowScope.BottomNavItem(screen: Screen, isSelected: Boolean, onSelected: () -
             )
         }
         Spacer(modifier = Modifier.height(4.dp))
+        val localeContext = getLocaleContext()
         val title = when (screen) {
-            Screen.Home -> stringResource(R.string.home)
-            Screen.Alerts -> stringResource(R.string.alerts)
-            Screen.Profile -> stringResource(R.string.profile)
+            Screen.Home -> localeContext.getString(R.string.home)
+            Screen.Alerts -> localeContext.getString(R.string.alerts)
+            Screen.Profile -> localeContext.getString(R.string.profile)
             else -> ""
         }
         Text(

@@ -39,6 +39,7 @@ import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.ui.components.ActionGrid
 import com.example.emergencycommunicationsystem.ui.components.SafeOverlay
 import com.example.emergencycommunicationsystem.ui.components.WeatherWidget
+import com.example.emergencycommunicationsystem.util.getLocaleContext
 import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
 import kotlinx.coroutines.launch
 
@@ -114,15 +115,16 @@ fun HomeScreen(
                     enter = fadeIn(animationSpec = tween(durationMillis = 500)) +
                             slideInVertically(initialOffsetY = { -40 }, animationSpec = tween(durationMillis = 500))
                 ) {
+                    val localeContext = getLocaleContext()
                     androidx.compose.foundation.layout.Column {
                         Text(
-                            stringResource(R.string.emergency_dashboard),
+                            localeContext.getString(R.string.emergency_dashboard),
                             fontSize = 26.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
                         Text(
-                            stringResource(R.string.dashboard_subtitle),
+                            localeContext.getString(R.string.dashboard_subtitle),
                             fontSize = 15.sp,
                             color = Color.White.copy(alpha = 0.7f)
                         )
