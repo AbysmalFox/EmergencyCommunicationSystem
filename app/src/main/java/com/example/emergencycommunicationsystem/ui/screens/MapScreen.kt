@@ -2,6 +2,10 @@ package com.example.emergencycommunicationsystem.ui.screens
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -14,6 +18,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,10 +34,15 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.emergencycommunicationsystem.AuthManager
+import com.example.emergencycommunicationsystem.data.models.Alert
+import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
@@ -41,6 +51,8 @@ import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 fun MapScreen() {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val alertsViewModel: AlertsViewModel = viewModel()
+    val alertsState by alertsViewModel.uiState.collectAsState()
 
     // State to hold MapView and Overlay for interaction
     var mapView by remember { mutableStateOf<MapView?>(null) }
@@ -117,6 +129,41 @@ fun MapScreen() {
                 }
             }
         )
+        
+        // Load alerts when screen is displayed
+        LaunchedEffect(Unit) {
+            alertsViewModel.loadAlerts()
+        }
+        
+        // Update alert markers when alerts state changes
+        LaunchedEffect(alertsState) {
+            mapView?.let { mapView ->
+                // Remove existing alert markers (keep boundary and user location)
+                val markersToRemove = mapView.overlays.filterIsInstance<Marker>().toList()
+                markersToRemove.forEach { mapView.overlays.remove(it) }
+                
+                // Add new alert markers
+                when (val state = alertsState) {
+                    is com.example.emergencycommunicationsystem.util.Resource.Success -> {
+                        state.data
+                            .filter { it.latitude != null && it.longitude != null }
+                            .forEach { alert ->
+                                val marker = Marker(mapView).apply {
+                                    position = GeoPoint(alert.latitude!!, alert.longitude!!)
+                                    title = alert.title ?: "Alert"
+                                    snippet = alert.location ?: alert.content
+                                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                                    // Use red color for alert markers
+                                    icon = createAlertMarkerIcon(mapView.context)
+                                }
+                                mapView.overlays.add(marker)
+                            }
+                        mapView.invalidate()
+                    }
+                    else -> {}
+                }
+            }
+        }
 
         // 3. "My Location" Button
         FloatingActionButton(
@@ -135,6 +182,38 @@ fun MapScreen() {
             Icon(Icons.Default.MyLocation, contentDescription = "My Location")
         }
     }
+}
+
+/**
+ * Creates a red marker icon for alerts
+ */
+private fun createAlertMarkerIcon(context: android.content.Context): android.graphics.drawable.Drawable {
+    // Create a simple red circle marker
+    val size = 48
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    
+    // Draw red circle
+    val paint = android.graphics.Paint().apply {
+        color = Color.Red.toArgb()
+        style = android.graphics.Paint.Style.FILL
+        isAntiAlias = true
+    }
+    val strokePaint = android.graphics.Paint().apply {
+        color = Color.White.toArgb()
+        style = android.graphics.Paint.Style.STROKE
+        strokeWidth = 4f
+        isAntiAlias = true
+    }
+    
+    val centerX = size / 2f
+    val centerY = size / 2f
+    val radius = (size / 2f) - 4f
+    
+    canvas.drawCircle(centerX, centerY, radius, paint)
+    canvas.drawCircle(centerX, centerY, radius, strokePaint)
+    
+    return BitmapDrawable(context.resources, bitmap)
 }
 
 private fun getQuezonCityBoundaryPoints(): ArrayList<GeoPoint> {

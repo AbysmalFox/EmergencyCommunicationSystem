@@ -52,6 +52,15 @@ data class Alert(
     @SerializedName("source")
     val source: String?,
 
+    @SerializedName("location")
+    val location: String?,
+
+    @SerializedName("latitude")
+    val latitude: Double?,
+
+    @SerializedName("longitude")
+    val longitude: Double?,
+
     @SerializedName("timestamp")
     val timestamp: String?
 )

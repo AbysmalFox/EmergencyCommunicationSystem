@@ -5,7 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [AlertEntity::class], version = 1, exportSchema = false)
+@Database(entities = [AlertEntity::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun alertDao(): AlertDao
 
@@ -19,7 +19,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "emergency_app_database"
-                ).build()
+                )
+                .fallbackToDestructiveMigration() // Recreate database if schema changes (for development)
+                .build()
                 INSTANCE = instance
                 instance
             }

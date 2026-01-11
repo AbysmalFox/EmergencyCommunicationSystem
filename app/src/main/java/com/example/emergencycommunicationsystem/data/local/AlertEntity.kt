@@ -11,6 +11,9 @@ data class AlertEntity(
     val title: String?,
     val content: String?,
     val source: String?,
+    val location: String?,
+    val latitude: Double?,
+    val longitude: Double?,
     val timestamp: String?
 )
 
@@ -24,6 +27,9 @@ fun Alert.toEntity(): AlertEntity {
         title = this.title,
         content = this.content,
         source = this.source,
+        location = this.location,
+        latitude = this.latitude,
+        longitude = this.longitude,
         timestamp = this.timestamp
     )
 }
@@ -38,6 +44,9 @@ fun AlertEntity.toDomain(): Alert {
         title = this.title,
         content = this.content,
         source = this.source,
+        location = this.location,
+        latitude = this.latitude,
+        longitude = this.longitude,
         timestamp = this.timestamp
     )
 }
