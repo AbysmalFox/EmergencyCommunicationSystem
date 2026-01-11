@@ -34,30 +34,64 @@ import java.util.Locale
 
 @Composable
 fun getIconForCategory(alert: Alert): ImageVector {
-    val category = alert.category?.lowercase(Locale.getDefault()) ?: ""
+    // Handle numeric category IDs from API (category comes as string "1", "2", "4", "5")
+    val categoryId = try {
+        alert.category?.toIntOrNull() ?: 0
+    } catch (e: Exception) {
+        0
+    }
+    
     val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
+    val categoryStr = alert.category?.lowercase(Locale.getDefault()) ?: ""
+    
     return when {
-        "weather" in category || "typhoon" in title || "storm" in title || "rain" in title -> Icons.Default.Cloud
-        "health" in category -> Icons.Default.LocalHospital
-        "security" in category -> Icons.Default.Security
-        "earthquake" in category || "tremor" in title -> Icons.Default.House
-        "fire" in category || "wildfire" in title -> Icons.Default.Fireplace
-        "water" in category || "water" in title || "flood" in title -> Icons.Default.WaterDrop
+        // Category 1: Weather - Cloud icon
+        categoryId == 1 || "weather" in categoryStr || "typhoon" in title || "storm" in title || "rain" in title || "heat" in title || "wind" in title -> Icons.Default.Cloud
+        // Category 2: Earthquake - Warning/Alert icon
+        categoryId == 2 || "earthquake" in categoryStr || "tremor" in title -> Icons.Default.Warning
+        // Category 4: Fire - Fireplace icon
+        categoryId == 4 || "fire" in categoryStr || "wildfire" in title -> Icons.Default.Fireplace
+        // Category 5: General/Emergency - Info icon
+        categoryId == 5 || "general" in categoryStr || "emergency" in categoryStr || "traffic" in title || "road" in title || "power" in title -> Icons.Default.Info
+        // Category 3: Health (if exists) - Hospital icon
+        categoryId == 3 || "health" in categoryStr -> Icons.Default.LocalHospital
+        // Security - Security icon
+        "security" in categoryStr -> Icons.Default.Security
+        // Water/Flood - Water drop icon
+        "water" in categoryStr || "flood" in title -> Icons.Default.WaterDrop
+        // Default fallback - Info icon
         else -> Icons.Default.Info
     }
 }
 
 @Composable
 fun getColorForCategory(alert: Alert): Color {
-    val category = alert.category?.lowercase(Locale.getDefault()) ?: ""
+    // Handle numeric category IDs from API (category comes as string "1", "2", "4", "5")
+    val categoryId = try {
+        alert.category?.toIntOrNull() ?: 0
+    } catch (e: Exception) {
+        0
+    }
+    
     val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
+    val categoryStr = alert.category?.lowercase(Locale.getDefault()) ?: ""
+    
     return when {
-        "weather" in category || "typhoon" in title || "storm" in title || "rain" in title -> Color(0xFF4A90E2)
-        "health" in category -> Color(0xFF50E3C2)
-        "security" in category -> Color(0xFFD0021B)
-        "earthquake" in category || "tremor" in title -> Color(0xFF7B4F2C)
-        "fire" in category || "wildfire" in title -> Color(0xFFF5A623)
-        "water" in category || "water" in title || "flood" in title -> Color(0xFF4A90E2)
+        // Category 1: Weather - Blue
+        categoryId == 1 || "weather" in categoryStr || "typhoon" in title || "storm" in title || "rain" in title || "heat" in title || "wind" in title -> Color(0xFF4A90E2)
+        // Category 2: Earthquake - Orange/Brown
+        categoryId == 2 || "earthquake" in categoryStr || "tremor" in title -> Color(0xFFF57C00)
+        // Category 4: Fire - Orange/Red
+        categoryId == 4 || "fire" in categoryStr || "wildfire" in title -> Color(0xFFF5A623)
+        // Category 5: General/Emergency - Teal/Cyan
+        categoryId == 5 || "general" in categoryStr || "emergency" in categoryStr || "traffic" in title || "road" in title || "power" in title -> Color(0xFF50E3C2)
+        // Category 3: Health - Teal
+        categoryId == 3 || "health" in categoryStr -> Color(0xFF50E3C2)
+        // Security - Red
+        "security" in categoryStr -> Color(0xFFD0021B)
+        // Water/Flood - Blue
+        "water" in categoryStr || "flood" in title -> Color(0xFF4A90E2)
+        // Default
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 }
@@ -67,19 +101,32 @@ fun getColorForCategory(alert: Alert): Color {
  * Returns: "High", "Medium", or "Low"
  */
 fun getAlertSeverity(alert: Alert): String {
+    // Handle numeric category IDs from API (category comes as string "1", "2", "4", "5")
+    val categoryId = try {
+        alert.category?.toIntOrNull() ?: 0
+    } catch (e: Exception) {
+        0
+    }
+    
     val category = alert.category?.lowercase(Locale.getDefault()) ?: ""
     val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
     val content = alert.content?.lowercase(Locale.getDefault()) ?: ""
     
-    // High severity indicators
-    val highSeverityKeywords = listOf("fire", "flood", "earthquake", "tsunami", "typhoon", "storm", "crime", "security", "evacuate", "urgent", "emergency")
+    // High severity indicators (category 2 = Earthquake, category 4 = Fire)
+    val highSeverityKeywords = listOf("fire", "flood", "earthquake", "tsunami", "typhoon", "storm", "crime", "security", "evacuate", "urgent", "emergency", "escape")
     
     // Medium severity indicators
-    val mediumSeverityKeywords = listOf("warning", "caution", "advisory", "health", "weather")
+    val mediumSeverityKeywords = listOf("warning", "caution", "advisory", "health", "weather", "traffic", "accident")
     
     val allText = "$category $title $content"
     
     return when {
+        // Category 2 (Earthquake) and 4 (Fire) are high severity
+        categoryId == 2 || categoryId == 4 -> "High"
+        // Category 1 (Weather) is medium severity
+        categoryId == 1 -> "Medium"
+        // Category 5 (General/Emergency) - check content for urgency
+        categoryId == 5 -> if (highSeverityKeywords.any { it in allText }) "High" else "Medium"
         highSeverityKeywords.any { it in allText } -> "High"
         mediumSeverityKeywords.any { it in allText } -> "Medium"
         else -> "Low"
@@ -99,6 +146,34 @@ fun getSeverityColor(severity: String): Color {
     }
 }
 
+/**
+ * Get category name from numeric ID or fallback to string/title analysis
+ */
+fun getCategoryName(alert: Alert, localeContext: android.content.Context): String {
+    // Handle numeric category IDs from API (category comes as string "1", "2", "4", "5")
+    val categoryId = try {
+        alert.category?.toIntOrNull() ?: 0
+    } catch (e: Exception) {
+        0
+    }
+    
+    val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
+    
+    return when {
+        categoryId == 1 -> "Weather"
+        categoryId == 2 -> "Earthquake"
+        categoryId == 3 -> "Health"
+        categoryId == 4 -> "Fire"
+        categoryId == 5 -> "General"
+        "weather" in title || "rain" in title || "storm" in title || "heat" in title || "wind" in title -> "Weather"
+        "earthquake" in title || "tremor" in title -> "Earthquake"
+        "fire" in title || "wildfire" in title -> "Fire"
+        "health" in title -> "Health"
+        "traffic" in title || "road" in title || "power" in title || "emergency" in title -> "General"
+        else -> localeContext.getString(R.string.general)
+    }
+}
+
 @Composable
 fun AlertItem(
     alert: Alert,
@@ -115,14 +190,14 @@ fun AlertItem(
             Row {
                 Icon(
                     imageVector = getIconForCategory(alert),
-                    contentDescription = alert.category ?: localeContext.getString(R.string.general),
+                    contentDescription = getCategoryName(alert, localeContext),
                     modifier = Modifier.size(40.dp).align(Alignment.Top),
                     tint = getColorForCategory(alert)
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = (alert.category ?: localeContext.getString(R.string.general)).uppercase(),
+                        text = getCategoryName(alert, localeContext).uppercase(),
                         color = getColorForCategory(alert),
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp
