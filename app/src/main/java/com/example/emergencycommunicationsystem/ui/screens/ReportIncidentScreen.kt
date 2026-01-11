@@ -131,7 +131,7 @@ fun ReportIncidentScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.background)
-                    .height(25.dp) // Reduced from default 64dp
+                    .height(40.dp) // Reduced from default 64dp
             ) {
                 Row(
                     modifier = Modifier
@@ -475,13 +475,17 @@ fun FormTextField(
             value = value,
             onValueChange = onValueChange,
             modifier = modifier.fillMaxWidth(),
-            placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+            placeholder = { Text(placeholder, color = Color.Gray.copy(alpha = 0.6f)) },
+            textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.Black),
             shape = MaterialTheme.shapes.large,
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White,
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black,
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = Color.Transparent
+                unfocusedBorderColor = Color.Gray.copy(alpha = 0.3f),
+                cursorColor = MaterialTheme.colorScheme.primary
             )
         )
     }
