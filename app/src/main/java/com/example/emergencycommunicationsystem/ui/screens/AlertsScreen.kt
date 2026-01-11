@@ -61,6 +61,43 @@ fun getColorForCategory(alert: Alert): Color {
     }
 }
 
+/**
+ * Determine severity level based on alert category and content
+ * Returns: "High", "Medium", or "Low"
+ */
+fun getAlertSeverity(alert: Alert): String {
+    val category = alert.category?.lowercase(Locale.getDefault()) ?: ""
+    val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
+    val content = alert.content?.lowercase(Locale.getDefault()) ?: ""
+    
+    // High severity indicators
+    val highSeverityKeywords = listOf("fire", "flood", "earthquake", "tsunami", "typhoon", "storm", "crime", "security", "evacuate", "urgent", "emergency")
+    
+    // Medium severity indicators
+    val mediumSeverityKeywords = listOf("warning", "caution", "advisory", "health", "weather")
+    
+    val allText = "$category $title $content"
+    
+    return when {
+        highSeverityKeywords.any { it in allText } -> "High"
+        mediumSeverityKeywords.any { it in allText } -> "Medium"
+        else -> "Low"
+    }
+}
+
+/**
+ * Get severity color (Yellow/Orange/Red)
+ */
+@Composable
+fun getSeverityColor(severity: String): Color {
+    return when (severity) {
+        "High" -> Color(0xFFD32F2F) // Red
+        "Medium" -> Color(0xFFF57C00) // Orange
+        "Low" -> Color(0xFFFBC02D) // Yellow
+        else -> Color(0xFF757575) // Gray (default)
+    }
+}
+
 @Composable
 fun AlertItem(
     alert: Alert,

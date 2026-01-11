@@ -72,7 +72,10 @@ import coil.compose.AsyncImage
 import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 import com.example.emergencycommunicationsystem.data.models.WeatherState
+import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.navigation.Screen
+import com.example.emergencycommunicationsystem.ui.screens.getIconForCategory
+import com.example.emergencycommunicationsystem.ui.screens.getAlertSeverity
 import kotlinx.coroutines.delay
 import java.util.Locale
 
@@ -655,5 +658,116 @@ fun ForecastDay(dayName: String, iconUrl: String, temp: String) {
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
         )
+    }
+}
+
+/**
+ * Compact Alert Card for Dashboard
+ */
+@Composable
+fun CompactAlertCard(
+    alert: com.example.emergencycommunicationsystem.data.models.Alert,
+    distanceKm: Double?,
+    severity: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val localeContext = getLocaleContext()
+    val severityColor = com.example.emergencycommunicationsystem.ui.screens.getSeverityColor(severity)
+    
+    Card(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Severity indicator bar
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(60.dp)
+                    .background(severityColor, RoundedCornerShape(2.dp))
+            )
+            
+            Spacer(modifier = Modifier.width(12.dp))
+            
+            // Icon
+            Icon(
+                imageVector = com.example.emergencycommunicationsystem.ui.screens.getIconForCategory(alert),
+                contentDescription = alert.category,
+                modifier = Modifier.size(32.dp),
+                tint = severityColor
+            )
+            
+            Spacer(modifier = Modifier.width(12.dp))
+            
+            // Content
+            Column(modifier = Modifier.weight(1f)) {
+                // Category and Severity
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = (alert.category ?: localeContext.getString(R.string.general)).uppercase(),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = severityColor
+                    )
+                    Box(
+                        modifier = Modifier
+                            .background(severityColor.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = severity,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = severityColor
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                // Title
+                Text(
+                    text = alert.title ?: localeContext.getString(R.string.no_title),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                // Distance and location
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (distanceKm != null) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = "Distance",
+                            modifier = Modifier.size(12.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = com.example.emergencycommunicationsystem.util.LocationUtils.formatDistance(distanceKm),
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
     }
 }

@@ -36,10 +36,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.emergencycommunicationsystem.R
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.emergencycommunicationsystem.data.models.WeatherState
 import com.example.emergencycommunicationsystem.ui.components.ActionGrid
 import com.example.emergencycommunicationsystem.ui.components.SafeOverlay
 import com.example.emergencycommunicationsystem.ui.components.WeatherWidget
 import com.example.emergencycommunicationsystem.util.getLocaleContext
+import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
 import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
 import kotlinx.coroutines.launch
 
@@ -49,6 +52,7 @@ fun HomeScreen(
     onEmergencyCallClick: () -> Unit,
     onReportIncidentClick: () -> Unit,
     onMessageClick: () -> Unit = {},
+    onAlertClick: (Int) -> Unit = {},
     weatherViewModel: WeatherViewModel
 ) {
     val context = LocalContext.current
@@ -57,6 +61,19 @@ fun HomeScreen(
     val animationState = remember { MutableTransitionState(false).apply { targetState = true } }
 
     val pullToRefreshState = rememberPullToRefreshState()
+    
+    // Alerts ViewModel
+    val alertsViewModel: AlertsViewModel = viewModel()
+    val alertsState by alertsViewModel.uiState.collectAsState()
+    val weatherState by weatherViewModel.weatherState.collectAsState()
+    
+    // Get user location for distance calculation
+    val userLocation = when (val state = weatherState) {
+        is WeatherState.Success -> Pair(state.lat, state.lon)
+        else -> null
+    }
+    val userLat = userLocation?.first
+    val userLon = userLocation?.second
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -81,6 +98,7 @@ fun HomeScreen(
                 )
             }
         }
+        alertsViewModel.loadAlerts()
     }
 
     // state to control the safe overlay
@@ -145,13 +163,30 @@ fun HomeScreen(
                     )
                 }
             }
+            
+            // Active Alerts Section
+            item {
+                AnimatedVisibility(
+                    visibleState = animationState,
+                    enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = 300)) +
+                            slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(durationMillis = 500, delayMillis = 300))
+                ) {
+                    ActiveAlertsSection(
+                        alertsState = alertsState,
+                        userLat = userLat,
+                        userLon = userLon,
+                        onAlertClick = onAlertClick
+                    )
+                }
+            }
+            
             item {
                 AnimatedVisibility(
                     visibleState = animationState,
                     enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = 400)) +
                             slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(durationMillis = 500, delayMillis = 400))
                 ) {
-                    WeatherWidget(weatherViewModel.weatherState.collectAsState().value)
+                    WeatherWidget(weatherState)
                 }
             }
             item { Spacer(modifier = Modifier.height(8.dp)) } // Reduced spacing

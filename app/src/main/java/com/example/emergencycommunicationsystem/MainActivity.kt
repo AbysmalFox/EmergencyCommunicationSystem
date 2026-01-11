@@ -170,6 +170,9 @@ fun EmergencyApp() {
                         onMessageClick = {
                             navigateToMessaging(alertId = 999, alertTitle = "General Inquiry")
                         },
+                        onAlertClick = { alertId ->
+                            navController.navigate(Screen.Alerts.route)
+                        },
                         weatherViewModel = weatherViewModel
                     )
                 }
