@@ -42,7 +42,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -126,6 +125,7 @@ fun BottomNavigationBar(
 @Composable
 private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, onClick: () -> Unit) {
     val haptic = LocalHapticFeedback.current
+    val localeContext = getLocaleContext()
 
     val iconColor by animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -139,6 +139,15 @@ private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, onClick: () ->
         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "iconOffsetY"
     )
+
+    // Get localized title for the screen
+    val localizedTitle = when (screen) {
+        is Screen.Home -> localeContext.getString(R.string.home)
+        is Screen.Alerts -> localeContext.getString(R.string.alerts)
+        is Screen.Profile -> localeContext.getString(R.string.profile)
+        is Screen.Map -> localeContext.getString(R.string.map)
+        else -> screen.title
+    }
 
     Box(
         modifier = Modifier
@@ -161,7 +170,7 @@ private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, onClick: () ->
             ) {
                 Icon(
                     imageVector = icon,
-                    contentDescription = screen.title,
+                    contentDescription = localizedTitle,
                     tint = iconColor,
                     modifier = Modifier.offset(y = iconOffsetY)
                 )
@@ -172,7 +181,7 @@ private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, onClick: () ->
                     exit = fadeOut(animationSpec = tween(150))
                 ) {
                     Text(
-                        text = screen.title,
+                        text = localizedTitle,
                         color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 12.sp,
                         modifier = Modifier.padding(top = 6.dp)

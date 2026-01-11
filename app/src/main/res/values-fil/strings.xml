@@ -23,6 +23,7 @@
     <string name="weather_widget_message">Mababa ang pagpapakita dahil sa kasalukuyang mga kondisyon. Magmaneho nang dahan-dahan at manatiling alerto. Mataas ang halumigmig, kaya asahan ang medyo malagkit na pakiramdam.</string>
     <string name="home">Home</string>
     <string name="alerts">Mga Alerto</string>
+    <string name="map">Mapa</string>
     <string name="profile">Profile</string>
     <!-- Alerts Screen -->
     <string name="alerts_and_notifications">Mga Alerto at Abiso</string>

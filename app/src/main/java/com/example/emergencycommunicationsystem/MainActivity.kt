@@ -76,6 +76,12 @@ class MainActivity : ComponentActivity() {
         
         enableEdgeToEdge()
 
+        // Set locale before Compose initialization
+        lifecycleScope.launch(Dispatchers.IO) {
+            val lang = UserPrefs.getLanguage(this@MainActivity).first()
+            LocaleHelper.setAppLocale(this@MainActivity, lang)
+        }
+
         setContent {
             EmergencyCommunicationSystemTheme {
                 // Wrap with LocaleProvider to provide locale-aware context to all screens

@@ -23,6 +23,7 @@
     <string name="weather_widget_message">La visibilidad es baja debido a las condiciones actuales. Conduzca despacio y manténgase alerta. La humedad es alta, así que espere algo de pegajosidad.</string>
     <string name="home">Inicio</string>
     <string name="alerts">Alertas</string>
+    <string name="map">Mapa</string>
     <string name="profile">Perfil</string>
     <!-- Alerts Screen -->
     <string name="alerts_and_notifications">Alertas y Notificaciones</string>

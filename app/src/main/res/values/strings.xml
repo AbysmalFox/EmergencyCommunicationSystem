@@ -22,6 +22,7 @@
     <string name="weather_widget_message">Visibility is low due to current conditions. Drive slowly and stay alert. The humidity is high, so expect some stickiness.</string>
     <string name="home">Home</string>
     <string name="alerts">Alerts</string>
+    <string name="map">Map</string>
     <string name="profile">Profile</string>
     <!-- Alerts Screen -->
     <string name="alerts_and_notifications">Alerts &amp; Notifications</string>
