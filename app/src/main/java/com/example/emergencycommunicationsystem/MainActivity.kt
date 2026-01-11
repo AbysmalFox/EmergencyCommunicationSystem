@@ -110,16 +110,16 @@ fun EmergencyApp() {
     if (isLoggedIn) {
         LocationUpdater {
             latitude, longitude, accuracy ->
-            coroutineScope.launch {
-                try {
-                    val userId = AuthManager.getUserId()
-                    if (userId != -1) {
+            val userId = AuthManager.getUserId()
+            if (userId != -1) {
+                coroutineScope.launch {
+                    try {
                         val address = LocationUtils.getAddressFromCoordinates(context, latitude, longitude)
                         settingsRepository.updateUserLocation(userId, latitude, longitude, address, accuracy)
                         Log.d("MainActivity", "Location updated successfully for user $userId")
+                    } catch (e: Exception) {
+                        Log.e("MainActivity", "Failed to update location on server: ${e.message}")
                     }
-                } catch (e: Exception) {
-                    Log.e("MainActivity", "Failed to update location on server", e)
                 }
             }
         }
