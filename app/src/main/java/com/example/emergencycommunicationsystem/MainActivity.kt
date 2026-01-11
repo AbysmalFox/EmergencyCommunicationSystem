@@ -1,5 +1,6 @@
 package com.example.emergencycommunicationsystem
 
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -47,15 +48,24 @@ import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.osmdroid.config.Configuration
 import java.net.URLDecoder
 import java.net.URLEncoder
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Set locale early in onCreate
+        lifecycleScope.launch(Dispatchers.IO) {
+            val lang = UserPrefs.getLanguage(this@MainActivity).first()
+            val locale = LocaleHelper.getLocaleFromCode(lang)
+            Locale.setDefault(locale)
+        }
 
         // Required OSMDroid configuration
         Configuration.getInstance().userAgentValue = packageName
@@ -76,17 +86,11 @@ class MainActivity : ComponentActivity() {
         
         enableEdgeToEdge()
 
-        // Set locale before Compose initialization
-        lifecycleScope.launch(Dispatchers.IO) {
-            val lang = UserPrefs.getLanguage(this@MainActivity).first()
-            LocaleHelper.setAppLocale(this@MainActivity, lang)
-        }
-
         setContent {
             EmergencyCommunicationSystemTheme {
                 // Wrap with LocaleProvider to provide locale-aware context to all screens
                 LocaleProvider {
-                    EmergencyApp()
+                EmergencyApp()
                 }
             }
         }
@@ -272,9 +276,11 @@ fun EmergencyApp() {
                         currentLanguage = currentLanguage,
                         onConfirm = { lang ->
                             coroutineScope.launch(Dispatchers.IO) {
+                                // Save the language preference and wait for it to complete
                                 UserPrefs.saveLanguage(context, lang)
-                                // Option 1: Recreate activity for full locale update (recommended)
-                                // This ensures all system-level locale changes are applied
+                                // Small delay to ensure DataStore write is persisted
+                                kotlinx.coroutines.delay(200)
+                                // Recreate activity for full locale update
                                 withContext(Dispatchers.Main) {
                                     activity?.recreate()
                                 }
