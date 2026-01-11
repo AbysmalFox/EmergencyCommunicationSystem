@@ -5,10 +5,12 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -163,27 +165,38 @@ fun AutoReplyChatScreen(viewModel: AutoReplyViewModel = androidx.lifecycle.viewm
 
     Scaffold(
         topBar = { ChatHeader() },
-        bottomBar = { QuickReplyPanel(replies = uiState.quickReplies, onReplyClick = viewModel::onQuickReplyClicked) },
         containerColor = MaterialTheme.colorScheme.surface
     ) { paddingValues ->
-        LazyColumn(
-            state = listState,
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(vertical = 16.dp)
         ) {
-            items(uiState.messages, key = { it.id }) { message ->
-                MessageBubble(message = message)
-            }
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(vertical = 16.dp)
+            ) {
+                items(uiState.messages, key = { it.id }) { message ->
+                    MessageBubble(message = message)
+                }
 
-            if (uiState.isBotTyping) {
-                item {
-                    TypingIndicator()
+                if (uiState.isBotTyping) {
+                    item {
+                        TypingIndicator()
+                    }
                 }
             }
+            
+            // Quick replies at the bottom, but more compact
+            QuickReplyPanel(
+                replies = uiState.quickReplies,
+                onReplyClick = viewModel::onQuickReplyClicked
+            )
         }
     }
 }
@@ -192,31 +205,31 @@ fun AutoReplyChatScreen(viewModel: AutoReplyViewModel = androidx.lifecycle.viewm
 fun ChatHeader() {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shadowElevation = 4.dp,
+        shadowElevation = 2.dp,
         color = MaterialTheme.colorScheme.background
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
                 Text(
                     text = "Auto-Reply Bot",
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(8.dp)
+                            .size(6.dp)
                             .background(Color(0xFF31A24C), CircleShape)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "Online • Auto-Reply",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -313,22 +326,42 @@ fun QuickReplyPanel(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.background,
-        shadowElevation = 8.dp
+        shadowElevation = 4.dp
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(replies) { reply ->
-                    Button(
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+        ) {
+            Text(
+                text = "Quick replies:",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 6.dp, start = 4.dp)
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                replies.forEach { reply ->
+                    FilterChip(
+                        selected = false,
                         onClick = { onReplyClick(reply) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
+                        label = {
+                            Text(
+                                text = reply.text,
+                                fontSize = 12.sp,
+                                maxLines = 1
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
                             containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                    ) {
-                        Text(text = reply.text, modifier = Modifier.padding(vertical = 8.dp))
-                    }
+                            labelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        ),
+                        shape = RoundedCornerShape(20.dp)
+                    )
                 }
             }
         }

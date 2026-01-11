@@ -2,6 +2,7 @@ package com.example.emergencycommunicationsystem.ui.screens
 
 import android.os.Build
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -232,25 +234,43 @@ fun QuickReplyPanel(
 ) {
     if (replies.isEmpty()) return
 
-    LazyColumn(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.background,
+        shadowElevation = 2.dp
     ) {
-        items(replies) { reply ->
-            Button(
-                onClick = { onReplyClick(reply) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp, vertical = 15.dp)
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            replies.forEach { reply ->
+                FilterChip(
+                    selected = false,
+                    onClick = { onReplyClick(reply) },
+                    label = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (!reply.icon.isNullOrEmpty()) {
+                                Text(text = reply.icon ?: "", fontSize = 17.sp)
+                                Spacer(modifier = Modifier.width(6.dp))
+                            }
+                            Text(
+                                text = reply.text ?: "",
+                                fontSize = 16.sp,
+                                maxLines = 1
+                            )
+                        }
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        labelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    ),
+                    shape = RoundedCornerShape(20.dp),
+                    border = null,
+                    modifier = Modifier.padding(vertical = 5.dp)
                 )
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = reply.icon ?: "")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = reply.text ?: "", modifier = Modifier.padding(vertical = 8.dp))
-                }
             }
         }
     }
