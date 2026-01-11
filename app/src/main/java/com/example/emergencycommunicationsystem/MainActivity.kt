@@ -58,16 +58,19 @@ class MainActivity : ComponentActivity() {
         // Required OSMDroid configuration
         Configuration.getInstance().userAgentValue = packageName
 
-        // Initialize network client and AuthManager
+        // Initialize background tasks off the Main thread
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                ApiClient.initializeAndCheckConnection()
-                Log.i("NetworkStatus", "Connection established. Check ApiClient logs for specific URL.")
+                // Initialize AuthManager first as it's purely local
+                AuthManager.initialize(applicationContext)
+                
+                // Then perform the production network check
+                ApiClient.initializeAndCheckConnection(applicationContext)
+                Log.i("MainActivity", "System initialization completed successfully.")
             } catch (e: Exception) {
-                Log.e("MainActivity", "Network initialization failed", e)
+                Log.e("MainActivity", "Initialization failed", e)
             }
         }
-        AuthManager.initialize(applicationContext)
         
         enableEdgeToEdge()
 

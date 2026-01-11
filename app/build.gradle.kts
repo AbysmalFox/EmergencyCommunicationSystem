@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("kotlin-kapt") // Required for Room
 }
 
 android {
@@ -37,7 +38,7 @@ android {
     }
     buildFeatures {
         compose = true
-        buildConfig = true // Explicitly enable BuildConfig generation
+        buildConfig = true
     }
 }
 
@@ -64,7 +65,7 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
 
     // OkHttp Logging Interceptor
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0") // <-- ADDED THIS LINE
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     // Google Location Services
     implementation("com.google.android.gms:play-services-location:21.0.1")
@@ -74,6 +75,12 @@ dependencies {
 
     // DataStore Preferences
     implementation("androidx.datastore:datastore-preferences:1.2.0")
+
+    // Room Database
+    val room_version = "2.6.1"
+    implementation("androidx.room:room-runtime:$room_version")
+    implementation("androidx.room:room-ktx:$room_version")
+    kapt("androidx.room:room-compiler:$room_version")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
@@ -91,5 +98,3 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
-
-// Another harmless comment to force a cache invalidation

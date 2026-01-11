@@ -4,11 +4,11 @@ import android.os.Build
 
 object NetworkConfig {
     // 1. Production (Your Hostinger Domain)
-    const val PRODUCTION_HOST = "https://emergency-comm.alertaraqc.com" // Updated to your production server
+    const val PRODUCTION_HOST = "https://emergency-comm.alertaraqc.com"
 
     // 2. Local Development
-    private const val EMULATOR_HOST = "10.0.2.2"
-    private const val DEVICE_HOST = "192.168.1.7"  // Updated to your new local IP
+    private const val EMULATOR_HOST = "10.0.2.2" // Gateway to your PC's localhost
+    private const val DEVICE_HOST = "192.168.1.7" // Your current PC IP
 
     // Publicly accessible URLs for both environments
     val PRODUCTION_API_URL: String = "$PRODUCTION_HOST/PHP/api/"

@@ -1,5 +1,8 @@
 package com.example.emergencycommunicationsystem.data.network
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.util.Log
 import com.example.emergencycommunicationsystem.BuildConfig
 import com.example.emergencycommunicationsystem.network.AlertsApiService
@@ -12,65 +15,123 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.io.File
 
 object ApiClient {
     private val _useLocalServer = MutableStateFlow(false)
     private val isInitialized = CompletableDeferred<Unit>()
 
-    private val loggingInterceptor = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
-    private val okHttpClient = OkHttpClient.Builder().addInterceptor(loggingInterceptor).build()
+    @Volatile
+    private var okHttpClient: OkHttpClient? = null
+    @Volatile
+    private var productionRetrofit: Retrofit? = null
+    @Volatile
+    private var localRetrofit: Retrofit? = null
+    
     private val gsonConverterFactory = GsonConverterFactory.create()
 
-    private val productionRetrofit = Retrofit.Builder()
-        .baseUrl(NetworkConfig.PRODUCTION_API_URL)
-        .client(okHttpClient)
-        .addConverterFactory(gsonConverterFactory)
-        .build()
+    private fun getOkHttpClient(context: Context? = null): OkHttpClient {
+        return okHttpClient ?: synchronized(this) {
+            okHttpClient ?: buildOkHttpClient(context).also { okHttpClient = it }
+        }
+    }
 
-    private val localRetrofit = Retrofit.Builder()
-        .baseUrl(NetworkConfig.LOCAL_API_URL)
-        .client(okHttpClient)
-        .addConverterFactory(gsonConverterFactory)
-        .build()
+    private fun buildOkHttpClient(context: Context?): OkHttpClient {
+        val loggingInterceptor = HttpLoggingInterceptor().apply {
+            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY else HttpLoggingInterceptor.Level.NONE
+        }
+        
+        val builder = OkHttpClient.Builder()
+            .addInterceptor(loggingInterceptor)
+        
+        context?.let { ctx ->
+            val cacheSize = 10 * 1024 * 1024L // 10 MB
+            val cacheDir = File(ctx.cacheDir, "http_cache")
+            val cache = Cache(cacheDir, cacheSize)
+            builder.cache(cache)
+            
+            builder.addInterceptor { chain ->
+                var request = chain.request()
+                if (!isNetworkAvailable(ctx)) {
+                    request = request.newBuilder()
+                        .header("Cache-Control", "public, only-if-cached, max-stale=" + 60 * 60 * 24 * 7)
+                        .build()
+                }
+                chain.proceed(request)
+            }
+        }
+        return builder.build()
+    }
 
-    // --- Service Providers are now suspend functions ---
+    private fun isNetworkAvailable(context: Context): Boolean {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = connectivityManager.activeNetwork ?: return false
+        val activeNetwork = connectivityManager.getNetworkCapabilities(network) ?: return false
+        return when {
+            activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> true
+            activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> true
+            activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> true
+            else -> false
+        }
+    }
+
+    private fun getRetrofit(isLocal: Boolean): Retrofit {
+        return if (isLocal) {
+            localRetrofit ?: synchronized(this) {
+                localRetrofit ?: Retrofit.Builder()
+                    .baseUrl(NetworkConfig.LOCAL_API_URL)
+                    .client(getOkHttpClient())
+                    .addConverterFactory(gsonConverterFactory)
+                    .build().also { localRetrofit = it }
+            }
+        } else {
+            productionRetrofit ?: synchronized(this) {
+                productionRetrofit ?: Retrofit.Builder()
+                    .baseUrl(NetworkConfig.PRODUCTION_API_URL)
+                    .client(getOkHttpClient())
+                    .addConverterFactory(gsonConverterFactory)
+                    .build().also { productionRetrofit = it }
+            }
+        }
+    }
+
     suspend fun authApiService(): AuthApiService {
         isInitialized.await()
-        return if (_useLocalServer.value) localRetrofit.create(AuthApiService::class.java)
-        else productionRetrofit.create(AuthApiService::class.java)
+        return getRetrofit(_useLocalServer.value).create(AuthApiService::class.java)
     }
 
     suspend fun alertsApiService(): AlertsApiService {
         isInitialized.await()
-        return if (_useLocalServer.value) localRetrofit.create(AlertsApiService::class.java)
-        else productionRetrofit.create(AlertsApiService::class.java)
+        return getRetrofit(_useLocalServer.value).create(AlertsApiService::class.java)
     }
 
     suspend fun messagingApiService(): MessagingApiService {
         isInitialized.await()
-        return if (_useLocalServer.value) localRetrofit.create(MessagingApiService::class.java)
-        else productionRetrofit.create(MessagingApiService::class.java)
+        return getRetrofit(_useLocalServer.value).create(MessagingApiService::class.java)
     }
 
     suspend fun settingsApiService(): SettingsApiService {
         isInitialized.await()
-        return if (_useLocalServer.value) localRetrofit.create(SettingsApiService::class.java)
-        else productionRetrofit.create(SettingsApiService::class.java)
+        return getRetrofit(_useLocalServer.value).create(SettingsApiService::class.java)
     }
 
     suspend fun incidentApiService(): IncidentApiService {
         isInitialized.await()
-        return if (_useLocalServer.value) localRetrofit.create(IncidentApiService::class.java)
-        else productionRetrofit.create(IncidentApiService::class.java)
+        return getRetrofit(_useLocalServer.value).create(IncidentApiService::class.java)
     }
 
-    fun initializeAndCheckConnection() {
+    fun initializeAndCheckConnection(context: Context) {
         if (isInitialized.isCompleted) return
+
+        // Pre-initialize client with context
+        getOkHttpClient(context.applicationContext)
 
         if (BuildConfig.DEBUG) {
             CoroutineScope(Dispatchers.IO).launch {
@@ -79,24 +140,33 @@ object ApiClient {
                         .url(NetworkConfig.PRODUCTION_API_URL + "alerts.php")
                         .head()
                         .build()
-                    val response = okHttpClient.newCall(request).execute()
+                    
+                    // Crucial: Use withContext(Dispatchers.IO) for the blocking OkHttp call
+                    val response = withContext(Dispatchers.IO) {
+                        getOkHttpClient().newCall(request).execute()
+                    }
+                    
                     if (response.isSuccessful) {
                         _useLocalServer.value = false
-                        Log.i("ApiClient", "Production server is reachable. Using ONLINE mode.")
+                        Log.i("ApiClient", "Production server reachable.")
                     } else {
                         _useLocalServer.value = true
-                        Log.w("ApiClient", "Production server returned ${response.code}. Falling back to LOCAL mode.")
+                        Log.w("ApiClient", "Production server returned ${response.code}. Falling back.")
                     }
                 } catch (e: Exception) {
                     _useLocalServer.value = true
-                    Log.e("ApiClient", "Production server unreachable. Falling back to LOCAL mode.", e)
+                    Log.e("ApiClient", "Check failed", e)
                 } finally {
-                    isInitialized.complete(Unit)
+                    if (!isInitialized.isCompleted) {
+                        isInitialized.complete(Unit)
+                    }
                 }
             }
         } else {
             _useLocalServer.value = false
-            isInitialized.complete(Unit)
+            if (!isInitialized.isCompleted) {
+                isInitialized.complete(Unit)
+            }
         }
     }
 }
