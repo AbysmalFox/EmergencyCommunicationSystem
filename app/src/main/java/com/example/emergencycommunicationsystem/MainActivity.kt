@@ -1,6 +1,5 @@
 package com.example.emergencycommunicationsystem
 
-import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -27,7 +26,6 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.emergencycommunicationsystem.data.UserPrefs
@@ -171,7 +169,7 @@ fun EmergencyApp() {
                         onMessageClick = {
                             navigateToMessaging(alertId = 999, alertTitle = "General Inquiry")
                         },
-                        onAlertClick = { alertId ->
+                        onAlertClick = { _ ->
                             navController.navigate(Screen.Alerts.route) {
                                 // Pop up to the start destination to avoid building up a back stack
                                 popUpTo(navController.graph.findStartDestination().id) {

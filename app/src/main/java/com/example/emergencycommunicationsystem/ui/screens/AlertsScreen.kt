@@ -1,11 +1,12 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
-import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Message
@@ -15,6 +16,7 @@ import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -31,13 +33,17 @@ import com.example.emergencycommunicationsystem.util.Resource
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
 import java.util.Locale
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Info
+import kotlin.math.max
+import kotlin.math.min
 
 @Composable
 fun getIconForCategory(alert: Alert): ImageVector {
     // Handle numeric category IDs from API (category comes as string "1", "2", "4", "5")
     val categoryId = try {
         alert.category?.toIntOrNull() ?: 0
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         0
     }
     
@@ -69,7 +75,7 @@ fun getColorForCategory(alert: Alert): Color {
     // Handle numeric category IDs from API (category comes as string "1", "2", "4", "5")
     val categoryId = try {
         alert.category?.toIntOrNull() ?: 0
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         0
     }
     
@@ -104,7 +110,7 @@ fun getAlertSeverity(alert: Alert): String {
     // Handle numeric category IDs from API (category comes as string "1", "2", "4", "5")
     val categoryId = try {
         alert.category?.toIntOrNull() ?: 0
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         0
     }
     
@@ -153,7 +159,7 @@ fun getCategoryName(alert: Alert, localeContext: android.content.Context): Strin
     // Handle numeric category IDs from API (category comes as string "1", "2", "4", "5")
     val categoryId = try {
         alert.category?.toIntOrNull() ?: 0
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         0
     }
     
@@ -171,6 +177,123 @@ fun getCategoryName(alert: Alert, localeContext: android.content.Context): Strin
         "health" in title -> "Health"
         "traffic" in title || "road" in title || "power" in title || "emergency" in title -> "General"
         else -> localeContext.getString(R.string.general)
+    }
+}
+
+/**
+ * Get alert type from a single alert
+ */
+private fun getAlertTypeFromAlert(alert: Alert): String {
+    val categoryId = try {
+        alert.category?.toIntOrNull() ?: 0
+    } catch (_: Exception) {
+        0
+    }
+    
+    val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
+    val categoryStr = alert.category?.lowercase(Locale.getDefault()) ?: ""
+    
+    return when {
+        categoryId == 2 || "earthquake" in categoryStr || "earthquake" in title || "tremor" in title -> "earthquake"
+        categoryId == 4 || "fire" in categoryStr || "fire" in title || "wildfire" in title -> "fire"
+        categoryId == 1 || "weather" in categoryStr || "flood" in title || "typhoon" in title || "storm" in title || "rain" in title -> "flood"
+        else -> "general"
+    }
+}
+
+/**
+ * Get compact emergency instructions for a single alert
+ */
+private fun getCompactInstructions(alertType: String, @Suppress("UNUSED_PARAMETER") timeOfDay: String): Pair<String, List<String>> {
+    return when (alertType) {
+        "earthquake" -> Pair(
+            "Duck, Cover, Hold",
+            listOf("Drop to hands and knees", "Cover head and neck", "Hold on to sturdy furniture", "Stay away from windows")
+        )
+        "fire" -> Pair(
+            "Do not use elevators",
+            listOf("Use stairs only", "Stay low to avoid smoke", "Feel doors before opening", "Evacuate immediately")
+        )
+        "flood" -> Pair(
+            "Move to higher ground",
+            listOf("Avoid floodwaters", "Go to highest floor", "Turn off electricity if safe", "Listen to broadcasts")
+        )
+        else -> Pair(
+            "Stay Calm",
+            listOf("Follow authorities", "Keep contacts ready", "Stay informed", "Help others if safe")
+        )
+    }
+}
+
+/**
+ * Compact Emergency Instructions for individual alerts
+ */
+@Composable
+fun CompactEmergencyInstructions(
+    alert: Alert,
+    modifier: Modifier = Modifier
+) {
+    val alertType = getAlertTypeFromAlert(alert)
+    val currentHour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+    val timeOfDay = when (currentHour) {
+        in 5..11 -> "morning"
+        in 12..17 -> "afternoon"
+        in 18..22 -> "evening"
+        else -> "night"
+    }
+    val (mainInstruction, steps) = getCompactInstructions(alertType, timeOfDay)
+    
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = "Instructions",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "🧠 What To Do: $mainInstruction",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Compact steps (show first 3)
+            steps.take(3).forEach { step ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 2.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Text(
+                        text = "• ",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = step,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -216,6 +339,11 @@ fun AlertItem(
                     )
                 }
             }
+            
+            // Emergency Instructions Section
+            Spacer(modifier = Modifier.height(12.dp))
+            CompactEmergencyInstructions(alert = alert)
+            
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -308,9 +436,7 @@ fun AlertsScreen(
             when (val resource = state) {
                 is Resource.Loading -> {
                     // Show full screen loader only if we have no data yet
-                    if (resource is Resource.Loading && state !is Resource.Success) {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                    }
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
 
                 is Resource.Success -> {
@@ -318,16 +444,29 @@ fun AlertsScreen(
                     if (alerts.isEmpty()) {
                         EmptyAlertsView()
                     } else {
-                        LazyColumn(
-                            contentPadding = PaddingValues(16.dp, bottom = 136.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            items(alerts, key = { it.id }) { alert ->
-                                AlertItem(alert = alert) { alertId, alertTitle ->
-                                    onMessageClick?.invoke(alertId, alertTitle)
+                        val listState = rememberLazyListState()
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            LazyColumn(
+                                state = listState,
+                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 136.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                items(alerts, key = { it.id }) { alert ->
+                                    AlertItem(alert = alert) { alertId, alertTitle ->
+                                        onMessageClick?.invoke(alertId, alertTitle)
+                                    }
                                 }
                             }
+                            
+                            // Scroll Indicator - positioned on the right edge
+                            ScrollIndicator(
+                                listState = listState,
+                                itemCount = alerts.size,
+                                modifier = Modifier
+                                    .align(Alignment.CenterEnd)
+                                    .padding(end = 4.dp)
+                            )
                         }
                     }
                 }
@@ -345,6 +484,114 @@ fun AlertsScreen(
                 contentColor = MaterialTheme.colorScheme.primary
             )
         }
+    }
+}
+
+/**
+ * Custom Scroll Indicator Component
+ * Shows a visual indicator on the right side to represent scroll position
+ */
+@Composable
+fun ScrollIndicator(
+    listState: LazyListState,
+    itemCount: Int,
+    modifier: Modifier = Modifier
+) {
+    // Force recomposition when scroll state changes
+    val layoutInfo by remember { derivedStateOf { listState.layoutInfo } }
+    val visibleItemsInfo = layoutInfo.visibleItemsInfo
+    
+    // Only show if there are items and we can scroll
+    if (visibleItemsInfo.isEmpty() || itemCount == 0 || itemCount <= visibleItemsInfo.size) {
+        return
+    }
+    
+    val firstVisibleItemIndex = visibleItemsInfo.firstOrNull()?.index ?: 0
+    val lastVisibleItemIndex = visibleItemsInfo.lastOrNull()?.index ?: 0
+    
+    // Get scroll position information
+    val firstVisibleItem = visibleItemsInfo.firstOrNull()
+    val lastVisibleItem = visibleItemsInfo.lastOrNull()
+    
+    // Check if we're at the bottom - more lenient detection
+    // Consider at bottom if:
+    // 1. Last visible item is within the last 2 items, OR
+    // 2. Last visible item is the last item, OR
+    // 3. We're very close to the end of the viewport (within 150px)
+    val viewportEndOffset = layoutInfo.viewportEndOffset
+    val lastItemEndPosition = (lastVisibleItem?.offset ?: 0) + (lastVisibleItem?.size ?: 0)
+    val distanceFromBottom = viewportEndOffset - lastItemEndPosition
+    
+    val isAtBottom = lastVisibleItemIndex >= itemCount - 2 || // Within last 2 items
+                     (lastVisibleItemIndex >= itemCount - 1 && distanceFromBottom <= 150) // Last item and close to bottom
+    
+    // Calculate scroll progress based on first visible item
+    // Account for partial scrolling within items
+    val scrollProgress = if (isAtBottom) {
+        1.0f // Force to bottom when detected
+    } else {
+        val firstItem = firstVisibleItem ?: return
+        val firstItemProgress = if (firstItem.size > 0) {
+            (-firstItem.offset).toFloat() / firstItem.size.toFloat()
+        } else {
+            0f
+        }
+        val itemBasedProgress = (firstItem.index + firstItemProgress) / (itemCount - 1).toFloat()
+        // Boost progress when near the end to make it reach bottom faster
+        val boostedProgress = if (itemBasedProgress > 0.8f) {
+            // When past 80%, accelerate to reach 1.0 faster
+            itemBasedProgress + (1.0f - itemBasedProgress) * 0.3f
+        } else {
+            itemBasedProgress
+        }
+        boostedProgress.coerceIn(0f, 1f)
+    }
+    
+    // Calculate visible range as percentage of total items
+    val visibleItemCount = (lastVisibleItemIndex - firstVisibleItemIndex + 1).toFloat()
+    val visibleRange = visibleItemCount / itemCount.toFloat()
+    val thumbHeightFraction = max(0.2f, min(0.5f, visibleRange)) // Min 20%, max 50% of track
+    
+    // Calculate thumb position (0.0 to 1.0 - thumbHeightFraction)
+    // When at bottom, thumb should be at the bottom of the track
+    val maxThumbPosition = 1f - thumbHeightFraction
+    val thumbPositionFraction = if (isAtBottom) {
+        maxThumbPosition // Position at bottom
+    } else {
+        (scrollProgress * maxThumbPosition).coerceIn(0f, maxThumbPosition)
+    }
+    
+    BoxWithConstraints(
+        modifier = modifier
+            .width(6.dp) // Made wider for better visibility
+            .fillMaxHeight()
+    ) {
+        val trackHeight = this.maxHeight
+        val thumbHeight = trackHeight * thumbHeightFraction
+        val thumbOffset = trackHeight * thumbPositionFraction
+        
+        // Track (background) - more visible
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .background(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                    shape = RoundedCornerShape(3.dp)
+                )
+        )
+        
+        // Thumb (scroll indicator) - more visible
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(thumbHeight)
+                .offset(y = thumbOffset)
+                .background(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f), // More opaque
+                    shape = RoundedCornerShape(3.dp)
+                )
+        )
     }
 }
 

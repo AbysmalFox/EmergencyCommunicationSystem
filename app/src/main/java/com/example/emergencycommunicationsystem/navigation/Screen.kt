@@ -24,6 +24,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
 
 
     companion object {
+        @Suppress("UNUSED")
         fun fromRoute(route: String?): Screen {
             return when (route) {
                 "home" -> Home

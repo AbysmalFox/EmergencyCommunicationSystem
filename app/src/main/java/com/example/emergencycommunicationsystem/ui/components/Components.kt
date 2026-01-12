@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -64,7 +65,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -666,7 +666,7 @@ fun ForecastDay(dayName: String, iconUrl: String, temp: String) {
  */
 @Composable
 fun CompactAlertCard(
-    alert: com.example.emergencycommunicationsystem.data.models.Alert,
+    alert: Alert,
     distanceKm: Double?,
     severity: String,
     onClick: () -> Unit,
@@ -699,7 +699,7 @@ fun CompactAlertCard(
             
             // Icon
             Icon(
-                imageVector = com.example.emergencycommunicationsystem.ui.screens.getIconForCategory(alert),
+                imageVector = getIconForCategory(alert),
                 contentDescription = alert.category,
                 modifier = Modifier.size(32.dp),
                 tint = severityColor
@@ -769,5 +769,221 @@ fun CompactAlertCard(
                 }
             }
         }
+    }
+}
+
+/**
+ * Emergency Instructions Component - Context-aware guidance
+ * Shows instructions based on alert type, user location, and time of day
+ */
+@Composable
+fun EmergencyInstructions(
+    alerts: List<Alert>,
+    userLat: Double?,
+    userLon: Double?,
+    modifier: Modifier = Modifier
+) {
+    val currentHour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+    val timeOfDay = when (currentHour) {
+        in 5..11 -> "morning"
+        in 12..17 -> "afternoon"
+        in 18..22 -> "evening"
+        else -> "night"
+    }
+    
+    // Determine primary alert type from active alerts
+    val primaryAlertType = getPrimaryAlertType(alerts)
+    val instructions = getEmergencyInstructions(primaryAlertType, timeOfDay, userLat != null && userLon != null)
+    
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            // Header
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = "Emergency Instructions",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "🧠 Emergency Instructions",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Main instruction
+            Text(
+                text = instructions.main,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.fillMaxWidth()
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // Additional steps
+            instructions.steps.forEachIndexed { index, step ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Text(
+                        text = "${index + 1}. ",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = step,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+            
+            // Context note
+            if (instructions.contextNote.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = instructions.contextNote,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(10.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Data class for emergency instructions
+ */
+private data class EmergencyInstruction(
+    val main: String,
+    val steps: List<String>,
+    val contextNote: String = ""
+)
+
+/**
+ * Determine primary alert type from active alerts
+ */
+private fun getPrimaryAlertType(alerts: List<Alert>): String {
+    if (alerts.isEmpty()) return "general"
+    
+    // Count alert types
+    val typeCounts = mutableMapOf<String, Int>()
+    alerts.forEach { alert ->
+        val categoryId = try {
+            alert.category?.toIntOrNull() ?: 0
+        } catch (_: Exception) {
+            0
+        }
+        
+        val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
+        val categoryStr = alert.category?.lowercase(Locale.getDefault()) ?: ""
+        
+        when {
+            categoryId == 2 || "earthquake" in categoryStr || "earthquake" in title || "tremor" in title -> {
+                typeCounts["earthquake"] = typeCounts.getOrDefault("earthquake", 0) + 1
+            }
+            categoryId == 4 || "fire" in categoryStr || "fire" in title || "wildfire" in title -> {
+                typeCounts["fire"] = typeCounts.getOrDefault("fire", 0) + 1
+            }
+            categoryId == 1 || "weather" in categoryStr || "flood" in title || "typhoon" in title || "storm" in title || "rain" in title -> {
+                typeCounts["flood"] = typeCounts.getOrDefault("flood", 0) + 1
+            }
+            else -> {
+                typeCounts["general"] = typeCounts.getOrDefault("general", 0) + 1
+            }
+        }
+    }
+    
+    // Return the most common type
+    return typeCounts.maxByOrNull { it.value }?.key ?: "general"
+}
+
+/**
+ * Get emergency instructions based on alert type, time of day, and location availability
+ */
+private fun getEmergencyInstructions(
+    alertType: String,
+    timeOfDay: String,
+    hasLocation: Boolean
+): EmergencyInstruction {
+    return when (alertType) {
+        "earthquake" -> EmergencyInstruction(
+            main = "During Earthquake: Duck, Cover, Hold",
+            steps = listOf(
+                "Drop to your hands and knees",
+                "Cover your head and neck with your arms",
+                "Hold on to any sturdy furniture",
+                "Stay away from windows and heavy objects",
+                "If outdoors, move to an open area away from buildings",
+                "After shaking stops, check for injuries and hazards"
+            ),
+            contextNote = if (hasLocation) "Stay alert for aftershocks. Check your location for nearby safe zones." else "Stay alert for aftershocks."
+        )
+        "fire" -> EmergencyInstruction(
+            main = "During Fire: Do not use elevators",
+            steps = listOf(
+                "Alert others and activate fire alarm if available",
+                "Use stairs, never elevators",
+                "Stay low to avoid smoke inhalation",
+                "Feel doors before opening - if hot, use another exit",
+                "If trapped, seal the room and signal for help",
+                "Once outside, move to a safe distance and call emergency services"
+            ),
+            contextNote = if (timeOfDay == "night") "Visibility may be limited. Use a flashlight if available." else "Evacuate immediately and do not return until authorities say it's safe."
+        )
+        "flood" -> EmergencyInstruction(
+            main = "During Flood: Move to higher ground",
+            steps = listOf(
+                "Move to higher ground immediately",
+                "Avoid walking or driving through floodwaters",
+                "Stay away from bridges over fast-moving water",
+                "If trapped in a building, go to the highest floor",
+                "Turn off electricity at the main breaker if safe to do so",
+                "Listen to emergency broadcasts for updates"
+            ),
+            contextNote = if (hasLocation) "Check your location and identify nearest evacuation centers on the map." else "Monitor water levels and be ready to evacuate."
+        )
+        else -> EmergencyInstruction(
+            main = "General Emergency: Stay Calm and Follow Instructions",
+            steps = listOf(
+                "Stay calm and assess the situation",
+                "Follow instructions from authorities",
+                "Keep emergency contacts accessible",
+                "Have an emergency kit ready",
+                "Stay informed through official channels",
+                "Help others if it's safe to do so"
+            ),
+            contextNote = if (hasLocation) "Your location is being tracked for better assistance." else "Enable location services for location-specific guidance."
+        )
     }
 }
