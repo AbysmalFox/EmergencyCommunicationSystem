@@ -30,18 +30,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.CallEnd
-import androidx.compose.material.icons.filled.Dialpad
-import androidx.compose.material.icons.filled.LocalFireDepartment
-import androidx.compose.material.icons.filled.LocalHospital
-import androidx.compose.material.icons.filled.LocalPolice
-import androidx.compose.material.icons.filled.MicOff
-import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.Traffic
-import androidx.compose.material.icons.filled.Warning
+import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -92,16 +81,16 @@ fun EmergencyContactsScreen(onBackPressed: () -> Unit) {
     val hotlineGroups = remember {
         mapOf(
             "Quezon City Specific Hotlines" to listOf(
-                Hotline("QC Helpline", "122", "Primary 24/7 contact center for all emergencies.", Icons.Default.Call, Icons.Default.Call),
-                Hotline("QC DRRMO", "89275914", "Disaster Risk Reduction and Management.", Icons.Default.Warning, Icons.Default.Warning),
-                Hotline("Quezon City Fire District", "83302344", "For fire hazards, rescues, and inspections.", Icons.Default.LocalFireDepartment, Icons.Default.LocalFireDepartment)
+                Hotline("QC Helpline", "122", "Primary 24/7 contact center for all emergencies.", AppIcons.EmergencyCall, AppIcons.EmergencyCall),
+                Hotline("QC DRRMO", "89275914", "Disaster Risk Reduction and Management.", AppIcons.Warning, AppIcons.Warning),
+                Hotline("Quezon City Fire District", "83302344", "For fire hazards, rescues, and inspections.", AppIcons.LocalFireDepartment, AppIcons.LocalFireDepartment)
             ),
             "Nationwide Emergency Hotlines" to listOf(
-                Hotline("National Emergency Hotline", "911", "National emergency hotline for police, fire, and medical.", Icons.Default.Shield, Icons.Default.Shield),
-                Hotline("PNP", "117", "Philippine National Police connection.", Icons.Default.LocalPolice, Icons.Default.LocalPolice),
-                Hotline("Philippine Red Cross", "143", "Medical and humanitarian aid.", Icons.Default.LocalHospital, Icons.Default.LocalHospital),
-                Hotline("Bureau of Fire Protection", "84260219", "National fire protection and rescue.", Icons.Default.LocalFireDepartment, Icons.Default.LocalFireDepartment),
-                Hotline("MMDA", "136", "Metropolitan Manila Development Authority.", Icons.Default.Traffic, Icons.Default.Traffic)
+                Hotline("National Emergency Hotline", "911", "National emergency hotline for police, fire, and medical.", AppIcons.Shield, AppIcons.Shield),
+                Hotline("PNP", "117", "Philippine National Police connection.", AppIcons.LocalPolice, AppIcons.LocalPolice),
+                Hotline("Philippine Red Cross", "143", "Medical and humanitarian aid.", AppIcons.LocalHospital, AppIcons.LocalHospital),
+                Hotline("Bureau of Fire Protection", "84260219", "National fire protection and rescue.", AppIcons.LocalFireDepartment, AppIcons.LocalFireDepartment),
+                Hotline("MMDA", "136", "Metropolitan Manila Development Authority.", AppIcons.Traffic, AppIcons.Traffic)
             )
         )
     }
@@ -156,7 +145,7 @@ private fun HotlineList(
                         modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
+                            AppIcons.ArrowBack,
                             contentDescription = "Back",
                             tint = MaterialTheme.colorScheme.onBackground
                         )
@@ -298,9 +287,9 @@ private fun SimulatedCallInterface(hotline: Hotline, onEndCall: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ActionButton(icon = Icons.Default.MicOff, text = "Mute", onClick = {})
+            ActionButton(icon = AppIcons.MicOff, text = "Mute", onClick = {})
             EndCallButton(onEndCall)
-            ActionButton(icon = Icons.Default.Dialpad, text = "Keypad", onClick = {})
+            ActionButton(icon = AppIcons.Dialpad, text = "Keypad", onClick = {})
         }
     }
 }
@@ -321,6 +310,7 @@ private fun ActionButton(icon: ImageVector, text: String, onClick: () -> Unit) {
     }
 }
 
+
 @Composable
 private fun EndCallButton(onClick: () -> Unit) {
     Button(
@@ -333,7 +323,7 @@ private fun EndCallButton(onClick: () -> Unit) {
         contentPadding = PaddingValues(0.dp)
     ) {
         Icon(
-            Icons.Default.CallEnd,
+            AppIcons.CallEnd,
             contentDescription = "End Call",
             modifier = Modifier.size(36.dp),
             tint = MaterialTheme.colorScheme.onError

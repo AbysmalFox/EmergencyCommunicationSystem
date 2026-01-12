@@ -28,6 +28,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.ui.res.painterResource
+import com.example.emergencycommunicationsystem.R
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -46,7 +48,6 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.animation.animateContentSize
-import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 
 const val navOverlayHeight = 92
@@ -159,7 +160,16 @@ private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, onClick: () ->
             },
         contentAlignment = Alignment.Center
     ) {
-        screen.icon?.let { icon ->
+        // Use Tabler icons for bottom navigation
+        val tablerIconRes = when (screen) {
+            is Screen.Home -> R.drawable.ic_tabler_home
+            is Screen.Alerts -> R.drawable.ic_tabler_bell
+            is Screen.Map -> R.drawable.ic_tabler_map_pin
+            is Screen.Profile -> R.drawable.ic_tabler_user
+            else -> null
+        }
+        
+        if (tablerIconRes != null) {
             Column(
                 modifier = Modifier.animateContentSize(animationSpec = spring(
                     dampingRatio = Spring.DampingRatioLowBouncy,
@@ -169,7 +179,7 @@ private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, onClick: () ->
                 verticalArrangement = Arrangement.Center
             ) {
                 Icon(
-                    imageVector = icon,
+                    painter = painterResource(id = tablerIconRes),
                     contentDescription = localizedTitle,
                     tint = iconColor,
                     modifier = Modifier.offset(y = iconOffsetY)

@@ -12,8 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -79,7 +78,7 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center
         ) {
             IconButton(onClick = onBackPressed, modifier = Modifier.align(Alignment.Start)) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                Icon(AppIcons.ArrowBack, contentDescription = "Back")
             }
             Text(
                 text = "Login to Account",

@@ -11,10 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.CheckCircle
+import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -55,7 +52,7 @@ fun LoginScreen(authViewModel: AuthViewModel, onLoginSuccess: () -> Unit, onBack
                 title = { Text("Login") },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(AppIcons.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -70,7 +67,7 @@ fun LoginScreen(authViewModel: AuthViewModel, onLoginSuccess: () -> Unit, onBack
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
-                imageVector = Icons.Default.AccountCircle,
+                imageVector = AppIcons.AccountCircle,
                 contentDescription = "Login Icon",
                 modifier = Modifier.size(100.dp),
                 tint = MaterialTheme.colorScheme.primary
@@ -133,7 +130,7 @@ fun SignUpScreen(authViewModel: AuthViewModel, onSignUpSuccess: () -> Unit, onBa
                 title = { Text("Sign Up") },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(AppIcons.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -148,7 +145,7 @@ fun SignUpScreen(authViewModel: AuthViewModel, onSignUpSuccess: () -> Unit, onBa
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
-                imageVector = Icons.Default.AccountCircle,
+                imageVector = AppIcons.AccountCircle,
                 contentDescription = "Sign Up Icon",
                 modifier = Modifier.size(100.dp),
                 tint = MaterialTheme.colorScheme.primary
@@ -240,7 +237,7 @@ fun SuccessScreen(onTimeout: () -> Unit) {
             Text("Creating account...")
         } else {
             Icon(
-                imageVector = Icons.Default.CheckCircle,
+                imageVector = AppIcons.CheckCircle,
                 contentDescription = "Success",
                 modifier = Modifier
                     .size(100.dp)

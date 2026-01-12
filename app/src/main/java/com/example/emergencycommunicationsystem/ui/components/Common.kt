@@ -1,9 +1,6 @@
 package com.example.emergencycommunicationsystem.ui.components
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
+import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -26,9 +23,9 @@ data class BottomNavItem(
 fun Footer(navController: NavController) {
     val items = listOf(
         // Use the route names you defined in your Screen sealed class
-        BottomNavItem("Home", Icons.Default.Home, "home"),
-        BottomNavItem("Hotlines", Icons.Default.Call, "emergency_contacts"),
-        BottomNavItem("Profile", Icons.Default.Person, "profile")
+        BottomNavItem("Home", AppIcons.Home, "home"),
+        BottomNavItem("Hotlines", AppIcons.EmergencyCall, "emergency_contacts"),
+        BottomNavItem("Profile", AppIcons.Profile, "profile")
     )
 
     NavigationBar {

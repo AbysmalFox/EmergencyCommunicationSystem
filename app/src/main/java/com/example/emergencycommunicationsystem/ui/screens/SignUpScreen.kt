@@ -6,9 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
+import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -73,7 +71,7 @@ fun SignUpScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     Icon(
-                        imageVector = Icons.Default.CheckCircle,
+                        imageVector = AppIcons.CheckCircle,
                         contentDescription = "Success",
                         tint = Color(0xFF4CAF50), // A nice green color
                         modifier = Modifier.size(100.dp)
@@ -92,7 +90,7 @@ fun SignUpScreen(
                 // --- Form UI ---
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     IconButton(onClick = onBackPressed, modifier = Modifier.align(Alignment.Start)) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(AppIcons.ArrowBack, contentDescription = "Back")
                     }
                     Text("Create Account", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
                     Spacer(modifier = Modifier.height(32.dp))

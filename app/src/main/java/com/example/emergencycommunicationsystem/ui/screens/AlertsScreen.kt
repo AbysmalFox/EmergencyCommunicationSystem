@@ -8,9 +8,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Message
-import androidx.compose.material.icons.filled.*
+import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
@@ -22,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,9 +33,44 @@ import com.example.emergencycommunicationsystem.util.getLocaleContext
 import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
 import java.util.Locale
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.filled.Info
 import kotlin.math.max
 import kotlin.math.min
+
+@Composable
+fun CategoryIcon(
+    alert: Alert,
+    modifier: Modifier = Modifier,
+    tint: Color = MaterialTheme.colorScheme.onSurface
+) {
+    val localeContext = getLocaleContext()
+    val categoryId = try {
+        alert.category?.toIntOrNull() ?: 0
+    } catch (_: Exception) {
+        0
+    }
+    val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
+    val categoryStr = alert.category?.lowercase(Locale.getDefault()) ?: ""
+    
+    val isFire = categoryId == 4 || "fire" in categoryStr || "wildfire" in title
+    
+    if (isFire) {
+        // Use Tabler flame icon from vector drawable
+        Icon(
+            painter = painterResource(id = R.drawable.ic_tabler_flame),
+            contentDescription = "Fire",
+            modifier = modifier,
+            tint = tint
+        )
+    } else {
+        // Use regular ImageVector icons
+        Icon(
+            imageVector = getIconForCategory(alert),
+            contentDescription = getCategoryName(alert, localeContext),
+            modifier = modifier,
+            tint = tint
+        )
+    }
+}
 
 @Composable
 fun getIconForCategory(alert: Alert): ImageVector {
@@ -52,21 +86,21 @@ fun getIconForCategory(alert: Alert): ImageVector {
     
     return when {
         // Category 1: Weather - Cloud icon
-        categoryId == 1 || "weather" in categoryStr || "typhoon" in title || "storm" in title || "rain" in title || "heat" in title || "wind" in title -> Icons.Default.Cloud
+        categoryId == 1 || "weather" in categoryStr || "typhoon" in title || "storm" in title || "rain" in title || "heat" in title || "wind" in title -> AppIcons.Weather
         // Category 2: Earthquake - Warning/Alert icon
-        categoryId == 2 || "earthquake" in categoryStr || "tremor" in title -> Icons.Default.Warning
-        // Category 4: Fire - Fireplace icon
-        categoryId == 4 || "fire" in categoryStr || "wildfire" in title -> Icons.Default.Fireplace
+        categoryId == 2 || "earthquake" in categoryStr || "tremor" in title -> AppIcons.Earthquake
+        // Category 4: Fire - Fire icon
+        categoryId == 4 || "fire" in categoryStr || "wildfire" in title -> AppIcons.Fire
         // Category 5: General/Emergency - Info icon
-        categoryId == 5 || "general" in categoryStr || "emergency" in categoryStr || "traffic" in title || "road" in title || "power" in title -> Icons.Default.Info
-        // Category 3: Health (if exists) - Hospital icon
-        categoryId == 3 || "health" in categoryStr -> Icons.Default.LocalHospital
+        categoryId == 5 || "general" in categoryStr || "emergency" in categoryStr || "traffic" in title || "road" in title || "power" in title -> AppIcons.Info
+        // Category 3: Health (if exists) - Health icon
+        categoryId == 3 || "health" in categoryStr -> AppIcons.Health
         // Security - Security icon
-        "security" in categoryStr -> Icons.Default.Security
+        "security" in categoryStr -> AppIcons.Security
         // Water/Flood - Water drop icon
-        "water" in categoryStr || "flood" in title -> Icons.Default.WaterDrop
+        "water" in categoryStr || "flood" in title -> AppIcons.Flood
         // Default fallback - Info icon
-        else -> Icons.Default.Info
+        else -> AppIcons.Info
     }
 }
 
@@ -256,7 +290,7 @@ fun CompactEmergencyInstructions(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(
-                    imageVector = Icons.Default.Info,
+                    imageVector = AppIcons.Info,
                     contentDescription = "Instructions",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp)
@@ -311,9 +345,8 @@ fun AlertItem(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row {
-                Icon(
-                    imageVector = getIconForCategory(alert),
-                    contentDescription = getCategoryName(alert, localeContext),
+                CategoryIcon(
+                    alert = alert,
                     modifier = Modifier.size(40.dp).align(Alignment.Top),
                     tint = getColorForCategory(alert)
                 )
@@ -375,7 +408,7 @@ fun AlertItem(
                     modifier = Modifier.height(40.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Message,
+                        imageVector = AppIcons.Message,
                         contentDescription = localeContext.getString(R.string.message),
                         modifier = Modifier.size(18.dp)
                     )
@@ -604,7 +637,7 @@ fun EmptyAlertsView() {
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Default.NotificationsOff,
+            imageVector = AppIcons.NotificationsOff,
             contentDescription = localeContext.getString(R.string.no_new_alerts),
             modifier = Modifier.size(64.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant

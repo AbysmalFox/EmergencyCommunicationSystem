@@ -5,15 +5,13 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MyLocation
+import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import androidx.compose.material3.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.Composable
@@ -36,7 +34,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.emergencycommunicationsystem.AuthManager
 import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.data.models.SafeZone
 import com.example.emergencycommunicationsystem.data.models.SafeZoneType
@@ -221,7 +218,7 @@ fun MapScreen() {
                 .align(Alignment.BottomEnd)
                 .padding(end = 16.dp, bottom = 130.dp)
         ) {
-            Icon(Icons.Default.MyLocation, contentDescription = "My Location")
+            Icon(AppIcons.MyLocation, contentDescription = "My Location")
         }
     }
 }
@@ -249,7 +246,7 @@ fun MapLegend(modifier: Modifier = Modifier) {
                 modifier = Modifier.padding(bottom = 2.dp)
             )
             
-            Divider(
+            HorizontalDivider(
                 modifier = Modifier.padding(vertical = 2.dp),
                 thickness = 1.dp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)

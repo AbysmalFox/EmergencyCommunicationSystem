@@ -56,6 +56,11 @@ dependencies {
 
     // Compose Material Icons
     implementation("androidx.compose.material:material-icons-extended:1.5.1")
+    
+    // Tabler Icons - libraries not resolving
+    // TODO: Find working Tabler icons library or use manual SVG conversion
+    // Attempted: br.com.devsrsouza.compose.icons:tabler-icons:1.1.0 (not available)
+    // Attempted: com.woowla.compose.icon.collections:tabler-android:3.33.0 (not available)
 
     // Coil for Compose
     implementation("io.coil-kt:coil-compose:2.4.0")

@@ -24,16 +24,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AddAPhoto
-import androidx.compose.material.icons.filled.Flood
-import androidx.compose.material.icons.filled.LocalFireDepartment
-import androidx.compose.material.icons.filled.LocalPolice
-import androidx.compose.material.icons.filled.MedicalServices
+import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -91,10 +84,10 @@ fun ReportIncidentScreen(
     var imageUri by remember { mutableStateOf<Uri?>(null) }
 
     val incidentTypes = mapOf(
-        "Fire" to Icons.Default.LocalFireDepartment,
-        "Flood" to Icons.Default.Flood,
-        "Medical" to Icons.Default.MedicalServices,
-        "Crime" to Icons.Default.LocalPolice
+        "Fire" to AppIcons.LocalFireDepartment,
+        "Flood" to AppIcons.Flood,
+        "Medical" to AppIcons.MedicalServices,
+        "Crime" to AppIcons.LocalPolice
     )
     var selectedIncidentType by remember { mutableStateOf(incidentTypes.keys.first()) }
 
@@ -144,7 +137,7 @@ fun ReportIncidentScreen(
                         modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
+                            AppIcons.ArrowBack,
                             contentDescription = "Back",
                             tint = MaterialTheme.colorScheme.onBackground
                         )
@@ -521,7 +514,7 @@ fun ImageAttachment(
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
         ) {
-            Icon(Icons.Default.AddAPhoto, contentDescription = "Add Photo", modifier = Modifier.size(ButtonDefaults.IconSize))
+            Icon(AppIcons.AddPhoto, contentDescription = "Add Photo", modifier = Modifier.size(ButtonDefaults.IconSize))
             Spacer(Modifier.size(ButtonDefaults.IconSpacing))
             Text(if (imageUri == null) "Attach Photo" else "Change Photo")
         }

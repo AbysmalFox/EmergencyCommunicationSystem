@@ -1,9 +1,6 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,14 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Warning
+import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -155,7 +145,7 @@ fun ProfileScreen(
 
             item {
                 ProfileItem(
-                    icon = Icons.Default.Notifications,
+                    icon = AppIcons.Alerts,
                     text = localeContext.getString(R.string.receive_notifications),
                     onClick = { 
                         if (isLoggedIn) {
@@ -168,21 +158,21 @@ fun ProfileScreen(
             }
             item {
                 ProfileItem(
-                    icon = Icons.Default.Language,
+                    icon = AppIcons.Language,
                     text = localeContext.getString(R.string.language_preference),
                     onClick = onLanguageSettingsClick
                 )
             }
             item {
                 ProfileItem(
-                    icon = Icons.Default.Security,
+                    icon = AppIcons.Security,
                     text = localeContext.getString(R.string.privacy_policy),
                     onClick = onPrivacyPolicyClick
                 )
             }
             item {
                 ProfileItem(
-                    icon = Icons.Default.Info,
+                    icon = AppIcons.Info,
                     text = localeContext.getString(R.string.about_app),
                     onClick = onAboutAppClick
                 )
@@ -244,7 +234,7 @@ private fun NotificationSettingsSheet(
             items(categories.size) { index ->
                 val category = categories[index]
                 ProfileItem(
-                    icon = Icons.Default.Warning, // You can make this dynamic later
+                    icon = AppIcons.Warning, // You can make this dynamic later
                     text = category.name,
                     checked = category.isSubscribed == 1,
                     onCheckedChange = { isEnabled ->
@@ -277,7 +267,7 @@ private fun AnonymousUserCard(
     ) {
         Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
-                imageVector = Icons.Default.Person,
+                imageVector = AppIcons.Person,
                 contentDescription = "User avatar",
                 modifier = Modifier.size(64.dp),
                 tint = MaterialTheme.colorScheme.primary
@@ -321,7 +311,7 @@ private fun LoggedInUserCard(
             verticalArrangement = Arrangement.Center
         ) {
             Icon(
-                imageVector = Icons.Default.Person,
+                imageVector = AppIcons.Person,
                 contentDescription = "User avatar",
                 modifier = Modifier.size(56.dp),
                 tint = MaterialTheme.colorScheme.primary
@@ -390,7 +380,7 @@ fun ProfileItem(
                     )
                 )
             } else if (onClick != null) {
-                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(AppIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

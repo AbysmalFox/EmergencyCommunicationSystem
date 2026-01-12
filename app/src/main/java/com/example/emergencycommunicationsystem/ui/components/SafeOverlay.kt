@@ -16,8 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
+import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -114,7 +113,7 @@ fun SafeOverlay(
                 ) {
                     val iconSize = with(LocalDensity.current) { 96.dp }
                     Icon(
-                        imageVector = Icons.Default.CheckCircle,
+                        imageVector = AppIcons.CheckCircle,
                         contentDescription = null,
                         tint = Color(0xFF4CAF50),
                         modifier = Modifier

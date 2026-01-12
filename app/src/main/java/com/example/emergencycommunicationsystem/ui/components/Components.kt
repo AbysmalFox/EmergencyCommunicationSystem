@@ -20,23 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Chat
-import androidx.compose.material.icons.automirrored.filled.Message
-import androidx.compose.material.icons.filled.Air
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Thermostat
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.filled.WaterDrop
-import androidx.compose.material.icons.filled.Info
+import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -44,6 +28,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
+import com.example.emergencycommunicationsystem.R
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -69,13 +55,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 import com.example.emergencycommunicationsystem.data.models.WeatherState
 import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.navigation.Screen
 import com.example.emergencycommunicationsystem.ui.screens.getIconForCategory
-import com.example.emergencycommunicationsystem.ui.screens.getAlertSeverity
 import kotlinx.coroutines.delay
 import java.util.Locale
 
@@ -106,7 +90,7 @@ fun ProfileItem(icon: ImageVector, text: String, hasSwitch: Boolean = false, onC
                     )
                 )
             } else {
-                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(AppIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -166,7 +150,7 @@ fun EmergencyCallButton(onClick: () -> Unit) {
             horizontalArrangement = Arrangement.Center
         ) {
             Icon(
-                imageVector = Icons.Filled.Call,
+                painter = painterResource(id = R.drawable.ic_tabler_phone),
                 contentDescription = localeContext.getString(R.string.emergency_call_label),
                 tint = Color.White,
                 modifier = Modifier.size(32.dp) // Reduced icon size
@@ -204,13 +188,13 @@ fun ActionGrid(
     Column(verticalArrangement = Arrangement.spacedBy(15.dp)) { // Reduced spacing
         EmergencyCallButton(onClick = onEmergencyCallClick)
         Row(horizontalArrangement = Arrangement.spacedBy(15.dp)) {
-            ActionGridItem(localeContext.getString(R.string.report_incident), Icons.Filled.Warning, onClick = onReportClick, modifier = Modifier.weight(1f))
-            ActionGridItem(localeContext.getString(R.string.i_am_safe), Icons.Filled.CheckCircle, onClick = onSafeClick, modifier = Modifier.weight(1f))
+            ActionGridItem(localeContext.getString(R.string.report_incident), AppIcons.ReportIncident, onClick = onReportClick, modifier = Modifier.weight(1f))
+            ActionGridItem(localeContext.getString(R.string.i_am_safe), AppIcons.CheckCircle, onClick = onSafeClick, modifier = Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(15.dp)) {
             ActionGridItem(
                 "Message Responder",
-                Icons.AutoMirrored.Filled.Message,
+                AppIcons.Message,
                 onClick = onMessageClick,
                 modifier = Modifier.weight(1f)
             )
@@ -308,7 +292,7 @@ fun WeatherWidget(state: WeatherState) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                imageVector = Icons.Default.LocationOn,
+                                imageVector = AppIcons.Location,
                                 contentDescription = "Location",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(16.dp)
@@ -347,7 +331,7 @@ fun WeatherWidget(state: WeatherState) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val localeContext = getLocaleContext()
-                    Icon(Icons.Filled.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.onError)
+                    Icon(AppIcons.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.onError)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         localeContext.getString(R.string.gps_signal_lost),
@@ -367,22 +351,22 @@ fun WeatherDetailsRow(state: WeatherState.Success) {
         horizontalArrangement = Arrangement.SpaceAround
     ) {
         WeatherDetailItem(
-            icon = Icons.Default.Thermostat,
+            icon = AppIcons.Thermostat,
             label = localeContext.getString(R.string.feels_like),
             value = state.feelsLike
         )
         WeatherDetailItem(
-            icon = Icons.Default.WaterDrop,
+            icon = AppIcons.Humidity,
             label = localeContext.getString(R.string.humidity),
             value = state.humidity
         )
         WeatherDetailItem(
-            icon = Icons.Default.Air,
+            icon = AppIcons.Wind,
             label = localeContext.getString(R.string.wind),
             value = state.windSpeed
         )
         WeatherDetailItem(
-            icon = Icons.Default.Visibility,
+            icon = AppIcons.Visibility,
             label = localeContext.getString(R.string.visibility),
             value = state.visibility
         )
@@ -428,7 +412,7 @@ fun WeatherAdvice(advice: String) {
 
     Row(verticalAlignment = Alignment.Top) {
         Icon(
-            imageVector = Icons.AutoMirrored.Filled.Chat,
+            imageVector = AppIcons.Chat,
             contentDescription = "Weather Advice",
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier
@@ -454,7 +438,11 @@ fun HotlineItem(name: String, number: String) {
                 val intent = Intent(Intent.ACTION_DIAL, ("tel:$number").toUri())
                 context.startActivity(intent)
             }, shape = CircleShape, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) {
-                Icon(Icons.Filled.Call, contentDescription = "Call $name", tint = MaterialTheme.colorScheme.onPrimary)
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_tabler_phone),
+                    contentDescription = "Call $name",
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
             }
         }
     }
@@ -501,10 +489,10 @@ fun AppBottomNavigation(selectedScreen: Screen, onScreenSelected: (Screen) -> Un
 @Composable
 fun RowScope.BottomNavItem(screen: Screen, isSelected: Boolean, onSelected: () -> Unit) {
     val icon = when (screen) {
-        Screen.Home -> Icons.Filled.Home
-        Screen.Alerts -> Icons.Filled.Notifications
-        Screen.Profile -> Icons.Filled.Person
-        else -> Icons.Filled.Error // Should not happen
+        Screen.Home -> AppIcons.Home
+        Screen.Alerts -> AppIcons.Alerts
+        Screen.Profile -> AppIcons.Profile
+        else -> AppIcons.Error // Should not happen
     }
     val iconColor by animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -755,7 +743,7 @@ fun CompactAlertCard(
                 ) {
                     if (distanceKm != null) {
                         Icon(
-                            imageVector = Icons.Default.LocationOn,
+                            imageVector = AppIcons.Location,
                             contentDescription = "Distance",
                             modifier = Modifier.size(12.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -811,7 +799,7 @@ fun EmergencyInstructions(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(
-                    imageVector = Icons.Default.Info,
+                    imageVector = AppIcons.Info,
                     contentDescription = "Emergency Instructions",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(24.dp)

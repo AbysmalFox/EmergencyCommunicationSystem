@@ -20,9 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Send
+import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -108,7 +106,7 @@ fun MessagingScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = AppIcons.ArrowBack,
                             contentDescription = "Back"
                         )
                     }
@@ -214,7 +212,7 @@ fun MessagingScreen(
                                 )
                             } else {
                                 Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.Send,
+                                    imageVector = AppIcons.Send,
                                     contentDescription = "Send",
                                     tint = MaterialTheme.colorScheme.onPrimary
                                 )

@@ -1,17 +1,13 @@
 package com.example.emergencycommunicationsystem.navigation
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector?) {
-    data object Home : Screen("home", "Home", Icons.Default.Home)
-    data object Alerts : Screen("alerts", "Alerts", Icons.Default.Notifications)
-    data object Profile : Screen("profile", "Profile", Icons.Default.AccountCircle)
-    data object Map : Screen("map", "Map", Icons.Default.Map)
+    data object Home : Screen("home", "Home", AppIcons.Home)
+    data object Alerts : Screen("alerts", "Alerts", AppIcons.Alerts)
+    data object Profile : Screen("profile", "Profile", AppIcons.Profile)
+    data object Map : Screen("map", "Map", AppIcons.Map)
     data object EmergencyContacts : Screen("emergency_contacts", "Emergency Contacts", null)
     data object ReportIncident : Screen("report_incident", "Report Incident", null)
     data object Login : Screen("login", "Login", null) // Added Login Screen

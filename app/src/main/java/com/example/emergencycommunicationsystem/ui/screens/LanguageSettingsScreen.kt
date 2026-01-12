@@ -13,8 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -64,7 +63,7 @@ fun LanguageSettingsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = AppIcons.ArrowBack,
                             contentDescription = context.getString(R.string.language_settings_back)
                         )
                     }
