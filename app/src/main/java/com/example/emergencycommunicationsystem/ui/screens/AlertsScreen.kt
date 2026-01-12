@@ -36,6 +36,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import kotlin.math.max
 import kotlin.math.min
 
+/**
+ * Category icon for alerts
+ * Uses local Tabler vector drawables - works offline
+ */
 @Composable
 fun CategoryIcon(
     alert: Alert,

@@ -1,5 +1,12 @@
 package com.example.emergencycommunicationsystem.ui.components
 
+/**
+ * UI Components for the Emergency Communication System
+ * 
+ * Note: All Tabler icons are local vector drawables stored in res/drawable/
+ * They are bundled with the app and work offline - no network connection required.
+ */
+
 import android.content.Intent
 import androidx.core.net.toUri
 import androidx.compose.animation.animateColorAsState
