@@ -163,7 +163,7 @@ private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, onClick: () ->
         // Use Tabler icons for bottom navigation
         val tablerIconRes = when (screen) {
             is Screen.Home -> R.drawable.ic_tabler_home
-            is Screen.Alerts -> R.drawable.ic_tabler_bell
+            is Screen.Alerts -> R.drawable.ic_tabler_bell_ringing
             is Screen.Map -> R.drawable.ic_tabler_map_pin
             is Screen.Profile -> R.drawable.ic_tabler_user
             else -> null

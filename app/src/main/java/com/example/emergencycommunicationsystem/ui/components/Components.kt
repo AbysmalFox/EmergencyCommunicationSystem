@@ -29,6 +29,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.ui.res.painterResource
+import androidx.annotation.DrawableRes
 import com.example.emergencycommunicationsystem.R
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
@@ -188,15 +189,28 @@ fun ActionGrid(
     Column(verticalArrangement = Arrangement.spacedBy(15.dp)) { // Reduced spacing
         EmergencyCallButton(onClick = onEmergencyCallClick)
         Row(horizontalArrangement = Arrangement.spacedBy(15.dp)) {
-            ActionGridItem(localeContext.getString(R.string.report_incident), AppIcons.ReportIncident, onClick = onReportClick, modifier = Modifier.weight(1f))
-            ActionGridItem(localeContext.getString(R.string.i_am_safe), AppIcons.CheckCircle, onClick = onSafeClick, modifier = Modifier.weight(1f))
+            ActionGridItem(
+                title = localeContext.getString(R.string.report_incident),
+                onClick = onReportClick,
+                modifier = Modifier.weight(1f),
+                useTablerIcon = true,
+                tablerIconRes = R.drawable.ic_tabler_file_alert
+            )
+            ActionGridItem(
+                title = localeContext.getString(R.string.i_am_safe),
+                onClick = onSafeClick,
+                modifier = Modifier.weight(1f),
+                useTablerIcon = true,
+                tablerIconRes = R.drawable.ic_tabler_shield_check
+            )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(15.dp)) {
             ActionGridItem(
-                "Message Responder",
-                AppIcons.Message,
+                title = "Message Responder",
                 onClick = onMessageClick,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                useTablerIcon = true,
+                tablerIconRes = R.drawable.ic_tabler_message_plus
             )
         }
     }
@@ -205,9 +219,11 @@ fun ActionGrid(
 @Composable
 fun ActionGridItem(
     title: String,
-    icon: ImageVector,
+    icon: ImageVector? = null,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    useTablerIcon: Boolean = false,
+    @androidx.annotation.DrawableRes tablerIconRes: Int? = null
 ) {
     val shape = RoundedCornerShape(24.dp)
     Button(
@@ -219,13 +235,29 @@ fun ActionGridItem(
             .height(80.dp), // Reduced height
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
         ) {
-            Icon(icon, contentDescription = title, tint = Color.White, modifier = Modifier.size(24.dp)) // Reduced icon size
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 12.sp) // Reduced font size
+            if (useTablerIcon && tablerIconRes != null) {
+                Icon(
+                    painter = painterResource(id = tablerIconRes),
+                    contentDescription = title,
+                    tint = Color.White,
+                    modifier = Modifier.size(37.dp)
+                )
+            } else if (icon != null) {
+                Icon(icon, contentDescription = title, tint = Color.White, modifier = Modifier.size(32.dp))
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = title.uppercase(),
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                letterSpacing = 0.5.sp
+            )
         }
     }
 }

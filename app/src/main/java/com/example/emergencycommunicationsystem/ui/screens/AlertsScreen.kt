@@ -51,24 +51,48 @@ fun CategoryIcon(
     val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
     val categoryStr = alert.category?.lowercase(Locale.getDefault()) ?: ""
     
+    // Check for categories that use Tabler icons
     val isFire = categoryId == 4 || "fire" in categoryStr || "wildfire" in title
+    val isHealth = categoryId == 3 || "health" in categoryStr
+    val isGeneral = categoryId == 5 || "general" in categoryStr || "emergency" in categoryStr || "traffic" in title || "road" in title || "power" in title
     
-    if (isFire) {
-        // Use Tabler flame icon from vector drawable
-        Icon(
-            painter = painterResource(id = R.drawable.ic_tabler_flame),
-            contentDescription = "Fire",
-            modifier = modifier,
-            tint = tint
-        )
-    } else {
-        // Use regular ImageVector icons
-        Icon(
-            imageVector = getIconForCategory(alert),
-            contentDescription = getCategoryName(alert, localeContext),
-            modifier = modifier,
-            tint = tint
-        )
+    when {
+        isFire -> {
+            // Use Tabler flame icon for Fire
+            Icon(
+                painter = painterResource(id = R.drawable.ic_tabler_flame),
+                contentDescription = "Fire",
+                modifier = modifier,
+                tint = tint
+            )
+        }
+        isHealth -> {
+            // Use Tabler clipboard-heart icon for Health
+            Icon(
+                painter = painterResource(id = R.drawable.ic_tabler_clipboard_heart),
+                contentDescription = "Health",
+                modifier = modifier,
+                tint = tint
+            )
+        }
+        isGeneral -> {
+            // Use Tabler message-2-exclamation icon for General/Emergency
+            Icon(
+                painter = painterResource(id = R.drawable.ic_tabler_message_2_exclamation),
+                contentDescription = "General",
+                modifier = modifier,
+                tint = tint
+            )
+        }
+        else -> {
+            // Use regular ImageVector icons for other categories
+            Icon(
+                imageVector = getIconForCategory(alert),
+                contentDescription = getCategoryName(alert, localeContext),
+                modifier = modifier,
+                tint = tint
+            )
+        }
     }
 }
 
