@@ -84,3 +84,25 @@ sealed interface WeatherState {
     ) : WeatherState
     data class Error(val message: String) : WeatherState
 }
+
+/**
+ * Safe Zone types for emergency situations
+ */
+enum class SafeZoneType {
+    HOSPITAL,
+    EVACUATION_CENTER
+}
+
+/**
+ * Safe Zone data model for hospitals and evacuation centers
+ */
+data class SafeZone(
+    val id: String,
+    val name: String,
+    val type: SafeZoneType,
+    val latitude: Double,
+    val longitude: Double,
+    val address: String? = null,
+    val contact: String? = null,
+    val capacity: Int? = null // For evacuation centers
+)

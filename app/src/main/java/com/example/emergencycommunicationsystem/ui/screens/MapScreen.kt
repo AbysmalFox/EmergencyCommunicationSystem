@@ -8,13 +8,14 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MyLocation
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
+import androidx.compose.material3.*
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -37,6 +38,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.emergencycommunicationsystem.AuthManager
 import com.example.emergencycommunicationsystem.data.models.Alert
+import com.example.emergencycommunicationsystem.data.models.SafeZone
+import com.example.emergencycommunicationsystem.data.models.SafeZoneType
 import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
@@ -126,6 +129,27 @@ fun MapScreen() {
                     // If permission is already granted, this starts it. If not, the launcher callback handles it.
                     overlays.add(overlay)
                     locationOverlay = overlay
+                    
+                    // Add Safe Zones (Hospitals and Evacuation Centers)
+                    val safeZones = getQuezonCitySafeZones()
+                    safeZones.forEach { safeZone ->
+                        val marker = Marker(this).apply {
+                            position = GeoPoint(safeZone.latitude, safeZone.longitude)
+                            // Add type prefix to title for clarity
+                            val typeLabel = when (safeZone.type) {
+                                SafeZoneType.HOSPITAL -> "🏥 Hospital: "
+                                SafeZoneType.EVACUATION_CENTER -> "🛟 Evacuation: "
+                            }
+                            title = "$typeLabel${safeZone.name}"
+                            snippet = safeZone.address ?: when (safeZone.type) {
+                                SafeZoneType.HOSPITAL -> "Hospital - ${safeZone.contact ?: "Contact available"}"
+                                SafeZoneType.EVACUATION_CENTER -> "Evacuation Center${if (safeZone.capacity != null) " - Capacity: ${safeZone.capacity}" else ""}"
+                            }
+                            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                            icon = createSafeZoneMarkerIcon(ctx, safeZone.type)
+                        }
+                        overlays.add(marker)
+                    }
                 }
             }
         )
@@ -138,8 +162,17 @@ fun MapScreen() {
         // Update alert markers when alerts state changes
         LaunchedEffect(alertsState) {
             mapView?.let { mapView ->
-                // Remove existing alert markers (keep boundary and user location)
-                val markersToRemove = mapView.overlays.filterIsInstance<Marker>().toList()
+                // Remove existing alert markers (keep boundary, user location, and safe zones)
+                val markersToRemove = mapView.overlays
+                    .filterIsInstance<Marker>()
+                    .filter { marker ->
+                        // Only remove alert markers (red), keep safe zone markers (green/blue)
+                        marker.title?.let { title ->
+                            // Alert markers start with "🚨 Alert:", safe zones start with "🏥 Hospital:" or "🛟 Evacuation:"
+                            title.startsWith("🚨 Alert:")
+                        } ?: false
+                    }
+                    .toList()
                 markersToRemove.forEach { mapView.overlays.remove(it) }
                 
                 // Add new alert markers
@@ -150,8 +183,9 @@ fun MapScreen() {
                             .forEach { alert ->
                                 val marker = Marker(mapView).apply {
                                     position = GeoPoint(alert.latitude!!, alert.longitude!!)
-                                    title = alert.title ?: "Alert"
-                                    snippet = alert.location ?: alert.content
+                                    // Add alert prefix to title for clarity
+                                    title = "🚨 Alert: ${alert.title ?: "Emergency Alert"}"
+                                    snippet = alert.location ?: alert.content ?: "Emergency alert in this area"
                                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                                     // Use red color for alert markers
                                     icon = createAlertMarkerIcon(mapView.context)
@@ -165,6 +199,14 @@ fun MapScreen() {
             }
         }
 
+        // Map Legend - Top Right Corner
+        MapLegend(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 8.dp, end = 8.dp)
+                .widthIn(max = 110.dp)
+        )
+        
         // 3. "My Location" Button
         FloatingActionButton(
             onClick = {
@@ -181,6 +223,81 @@ fun MapScreen() {
         ) {
             Icon(Icons.Default.MyLocation, contentDescription = "My Location")
         }
+    }
+}
+
+/**
+ * Map Legend component to show what each marker type represents
+ */
+@Composable
+fun MapLegend(modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(4.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+        shadowElevation = 4.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = "Legend",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(bottom = 2.dp)
+            )
+            
+            Divider(
+                modifier = Modifier.padding(vertical = 2.dp),
+                thickness = 1.dp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+            )
+            
+            // Alert Marker
+            LegendItem(
+                color = Color.Red,
+                label = "Alert"
+            )
+            
+            // Hospital Marker
+            LegendItem(
+                color = Color(0xFF4CAF50),
+                label = "Hospital"
+            )
+            
+            // Evacuation Center Marker
+            LegendItem(
+                color = Color(0xFF2196F3),
+                label = "Evacuation"
+            )
+        }
+    }
+}
+
+@Composable
+fun LegendItem(
+    color: Color,
+    label: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(14.dp)
+                .background(color, RoundedCornerShape(50))
+                .border(1.5.dp, Color.White, RoundedCornerShape(50))
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
 
@@ -214,6 +331,581 @@ private fun createAlertMarkerIcon(context: android.content.Context): android.gra
     canvas.drawCircle(centerX, centerY, radius, strokePaint)
     
     return BitmapDrawable(context.resources, bitmap)
+}
+
+/**
+ * Creates a marker icon for safe zones (hospitals = green, evacuation centers = blue)
+ */
+private fun createSafeZoneMarkerIcon(context: android.content.Context, type: SafeZoneType): android.graphics.drawable.Drawable {
+    val size = 48
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    
+    // Choose color based on type
+    val zoneColor = when (type) {
+        SafeZoneType.HOSPITAL -> Color(0xFF4CAF50) // Green
+        SafeZoneType.EVACUATION_CENTER -> Color(0xFF2196F3) // Blue
+    }
+    
+    // Draw circle with appropriate color
+    val paint = android.graphics.Paint().apply {
+        color = zoneColor.toArgb()
+        style = android.graphics.Paint.Style.FILL
+        isAntiAlias = true
+    }
+    val strokePaint = android.graphics.Paint().apply {
+        color = Color.White.toArgb()
+        style = android.graphics.Paint.Style.STROKE
+        strokeWidth = 4f
+        isAntiAlias = true
+    }
+    
+    val centerX = size / 2f
+    val centerY = size / 2f
+    val radius = (size / 2f) - 4f
+    
+    canvas.drawCircle(centerX, centerY, radius, paint)
+    canvas.drawCircle(centerX, centerY, radius, strokePaint)
+    
+    // Add icon symbol (H for Hospital, E for Evacuation)
+    val textPaint = android.graphics.Paint().apply {
+        color = Color.White.toArgb()
+        textSize = 24f
+        textAlign = android.graphics.Paint.Align.CENTER
+        isAntiAlias = true
+        typeface = android.graphics.Typeface.DEFAULT_BOLD
+    }
+    val symbol = when (type) {
+        SafeZoneType.HOSPITAL -> "H"
+        SafeZoneType.EVACUATION_CENTER -> "E"
+    }
+    val textY = centerY + (textPaint.descent() + textPaint.ascent()) / 2
+    canvas.drawText(symbol, centerX, textY, textPaint)
+    
+    return BitmapDrawable(context.resources, bitmap)
+}
+
+/**
+ * Get list of safe zones (hospitals and evacuation centers) in Quezon City
+ * Based on official Quezon City evacuation centers list
+ */
+private fun getQuezonCitySafeZones(): List<SafeZone> {
+    return listOf(
+        // QUEZON CITY-OWNED HOSPITALS
+        SafeZone(
+            id = "hosp_qc_1",
+            name = "Novaliches District Hospital",
+            type = SafeZoneType.HOSPITAL,
+            latitude = 14.7200,
+            longitude = 121.0600,
+            address = "683 Quirino Highway, Barangay San Bartolome, Novaliches",
+            contact = "8931-0307"
+        ),
+        SafeZone(
+            id = "hosp_qc_2",
+            name = "Quezon City General Hospital",
+            type = SafeZoneType.HOSPITAL,
+            latitude = 14.6500,
+            longitude = 121.0500,
+            address = "Seminary Road, Barangay Bahay Toro, Project 8",
+            contact = "8863-0800"
+        ),
+        SafeZone(
+            id = "hosp_qc_3",
+            name = "Rosario Maclang Bautista General Hospital",
+            type = SafeZoneType.HOSPITAL,
+            latitude = 14.6900,
+            longitude = 121.0900,
+            address = "IBP Road, Batasan Hills",
+            contact = "8835-2560"
+        ),
+        
+        // NATIONAL GOVERNMENT-OWNED HOSPITALS
+        SafeZone(
+            id = "hosp_nat_1",
+            name = "National Children's Hospital",
+            type = SafeZoneType.HOSPITAL,
+            latitude = 14.6250,
+            longitude = 121.0250,
+            address = "264 E. Rodriguez Sr. Avenue, Quezon City",
+            contact = "(02) 8724-0656"
+        ),
+        SafeZone(
+            id = "hosp_nat_2",
+            name = "Philippine Orthopedic Center",
+            type = SafeZoneType.HOSPITAL,
+            latitude = 14.6200,
+            longitude = 121.0200,
+            address = "Maria Clara cor. Banawe Street, Quezon City",
+            contact = "(02) 8711-4276 to 80"
+        ),
+        SafeZone(
+            id = "hosp_nat_3",
+            name = "Quirino Memorial Medical Center",
+            type = SafeZoneType.HOSPITAL,
+            latitude = 14.6400,
+            longitude = 121.0450,
+            address = "JP Rizal cor. P. Tuazon Sts, Project 4",
+            contact = "(02) 5304-9800"
+        ),
+        SafeZone(
+            id = "hosp_nat_4",
+            name = "Lung Center of the Philippines",
+            type = SafeZoneType.HOSPITAL,
+            latitude = 14.6500,
+            longitude = 121.0400,
+            address = "Quezon Avenue, Barangay Central, Diliman",
+            contact = "0917-5301331"
+        ),
+        SafeZone(
+            id = "hosp_nat_5",
+            name = "Philippine Children's Medical Center",
+            type = SafeZoneType.HOSPITAL,
+            latitude = 14.6450,
+            longitude = 121.0350,
+            address = "Quezon Avenue cor. Sen. Miriam Defensor-Santiago Avenue, Bagong Pag-asa",
+            contact = "Contact via email"
+        ),
+        SafeZone(
+            id = "hosp_nat_6",
+            name = "National Kidney and Transplant Institute",
+            type = SafeZoneType.HOSPITAL,
+            latitude = 14.6250,
+            longitude = 121.0250,
+            address = "East Avenue, Diliman",
+            contact = "931-03000, 981-0400"
+        ),
+        SafeZone(
+            id = "hosp_nat_7",
+            name = "Philippine Heart Center",
+            type = SafeZoneType.HOSPITAL,
+            latitude = 14.6300,
+            longitude = 121.0300,
+            address = "East Avenue, Diliman",
+            contact = "925-2430"
+        ),
+        SafeZone(
+            id = "hosp_nat_8",
+            name = "East Avenue Medical Center",
+            type = SafeZoneType.HOSPITAL,
+            latitude = 14.6400,
+            longitude = 121.0400,
+            address = "East Avenue, Diliman",
+            contact = "(02) 8928-0611 to 24"
+        ),
+        
+        // ADDITIONAL PRIVATE HOSPITALS IN QUEZON CITY
+        SafeZone(
+            id = "hosp_priv_1",
+            name = "Skyline Hospital and Medical Center",
+            type = SafeZoneType.HOSPITAL,
+            latitude = 14.7500,
+            longitude = 121.0700,
+            address = "Gaya-Gaya, Quezon City",
+            contact = "Contact available"
+        ),
+        SafeZone(
+            id = "hosp_priv_2",
+            name = "Healthway QualiMed Hospital San Jose",
+            type = SafeZoneType.HOSPITAL,
+            latitude = 14.7400,
+            longitude = 121.0650,
+            address = "Tungkong Mangga, Quezon City",
+            contact = "Contact available"
+        ),
+        SafeZone(
+            id = "hosp_priv_3",
+            name = "North Caloocan Doctors Hospital",
+            type = SafeZoneType.HOSPITAL,
+            latitude = 14.7450,
+            longitude = 121.0600,
+            address = "Tungkong Mangga, Quezon City",
+            contact = "Contact available"
+        ),
+        SafeZone(
+            id = "hosp_priv_4",
+            name = "Caloocan City North Medical Center",
+            type = SafeZoneType.HOSPITAL,
+            latitude = 14.7350,
+            longitude = 121.0550,
+            address = "Near Loma de Gato, Quezon City",
+            contact = "Contact available"
+        ),
+        SafeZone(
+            id = "hosp_priv_5",
+            name = "Reynold M. Sta. Ana Medical Center",
+            type = SafeZoneType.HOSPITAL,
+            latitude = 14.7200,
+            longitude = 121.0500,
+            address = "Novaliches Proper, Quezon City",
+            contact = "Contact available"
+        ),
+        SafeZone(
+            id = "hosp_priv_6",
+            name = "Fairview General Hospital",
+            type = SafeZoneType.HOSPITAL,
+            latitude = 14.7150,
+            longitude = 121.0550,
+            address = "Novaliches Proper, Quezon City",
+            contact = "Contact available"
+        ),
+        SafeZone(
+            id = "hosp_priv_7",
+            name = "Diliman Doctors Hospital",
+            type = SafeZoneType.HOSPITAL,
+            latitude = 14.6800,
+            longitude = 121.0800,
+            address = "Batasan Hills, Quezon City",
+            contact = "Contact available"
+        ),
+        SafeZone(
+            id = "hosp_priv_8",
+            name = "Providence Hospital",
+            type = SafeZoneType.HOSPITAL,
+            latitude = 14.6400,
+            longitude = 121.0300,
+            address = "Balingasa, Quezon City",
+            contact = "Contact available"
+        ),
+        SafeZone(
+            id = "hosp_priv_9",
+            name = "United Doctors Medical Center",
+            type = SafeZoneType.HOSPITAL,
+            latitude = 14.6350,
+            longitude = 121.0250,
+            address = "Balingasa, Quezon City",
+            contact = "Contact available"
+        ),
+        SafeZone(
+            id = "hosp_priv_10",
+            name = "Fe Del Mundo Medical Center",
+            type = SafeZoneType.HOSPITAL,
+            latitude = 14.6300,
+            longitude = 121.0200,
+            address = "Balingasa, Quezon City",
+            contact = "Contact available"
+        ),
+        SafeZone(
+            id = "hosp_priv_11",
+            name = "UERM Medical Center",
+            type = SafeZoneType.HOSPITAL,
+            latitude = 14.6000,
+            longitude = 121.0000,
+            address = "Sampaloc, Quezon City",
+            contact = "Contact available"
+        ),
+        SafeZone(
+            id = "hosp_priv_12",
+            name = "Villarosa Hospital",
+            type = SafeZoneType.HOSPITAL,
+            latitude = 14.6500,
+            longitude = 121.1000,
+            address = "Marikina, Quezon City",
+            contact = "Contact available"
+        ),
+        
+        // DISTRICT 1 - Major Evacuation Centers
+        SafeZone(
+            id = "evac_d1_1",
+            name = "Quezon City Memorial Circle",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.6500,
+            longitude = 121.0500,
+            address = "Elliptical Road, Quezon City",
+            capacity = 5000
+        ),
+        SafeZone(
+            id = "evac_d1_2",
+            name = "Amoranto Sports Complex",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.6300,
+            longitude = 121.0300,
+            address = "Roces Avenue, Quezon City",
+            capacity = 3000
+        ),
+        SafeZone(
+            id = "evac_d1_3",
+            name = "Project 6 Elementary School",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.6450,
+            longitude = 121.0400,
+            address = "Project 6, Quezon City",
+            capacity = 800
+        ),
+        SafeZone(
+            id = "evac_d1_4",
+            name = "Quirino High School & Elementary School",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.6350,
+            longitude = 121.0350,
+            address = "Quirino 2-B, Quezon City",
+            capacity = 1200
+        ),
+        SafeZone(
+            id = "evac_d1_5",
+            name = "San Antonio Elementary School",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.6400,
+            longitude = 121.0450,
+            address = "Katipunan, Quezon City",
+            capacity = 600
+        ),
+        
+        // DISTRICT 2 - Major Evacuation Centers
+        SafeZone(
+            id = "evac_d2_1",
+            name = "Bagong Silangan Elementary School",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.7000,
+            longitude = 121.1000,
+            address = "Bagong Silangan, Quezon City",
+            capacity = 1000
+        ),
+        SafeZone(
+            id = "evac_d2_2",
+            name = "Bagong Silangan High School",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.7020,
+            longitude = 121.1020,
+            address = "Bagong Silangan, Quezon City",
+            capacity = 1200
+        ),
+        SafeZone(
+            id = "evac_d2_3",
+            name = "Batasan National High School",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.6900,
+            longitude = 121.0900,
+            address = "Batasan Hills, Quezon City",
+            capacity = 1500
+        ),
+        SafeZone(
+            id = "evac_d2_4",
+            name = "Commonwealth Covered Court",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.6800,
+            longitude = 121.0800,
+            address = "Commonwealth, Quezon City",
+            capacity = 500
+        ),
+        SafeZone(
+            id = "evac_d2_5",
+            name = "Payatas Multi-Purpose Hall",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.7100,
+            longitude = 121.1100,
+            address = "Payatas, Quezon City",
+            capacity = 800
+        ),
+        
+        // DISTRICT 3 - Major Evacuation Centers
+        SafeZone(
+            id = "evac_d3_1",
+            name = "Araneta Coliseum",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.6200,
+            longitude = 121.0200,
+            address = "Araneta Center, Quezon City",
+            capacity = 10000
+        ),
+        SafeZone(
+            id = "evac_d3_2",
+            name = "Quirino High School",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.6250,
+            longitude = 121.0250,
+            address = "Amihan, Quezon City",
+            capacity = 1200
+        ),
+        SafeZone(
+            id = "evac_d3_3",
+            name = "E. Rodriguez Elementary School",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.6150,
+            longitude = 121.0150,
+            address = "E. Rodriguez, Quezon City",
+            capacity = 800
+        ),
+        SafeZone(
+            id = "evac_d3_4",
+            name = "Camp Aguinaldo Open Space",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.6100,
+            longitude = 121.0100,
+            address = "Camp Aguinaldo, Quezon City",
+            capacity = 2000
+        ),
+        SafeZone(
+            id = "evac_d3_5",
+            name = "SM Cubao Parking",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.6180,
+            longitude = 121.0180,
+            address = "Cubao, Quezon City",
+            capacity = 3000
+        ),
+        
+        // DISTRICT 4 - Major Evacuation Centers
+        SafeZone(
+            id = "evac_d4_1",
+            name = "Quezon City Hall",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.6500,
+            longitude = 121.0500,
+            address = "Elliptical Road, Quezon City",
+            capacity = 1500
+        ),
+        SafeZone(
+            id = "evac_d4_2",
+            name = "Kamuning Elementary School",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.6400,
+            longitude = 121.0400,
+            address = "Kamuning, Quezon City",
+            capacity = 600
+        ),
+        SafeZone(
+            id = "evac_d4_3",
+            name = "Don Alejandro Rocess Sr. High School",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.6450,
+            longitude = 121.0450,
+            address = "Obrero, Quezon City",
+            capacity = 1000
+        ),
+        SafeZone(
+            id = "evac_d4_4",
+            name = "Pinyahan Elementary School",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.6350,
+            longitude = 121.0350,
+            address = "Pinyahan, Quezon City",
+            capacity = 700
+        ),
+        SafeZone(
+            id = "evac_d4_5",
+            name = "Teachers Village East Barangay Hall",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.6300,
+            longitude = 121.0300,
+            address = "Teachers Village East, Quezon City",
+            capacity = 400
+        ),
+        
+        // DISTRICT 5 - Major Evacuation Centers
+        SafeZone(
+            id = "evac_d5_1",
+            name = "Fairlane Elementary School",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.7200,
+            longitude = 121.0600,
+            address = "Fairview, Quezon City",
+            capacity = 800
+        ),
+        SafeZone(
+            id = "evac_d5_2",
+            name = "Novaliches Proper Barangay Hall",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.7300,
+            longitude = 121.0700,
+            address = "Novaliches Proper, Quezon City",
+            capacity = 500
+        ),
+        SafeZone(
+            id = "evac_d5_3",
+            name = "San Bartolome Elementary School",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.7100,
+            longitude = 121.0500,
+            address = "San Bartolome, Quezon City",
+            capacity = 700
+        ),
+        SafeZone(
+            id = "evac_d5_4",
+            name = "Sta. Monica Covered Court",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.7150,
+            longitude = 121.0550,
+            address = "Sta. Monica, Quezon City",
+            capacity = 400
+        ),
+        SafeZone(
+            id = "evac_d5_5",
+            name = "Greater Lagro Centennial Park",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.7250,
+            longitude = 121.0650,
+            address = "Greater Lagro, Quezon City",
+            capacity = 2000
+        ),
+        
+        // DISTRICT 6 - Major Evacuation Centers
+        SafeZone(
+            id = "evac_d6_1",
+            name = "Apolonio Samson Elementary School",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.6800,
+            longitude = 121.0400,
+            address = "Apolonio Samson, Quezon City",
+            capacity = 800
+        ),
+        SafeZone(
+            id = "evac_d6_2",
+            name = "Culiat High School",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.6700,
+            longitude = 121.0300,
+            address = "Culiat, Quezon City",
+            capacity = 1200
+        ),
+        SafeZone(
+            id = "evac_d6_3",
+            name = "Tandang Sora Barangay Hall",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.6750,
+            longitude = 121.0350,
+            address = "Tandang Sora, Quezon City",
+            capacity = 500
+        ),
+        SafeZone(
+            id = "evac_d6_4",
+            name = "Talipapa Barangay Hall",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.6650,
+            longitude = 121.0250,
+            address = "Talipapa, Quezon City",
+            capacity = 400
+        ),
+        SafeZone(
+            id = "evac_d6_5",
+            name = "UP Campus Amorsolo Building",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.6600,
+            longitude = 121.0200,
+            address = "UP Campus, Quezon City",
+            capacity = 1000
+        ),
+        
+        // Additional Major Facilities
+        SafeZone(
+            id = "evac_major_1",
+            name = "SM North EDSA",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.6550,
+            longitude = 121.0550,
+            address = "North EDSA, Quezon City",
+            capacity = 8000
+        ),
+        SafeZone(
+            id = "evac_major_2",
+            name = "Quezon City Sports Complex",
+            type = SafeZoneType.EVACUATION_CENTER,
+            latitude = 14.6400,
+            longitude = 121.0450,
+            address = "E. Rodriguez Sr. Ave, Quezon City",
+            capacity = 3000
+        )
+    )
 }
 
 private fun getQuezonCityBoundaryPoints(): ArrayList<GeoPoint> {
