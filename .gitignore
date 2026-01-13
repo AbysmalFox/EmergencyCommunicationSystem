@@ -18,3 +18,33 @@ local.properties
 .env
 .env.local
 .env.*.local
+
+# OSMDroid map tile cache (can be very large)
+osmdroid/
+*.tile
+tiles/
+tilecache/
+
+# Android cache and temporary files
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+bin/
+gen/
+out/
+proguard/
+
+# Database files (if any are accidentally created)
+*.db
+*.sqlite
+*.sqlite3
+
+# Log files
+*.log
+hs_err_pid*.log
+replay_pid*.log
+
+# HTTP cache
+http_cache/

@@ -15,6 +15,16 @@ import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import androidx.compose.material3.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.res.painterResource
+import com.example.emergencycommunicationsystem.R
+import com.example.emergencycommunicationsystem.util.LocationUtils
+import kotlin.math.*
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -22,6 +32,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -30,6 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import android.widget.Toast
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -44,6 +59,7 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polygon
+import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
@@ -57,6 +73,8 @@ fun MapScreen() {
     // State to hold MapView and Overlay for interaction
     var mapView by remember { mutableStateOf<MapView?>(null) }
     var locationOverlay by remember { mutableStateOf<MyLocationNewOverlay?>(null) }
+    var currentRoutePolyline by remember { mutableStateOf<Polyline?>(null) }
+    var routeDestination by remember { mutableStateOf<SafeZone?>(null) }
 
     // 1. Handle Lifecycle (Critical for osmdroid location updates)
     DisposableEffect(lifecycleOwner) {
@@ -204,7 +222,99 @@ fun MapScreen() {
                 .widthIn(max = 110.dp)
         )
         
-        // 3. "My Location" Button
+        // 3. "Find Nearest Evacuation Center" Button
+        FloatingActionButton(
+            onClick = {
+                val overlay = locationOverlay
+                val map = mapView
+                if (overlay != null && map != null) {
+                    if (overlay.myLocation != null) {
+                        val userLocation = overlay.myLocation
+                        val nearestEvac = findNearestEvacuationCenter(
+                            userLat = userLocation.latitude,
+                            userLon = userLocation.longitude
+                        )
+                        
+                        if (nearestEvac != null) {
+                            val distance = LocationUtils.calculateDistance(
+                                userLocation.latitude, userLocation.longitude,
+                                nearestEvac.latitude, nearestEvac.longitude
+                            )
+                            val distanceText = LocationUtils.formatDistance(distance)
+                            
+                            // Store destination for route
+                            routeDestination = nearestEvac
+                            
+                            // Remove previous route if exists
+                            currentRoutePolyline?.let { oldRoute ->
+                                map.overlays.remove(oldRoute)
+                            }
+                            
+                            // Draw route from user location to evacuation center
+                            val route = Polyline().apply {
+                                val routePoints = listOf(
+                                    GeoPoint(userLocation.latitude, userLocation.longitude),
+                                    GeoPoint(nearestEvac.latitude, nearestEvac.longitude)
+                                )
+                                setPoints(routePoints)
+                                color = Color(0xFF4CAF50).toArgb() // Green color for route
+                                width = 12.0f
+                                isGeodesic = true // Follows the curve of the Earth
+                            }
+                            map.overlays.add(route)
+                            currentRoutePolyline = route
+                            
+                            Toast.makeText(
+                                context,
+                                "Route to: ${nearestEvac.name} ($distanceText away)",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            
+                            val evacPoint = GeoPoint(nearestEvac.latitude, nearestEvac.longitude)
+                            map.controller.animateTo(evacPoint)
+                            map.controller.setZoom(15.0)
+                            
+                            // Find and show the marker for this evacuation center after animation
+                            CoroutineScope(Dispatchers.Main).launch {
+                                delay(800) // Wait for animation to complete
+                                val marker = map.overlays
+                                    .filterIsInstance<Marker>()
+                                    .firstOrNull { marker ->
+                                        marker.position.latitude == nearestEvac.latitude &&
+                                        marker.position.longitude == nearestEvac.longitude &&
+                                        marker.title?.startsWith("🛟 Evacuation:") == true
+                                    }
+                                marker?.showInfoWindow()
+                                map.invalidate() // Refresh map to show route
+                            }
+                        } else {
+                            Toast.makeText(
+                                context,
+                                "No evacuation centers found",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    } else {
+                        Toast.makeText(
+                            context,
+                            "Location not available. Please enable location services.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 200.dp),
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_tabler_home_search),
+                contentDescription = "Find Nearest Evacuation Center"
+            )
+        }
+        
+        // 4. "My Location" Button
         FloatingActionButton(
             onClick = {
                 val overlay = locationOverlay
@@ -219,6 +329,35 @@ fun MapScreen() {
                 .padding(end = 16.dp, bottom = 130.dp)
         ) {
             Icon(AppIcons.MyLocation, contentDescription = "My Location")
+        }
+        
+        // 5. Directions Card - Shows route information
+        routeDestination?.let { destination ->
+            locationOverlay?.myLocation?.let { userLoc ->
+                val distance = LocationUtils.calculateDistance(
+                    userLoc.latitude, userLoc.longitude,
+                    destination.latitude, destination.longitude
+                )
+                val distanceText = LocationUtils.formatDistance(distance)
+                
+                DirectionsCard(
+                    destination = destination,
+                    distance = distanceText,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(start = 16.dp, bottom = 130.dp)
+                        .fillMaxWidth(0.85f),
+                    onClose = {
+                        // Clear route
+                        currentRoutePolyline?.let { route ->
+                            mapView?.overlays?.remove(route)
+                            mapView?.invalidate()
+                        }
+                        currentRoutePolyline = null
+                        routeDestination = null
+                    }
+                )
+            }
         }
     }
 }
@@ -380,6 +519,122 @@ private fun createSafeZoneMarkerIcon(context: android.content.Context, type: Saf
     canvas.drawText(symbol, centerX, textY, textPaint)
     
     return BitmapDrawable(context.resources, bitmap)
+}
+
+/**
+ * Directions Card component showing route information to evacuation center
+ */
+@Composable
+fun DirectionsCard(
+    destination: SafeZone,
+    distance: String,
+    modifier: Modifier = Modifier,
+    onClose: () -> Unit
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 8.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Header with close button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        Icons.Filled.Navigation,
+                        contentDescription = "Route",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "Directions",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                IconButton(onClick = onClose) {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = "Close",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 4.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+            )
+            
+            // Destination info
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = "To: ${destination.name}",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                
+                destination.address?.let { address ->
+                    Text(
+                        text = address,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                
+                Row(
+                    modifier = Modifier.padding(top = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Distance: $distance",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    
+                    destination.capacity?.let { capacity ->
+                        Text(
+                            text = "• Capacity: $capacity",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            
+            // Route instruction
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+            ) {
+                Text(
+                    text = "Follow the green route line on the map to reach the evacuation center.",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(12.dp),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+    }
 }
 
 /**
@@ -903,6 +1158,26 @@ private fun getQuezonCitySafeZones(): List<SafeZone> {
             capacity = 3000
         )
     )
+}
+
+/**
+ * Find the nearest evacuation center to the user's location
+ * @param userLat User's latitude
+ * @param userLon User's longitude
+ * @return The nearest SafeZone of type EVACUATION_CENTER, or null if none found
+ */
+private fun findNearestEvacuationCenter(userLat: Double, userLon: Double): SafeZone? {
+    val safeZones = getQuezonCitySafeZones()
+    val evacuationCenters = safeZones.filter { it.type == SafeZoneType.EVACUATION_CENTER }
+    
+    if (evacuationCenters.isEmpty()) return null
+    
+    return evacuationCenters.minByOrNull { evac ->
+        LocationUtils.calculateDistance(
+            userLat, userLon,
+            evac.latitude, evac.longitude
+        )
+    }
 }
 
 private fun getQuezonCityBoundaryPoints(): ArrayList<GeoPoint> {
