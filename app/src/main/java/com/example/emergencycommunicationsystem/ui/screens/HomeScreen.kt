@@ -69,6 +69,7 @@ fun HomeScreen(
     onReportIncidentClick: () -> Unit,
     onMessageClick: () -> Unit = {},
     onAlertClick: (Int) -> Unit = {},
+    onEmergencyGuidesClick: () -> Unit = {},
     weatherViewModel: WeatherViewModel
 ) {
     val context = LocalContext.current
@@ -212,14 +213,16 @@ fun HomeScreen(
                             EmergencyInstructions(
                                 alerts = state.data,
                                 userLat = userLat,
-                                userLon = userLon
+                                userLon = userLon,
+                                onClick = onEmergencyGuidesClick
                             )
                         }
                         else -> {
                             EmergencyInstructions(
                                 alerts = emptyList(),
                                 userLat = userLat,
-                                userLon = userLon
+                                userLon = userLon,
+                                onClick = onEmergencyGuidesClick
                             )
                         }
                     }
