@@ -13,3 +13,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Environment variables (contains sensitive credentials)
+.env
+.env.local
+.env.*.local

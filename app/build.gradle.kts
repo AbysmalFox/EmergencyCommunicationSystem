@@ -5,6 +5,19 @@ plugins {
     id("kotlin-kapt") // Required for Room
 }
 
+// Load local.properties file
+fun getLocalProperty(key: String, defaultValue: String): String {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.readLines().forEach { line ->
+            if (line.startsWith("$key=")) {
+                return line.substringAfter("=").trim()
+            }
+        }
+    }
+    return defaultValue
+}
+
 android {
     namespace = "com.example.emergencycommunicationsystem"
     compileSdk = 36
@@ -17,6 +30,19 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        
+        // Google OAuth Credentials from local.properties or environment variables
+        // These will be available in BuildConfig
+        buildConfigField(
+            "String",
+            "GOOGLE_CLIENT_ID",
+            "\"${getLocalProperty("GOOGLE_CLIENT_ID", "1054819730704-dp3pmtvb6kmv3qs0nb17o7bun0qo3n6a.apps.googleusercontent.com")}\""
+        )
+        buildConfigField(
+            "String",
+            "GOOGLE_CLIENT_SECRET",
+            "\"${getLocalProperty("GOOGLE_CLIENT_SECRET", "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")}\""
+        )
     }
 
     buildTypes {
@@ -74,6 +100,9 @@ dependencies {
 
     // Google Location Services
     implementation("com.google.android.gms:play-services-location:21.0.1")
+    
+    // Google Sign-In
+    implementation("com.google.android.gms:play-services-auth:21.0.0")
 
     // Compose ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")

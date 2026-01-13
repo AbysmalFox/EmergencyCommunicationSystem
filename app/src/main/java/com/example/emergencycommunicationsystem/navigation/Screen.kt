@@ -17,6 +17,10 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
     data object AboutApp : Screen("about_app", "About App", null) // Added AboutApp Screen
     data object Messaging : Screen("messaging", "Messaging", null) // Added Messaging Screen
     data object AutoReplyChat : Screen("auto_reply_chat", "Auto-Reply Chat", null)
+    data object EmergencyGuides : Screen("emergency_guides", "Emergency Guides", null)
+    data object EmergencyGuideDetail : Screen("emergency_guide_detail/{guideId}", "Emergency Guide Detail", null) {
+        fun createRoute(guideId: String) = "emergency_guide_detail/$guideId"
+    }
 
 
     companion object {
@@ -34,7 +38,15 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
                 "about_app" -> AboutApp // Added AboutApp route handling
                 "messaging" -> Messaging // Added Messaging route handling
                 "auto_reply_chat" -> AutoReplyChat
-                else -> Home // Default screen
+                "emergency_guides" -> EmergencyGuides
+                else -> {
+                    // Handle dynamic route for EmergencyGuideDetail
+                    if (route?.startsWith("emergency_guide_detail/") == true) {
+                        EmergencyGuideDetail
+                    } else {
+                        Home // Default screen
+                    }
+                }
             }
         }
     }

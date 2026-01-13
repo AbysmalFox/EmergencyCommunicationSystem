@@ -181,6 +181,9 @@ fun EmergencyApp() {
                                 restoreState = true
                             }
                         },
+                        onEmergencyGuidesClick = {
+                            navController.navigate(Screen.EmergencyGuides.route)
+                        },
                         weatherViewModel = weatherViewModel
                     )
                 }
@@ -252,6 +255,28 @@ fun EmergencyApp() {
                 }
                 composable(Screen.ReportIncident.route) {
                     ReportIncidentScreen(weatherState = weatherState, onBackPressed = { navController.popBackStack() })
+                }
+                composable(Screen.EmergencyGuides.route) {
+                    EmergencyGuidesScreen(
+                        onBackPressed = { navController.popBackStack() },
+                        onGuideClick = { guideId ->
+                            navController.navigate(Screen.EmergencyGuideDetail.createRoute(guideId))
+                        }
+                    )
+                }
+                composable(
+                    route = Screen.EmergencyGuideDetail.route,
+                    arguments = listOf(
+                        navArgument("guideId") {
+                            type = NavType.StringType
+                        }
+                    )
+                ) { backStackEntry ->
+                    val guideId = backStackEntry.arguments?.getString("guideId") ?: ""
+                    EmergencyGuideDetailScreen(
+                        guideId = guideId,
+                        onBackPressed = { navController.popBackStack() }
+                    )
                 }
                 composable(Screen.Login.route) {
                     LoginScreen(

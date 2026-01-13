@@ -70,4 +70,12 @@ class AuthRepository {
         val request = LogoutRequest(userId = userId, deviceId = deviceId)
         return executeApiCall { apiService().logout(request) }
     }
+    
+    /**
+     * Login with Google account
+     * Sends Google ID token and account info to backend
+     */
+    suspend fun loginWithGoogle(context: Context, loginData: Map<String, Any>): AuthResponse {
+        return executeApiCall { apiService().loginUser(loginData) }
+    }
 }

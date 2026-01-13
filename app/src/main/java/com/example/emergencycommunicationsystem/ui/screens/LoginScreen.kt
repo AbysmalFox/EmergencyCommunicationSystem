@@ -1,23 +1,33 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
+import android.content.Intent
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -31,12 +41,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.emergencycommunicationsystem.R
+import com.example.emergencycommunicationsystem.util.GoogleSignInHelper
 
 @Composable
 fun LoginScreen(
@@ -51,6 +67,17 @@ fun LoginScreen(
 
     val context = LocalContext.current
     val loginState by viewModel.loginState.collectAsState()
+    
+    // Google Sign-In launcher
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            viewModel.handleGoogleSignInResult(result.data)
+        } else {
+            errorMessage = "Google Sign-In was cancelled"
+        }
+    }
 
     LaunchedEffect(loginState) {
         when (val state = loginState) {
@@ -135,11 +162,78 @@ fun LoginScreen(
                 enabled = loginState !is LoginState.Loading
             ) {
                 if (loginState is LoginState.Loading) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
                 } else {
                     Text("Login")
                 }
             }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Divider with "OR"
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(1.dp)
+                        .padding(horizontal = 8.dp)
+                        .background(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
+                )
+                Text(
+                    text = "OR",
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    fontSize = 14.sp
+                )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(1.dp)
+                        .padding(horizontal = 8.dp)
+                        .background(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Google Sign-In Button
+            OutlinedButton(
+                onClick = {
+                    val signInIntent = GoogleSignInHelper.getSignInIntent(context)
+                    googleSignInLauncher.launch(signInIntent)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = loginState !is LoginState.Loading,
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                )
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    // Google icon (using a simple colored circle as placeholder)
+                    // You can replace this with an actual Google icon drawable
+                    Icon(
+                        imageVector = AppIcons.AccountCircle,
+                        contentDescription = "Google",
+                        modifier = Modifier.size(20.dp),
+                        tint = Color.Unspecified
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Continue with Google",
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+            
             Spacer(modifier = Modifier.height(16.dp))
             TextButton(
                 onClick = onSignUpClick,

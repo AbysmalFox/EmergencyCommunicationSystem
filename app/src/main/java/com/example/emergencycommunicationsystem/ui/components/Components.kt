@@ -808,7 +808,8 @@ fun EmergencyInstructions(
     alerts: List<Alert>,
     userLat: Double?,
     userLon: Double?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
 ) {
     val currentHour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
     val timeOfDay = when (currentHour) {
@@ -823,7 +824,15 @@ fun EmergencyInstructions(
     val instructions = getEmergencyInstructions(primaryAlertType, timeOfDay, userLat != null && userLon != null)
     
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable { onClick() }
+                } else {
+                    Modifier
+                }
+            ),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
@@ -848,8 +857,17 @@ fun EmergencyInstructions(
                     text = "🧠 Emergency Instructions",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
                 )
+                if (onClick != null) {
+                    Icon(
+                        imageVector = AppIcons.ChevronRight,
+                        contentDescription = "View More",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
             
             Spacer(modifier = Modifier.height(16.dp))
