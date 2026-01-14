@@ -1,6 +1,5 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
-import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -43,7 +42,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -51,8 +49,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.util.GoogleSignInHelper
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.common.api.ApiException
 
 @Composable
 fun LoginScreen(
@@ -68,14 +67,24 @@ fun LoginScreen(
     val context = LocalContext.current
     val loginState by viewModel.loginState.collectAsState()
     
-    // Google Sign-In launcher
+    // Google Sign-In launcher with enhanced error handling for debugging
     val googleSignInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            // This will throw an exception if the sign-in failed
+            task.getResult(ApiException::class.java)
             viewModel.handleGoogleSignInResult(result.data)
-        } else {
-            errorMessage = "Google Sign-In was cancelled"
+        } catch (e: ApiException) {
+            // This will tell you the ACTUAL error code
+            // Code 10 = Developer Error (SHA-1 or Package Name mismatch)
+            // Code 12500 = Configuration Error
+            errorMessage = "Google Error (${e.statusCode}): ${e.statusMessage ?: "Check SHA-1 in Console"}"
+            android.util.Log.e("GoogleSignIn", "Status code: ${e.statusCode}")
+        } catch (e: Exception) {
+            errorMessage = "Google Sign-In failed: ${e.localizedMessage}"
+            android.util.Log.e("GoogleSignIn", "Exception", e)
         }
     }
 
@@ -218,8 +227,7 @@ fun LoginScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    // Google icon (using a simple colored circle as placeholder)
-                    // You can replace this with an actual Google icon drawable
+                    // Google icon (using account circle as placeholder)
                     Icon(
                         imageVector = AppIcons.AccountCircle,
                         contentDescription = "Google",
