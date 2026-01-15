@@ -42,6 +42,20 @@ import com.example.emergencycommunicationsystem.data.models.EmergencyCategory
 import com.example.emergencycommunicationsystem.data.models.EmergencyGuide
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 
+/**
+ * Format category name for display
+ */
+private fun formatCategoryName(category: EmergencyCategory): String {
+    return when (category) {
+        EmergencyCategory.MEDICAL -> "Medical"
+        EmergencyCategory.NATURAL_DISASTER -> "Natural Disaster"
+        EmergencyCategory.CRIME -> "Crime"
+        EmergencyCategory.ACCIDENT -> "Accident"
+        EmergencyCategory.FIRE -> "Fire"
+        EmergencyCategory.WEATHER -> "Weather"
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EmergencyGuidesScreen(
@@ -120,14 +134,18 @@ fun EmergencyGuidesScreen(
                             onClick = { selectedCategory = null }
                         )
                         
-                        // Category chips
-                        EmergencyCategory.values().forEach { category ->
-                            CategoryChip(
-                                label = category.name.replace("_", " "),
-                                isSelected = selectedCategory == category,
-                                onClick = { selectedCategory = category }
-                            )
-                        }
+                        // Category chips - only show categories that have guides
+                        EmergencyCategory.values()
+                            .filter { category ->
+                                EmergencyGuidesData.getGuidesByCategory(category).isNotEmpty()
+                            }
+                            .forEach { category ->
+                                CategoryChip(
+                                    label = formatCategoryName(category),
+                                    isSelected = selectedCategory == category,
+                                    onClick = { selectedCategory = category }
+                                )
+                            }
                     }
                 }
             }
