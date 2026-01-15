@@ -43,6 +43,11 @@ android {
             "GOOGLE_CLIENT_SECRET",
             "\"${getLocalProperty("GOOGLE_CLIENT_SECRET", "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")}\""
         )
+        buildConfigField(
+            "String",
+            "GEMINI_API_KEY",
+            "\"${getLocalProperty("GEMINI_API_KEY", "")}\""
+        )
     }
 
     buildTypes {
@@ -115,6 +120,9 @@ dependencies {
     // Note: Version 17.0.2 may have 16KB page size compatibility issues
     // This is a known issue with ML Kit's native library that Google needs to fix
     implementation("com.google.mlkit:translate:17.0.2")
+    
+    // Note: Gemini API is called via HTTP (OkHttp) - no SDK dependency needed
+    // OkHttp is already included via Retrofit dependency
 
     // Compose ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")

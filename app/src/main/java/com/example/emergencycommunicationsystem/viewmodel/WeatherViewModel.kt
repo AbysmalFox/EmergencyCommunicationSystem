@@ -11,6 +11,7 @@ import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.example.emergencycommunicationsystem.data.models.WeatherState
 import com.example.emergencycommunicationsystem.data.network.WeatherApiClient
+import com.example.emergencycommunicationsystem.util.GeminiWeatherService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -108,6 +109,29 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
             val iconCode = weatherResponse.weather.firstOrNull()?.icon ?: "01d"
             val condition = weatherResponse.weather.firstOrNull()?.main ?: "Clear"
 
+            // Get weather advice using hybrid approach (AI + template fallback)
+            val weatherAdvice = withContext(Dispatchers.IO) {
+                GeminiWeatherService.getWeatherAdvice(
+                    condition = condition,
+                    temp = weatherResponse.main.temp,
+                    feelsLike = weatherResponse.main.feelsLike,
+                    humidity = weatherResponse.main.humidity,
+                    windSpeed = weatherResponse.wind.speed,
+                    visibility = weatherResponse.visibility,
+                    location = locationName,
+                    templateFallback = {
+                        getTemplateWeatherAdvice(
+                            condition = condition,
+                            temp = weatherResponse.main.temp,
+                            feelsLike = weatherResponse.main.feelsLike,
+                            humidity = weatherResponse.main.humidity,
+                            windSpeed = weatherResponse.wind.speed,
+                            visibility = weatherResponse.visibility
+                        )
+                    }
+                )
+            }
+
             _weatherState.value = WeatherState.Success(
                 location = "$locationName, PH",
                 temperature = "${String.format(Locale.US, "%.1f", weatherResponse.main.temp)}°C",
@@ -115,14 +139,7 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
                 iconUrl = "https://openweathermap.org/img/wn/$iconCode@4x.png",
                 lat = lat,
                 lon = lon,
-                advice = getWeatherAdvice(
-                    condition = condition,
-                    temp = weatherResponse.main.temp,
-                    feelsLike = weatherResponse.main.feelsLike,
-                    humidity = weatherResponse.main.humidity,
-                    windSpeed = weatherResponse.wind.speed,
-                    visibility = weatherResponse.visibility
-                ),
+                advice = weatherAdvice,
                 feelsLike = "${String.format(Locale.US, "%.1f", weatherResponse.main.feelsLike)}°C",
                 humidity = "${weatherResponse.main.humidity}%",
                 windSpeed = "${String.format(Locale.US, "%.1f", weatherResponse.wind.speed)} km/h",
@@ -156,7 +173,10 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
         hasLoadedData = true
     }
 
-    private fun getWeatherAdvice(
+    /**
+     * Template-based weather advice (fallback when AI is unavailable)
+     */
+    private fun getTemplateWeatherAdvice(
         condition: String,
         temp: Double,
         feelsLike: Double,

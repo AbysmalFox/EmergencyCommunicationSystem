@@ -155,7 +155,7 @@ private fun HotlineList(
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(start = 4.dp)
-                    )
+            )
                 }
             }
         },
