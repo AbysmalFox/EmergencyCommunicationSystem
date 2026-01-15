@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
+import android.view.View
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -14,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import androidx.compose.material3.*
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Place
@@ -36,6 +38,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.example.emergencycommunicationsystem.util.NavigationManager
+import com.example.emergencycommunicationsystem.data.network.RoutingService
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import android.widget.Toast
+import com.example.emergencycommunicationsystem.util.LogFilter
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -63,6 +68,8 @@ import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
+private const val TAG = "MapScreen"
+
 @Composable
 fun MapScreen() {
     val context = LocalContext.current
@@ -75,6 +82,12 @@ fun MapScreen() {
     var locationOverlay by remember { mutableStateOf<MyLocationNewOverlay?>(null) }
     var currentRoutePolyline by remember { mutableStateOf<Polyline?>(null) }
     var routeDestination by remember { mutableStateOf<SafeZone?>(null) }
+    
+    // Navigation Manager for real-time navigation
+    val navigationManager = remember {
+        NavigationManager(CoroutineScope(Dispatchers.Main))
+    }
+    val navigationState by navigationManager.navigationState.collectAsState()
 
     // 1. Handle Lifecycle (Critical for osmdroid location updates)
     DisposableEffect(lifecycleOwner) {
@@ -119,6 +132,27 @@ fun MapScreen() {
                     mapView = this
                     setTileSource(TileSourceFactory.MAPNIK)
                     setMultiTouchControls(true)
+                    
+                    // AGGRESSIVE tile loading optimization to minimize HWUI logs
+                    try {
+                        // Use higher minimum zoom to reduce tile count (fewer tiles = fewer HWUI logs)
+                        minZoomLevel = 12.0  // Increased from 10.0 to reduce initial tile load
+                        maxZoomLevel = 18.0  // Reduced from 19.0 to limit maximum tiles
+                        
+                        // Disable map repetition to prevent duplicate tile loading
+                        isHorizontalMapRepetitionEnabled = false
+                        isVerticalMapRepetitionEnabled = false
+                        
+                        // Disable built-in zoom controls to reduce tile update triggers
+                        setBuiltInZoomControls(false)
+                        
+                        // Disable hardware acceleration for this view to reduce HWUI usage
+                        // This uses software rendering which may be slower but reduces native log spam
+                        setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
+                    } catch (e: Exception) {
+                        // Some methods might not be available on all Android versions
+                        LogFilter.w(TAG, "Could not apply all tile optimizations: ${e.message}")
+                    }
 
                     // QC Boundary
                     val qcPoints = getQuezonCityBoundaryPoints()
@@ -236,13 +270,7 @@ fun MapScreen() {
                         )
                         
                         if (nearestEvac != null) {
-                            val distance = LocationUtils.calculateDistance(
-                                userLocation.latitude, userLocation.longitude,
-                                nearestEvac.latitude, nearestEvac.longitude
-                            )
-                            val distanceText = LocationUtils.formatDistance(distance)
-                            
-                            // Store destination for route
+                            // Store destination
                             routeDestination = nearestEvac
                             
                             // Remove previous route if exists
@@ -250,42 +278,207 @@ fun MapScreen() {
                                 map.overlays.remove(oldRoute)
                             }
                             
-                            // Draw route from user location to evacuation center
-                            val route = Polyline().apply {
-                                val routePoints = listOf(
-                                    GeoPoint(userLocation.latitude, userLocation.longitude),
-                                    GeoPoint(nearestEvac.latitude, nearestEvac.longitude)
-                                )
-                                setPoints(routePoints)
-                                color = Color(0xFF4CAF50).toArgb() // Green color for route
-                                width = 12.0f
-                                isGeodesic = true // Follows the curve of the Earth
-                            }
-                            map.overlays.add(route)
-                            currentRoutePolyline = route
-                            
+                            // Show loading toast
                             Toast.makeText(
                                 context,
-                                "Route to: ${nearestEvac.name} ($distanceText away)",
+                                "Calculating route to ${nearestEvac.name}...",
                                 Toast.LENGTH_SHORT
                             ).show()
                             
-                            val evacPoint = GeoPoint(nearestEvac.latitude, nearestEvac.longitude)
-                            map.controller.animateTo(evacPoint)
-                            map.controller.setZoom(15.0)
-                            
-                            // Find and show the marker for this evacuation center after animation
+                            // Get route using OSRM routing service
                             CoroutineScope(Dispatchers.Main).launch {
-                                delay(800) // Wait for animation to complete
-                                val marker = map.overlays
-                                    .filterIsInstance<Marker>()
-                                    .firstOrNull { marker ->
-                                        marker.position.latitude == nearestEvac.latitude &&
-                                        marker.position.longitude == nearestEvac.longitude &&
-                                        marker.title?.startsWith("🛟 Evacuation:") == true
+                                LogFilter.d(TAG, "Requesting route to evacuation center: ${nearestEvac.name}")
+                                
+                                val result = RoutingService.getRoute(
+                                    originLat = userLocation.latitude,
+                                    originLon = userLocation.longitude,
+                                    destLat = nearestEvac.latitude,
+                                    destLon = nearestEvac.longitude
+                                )
+                                
+                                result.onSuccess { routeResponse ->
+                                    LogFilter.d(TAG, "Route response received successfully")
+                                    
+                                    if (routeResponse.routes.isNotEmpty()) {
+                                        val route = routeResponse.routes[0]
+                                        LogFilter.d(TAG, "Processing route: ${route.distance}m, ${route.duration}s")
+                                        
+                                        // Decode route geometry from route object (OSRM returns geometry at route level)
+                                        val routeGeometry = try {
+                                            val geometryStr = when (val geom = route.geometry) {
+                                                is String -> {
+                                                    geom
+                                                }
+                                                is Map<*, *> -> {
+                                                    val gson = com.google.gson.Gson()
+                                                    gson.toJson(geom)
+                                                }
+                                                else -> {
+                                                    LogFilter.w(TAG, "Route geometry is null or unknown type: ${route.geometry?.javaClass?.simpleName}")
+                                                    null
+                                                }
+                                            }
+                                            
+                                            if (geometryStr != null) {
+                                                val decoded = RoutingService.decodeGeometry(geometryStr)
+                                                if (decoded.isNotEmpty()) {
+                                                    LogFilter.d(TAG, "Decoded ${decoded.size} points from route geometry")
+                                                    decoded
+                                                } else {
+                                                    LogFilter.w(TAG, "Route geometry decoding returned empty, trying step geometries")
+                                                    // Fallback: use step geometries
+                                                    decodeStepGeometries(route)
+                                                }
+                                            } else {
+                                                LogFilter.w(TAG, "Route geometry string is null, using step geometries")
+                                                decodeStepGeometries(route)
+                                            }
+                                        } catch (e: Exception) {
+                                            LogFilter.e(TAG, "Error decoding route geometry: ${e.message}", e)
+                                            emptyList()
+                                        }
+                                        
+                                        // Draw route polyline
+                                        if (routeGeometry.isNotEmpty()) {
+                                            LogFilter.d(TAG, "Drawing route polyline with ${routeGeometry.size} points")
+                                            
+                                            val routePolyline = Polyline().apply {
+                                                setPoints(routeGeometry)
+                                                color = Color(0xFFFF9800).toArgb() // Orange color for route
+                                                width = 14.0f
+                                                isGeodesic = false // Use actual road geometry
+                                            }
+                                            map.overlays.add(routePolyline)
+                                            currentRoutePolyline = routePolyline
+                                            
+                                            // Start navigation
+                                            LogFilter.d(TAG, "Starting navigation manager")
+                                            navigationManager.startNavigation(
+                                                originLat = userLocation.latitude,
+                                                originLon = userLocation.longitude,
+                                                destLat = nearestEvac.latitude,
+                                                destLon = nearestEvac.longitude,
+                                                onSuccess = { navGeometry ->
+                                                    LogFilter.d(TAG, "Navigation started successfully with ${navGeometry.size} points")
+                                                },
+                                                onError = { error ->
+                                                    LogFilter.e(TAG, "Navigation manager error: $error")
+                                                    Toast.makeText(
+                                                        context,
+                                                        "Navigation error: $error",
+                                                        Toast.LENGTH_LONG
+                                                    ).show()
+                                                }
+                                            )
+                                            
+                                            // Zoom to show entire route
+                                            val allPoints = routeGeometry + GeoPoint(userLocation.latitude, userLocation.longitude)
+                                            if (allPoints.isNotEmpty()) {
+                                                val minLat = allPoints.minOf { it.latitude }
+                                                val maxLat = allPoints.maxOf { it.latitude }
+                                                val minLon = allPoints.minOf { it.longitude }
+                                                val maxLon = allPoints.maxOf { it.longitude }
+                                                val boundingBox = BoundingBox(maxLat, maxLon, minLat, minLon)
+                                                map.post {
+                                                    map.zoomToBoundingBox(boundingBox, true, 50)
+                                                }
+                                            }
+                                            
+                                            Toast.makeText(
+                                                context,
+                                                "Route to: ${nearestEvac.name}",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        } else {
+                                            LogFilter.w(TAG, "Route geometry is empty, falling back to straight line")
+                                            // Fallback to straight line if geometry decoding fails
+                                            val routePolyline = Polyline().apply {
+                                                val routePoints = listOf(
+                                                    GeoPoint(userLocation.latitude, userLocation.longitude),
+                                                    GeoPoint(nearestEvac.latitude, nearestEvac.longitude)
+                                                )
+                                                setPoints(routePoints)
+                                                color = Color(0xFFFF9800).toArgb() // Orange color for route
+                                                width = 12.0f
+                                                isGeodesic = true
+                                            }
+                                            map.overlays.add(routePolyline)
+                                            currentRoutePolyline = routePolyline
+                                            
+                                            val evacPoint = GeoPoint(nearestEvac.latitude, nearestEvac.longitude)
+                                            map.controller.animateTo(evacPoint)
+                                            map.controller.setZoom(15.0)
+                                            
+                                            Toast.makeText(
+                                                context,
+                                                "Using direct route (geometry unavailable)",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                        
+                                        map.invalidate()
+                                    } else {
+                                        LogFilter.e(TAG, "Route response contains no routes")
+                                        fallbackToStraightLine(map, userLocation, nearestEvac, context)
                                     }
-                                marker?.showInfoWindow()
-                                map.invalidate() // Refresh map to show route
+                                }.onFailure { error ->
+                                    val errorMsg = error.message ?: "Unknown error"
+                                    val errorClass = error.javaClass.simpleName
+                                    LogFilter.e(TAG, "Failed to get route: $errorMsg (${errorClass})", error)
+                                    
+                                    // Show user-friendly error message based on error type and message
+                                    val userMessage = when {
+                                        // Network connectivity issues
+                                        errorMsg.contains("No internet", ignoreCase = true) || 
+                                        errorMsg.contains("Cannot reach", ignoreCase = true) ||
+                                        error is java.net.UnknownHostException ->
+                                            "No internet connection. Check your network."
+                                        
+                                        // Timeout issues
+                                        errorMsg.contains("timeout", ignoreCase = true) ||
+                                        errorMsg.contains("took too long", ignoreCase = true) ||
+                                        error is java.net.SocketTimeoutException ->
+                                            "Request timeout. Please try again."
+                                        
+                                        // Network IO errors
+                                        errorMsg.contains("Network error", ignoreCase = true) ||
+                                        errorMsg.contains("IO error", ignoreCase = true) ||
+                                        error is java.io.IOException ->
+                                            "Network error. Check your connection."
+                                        
+                                        // Routing service errors
+                                        errorMsg.contains("No road route available", ignoreCase = true) ||
+                                        errorMsg.contains("No route found", ignoreCase = true) ->
+                                            "No road route found. Using direct path."
+                                        
+                                        errorMsg.contains("temporarily unavailable", ignoreCase = true) ||
+                                        errorMsg.contains("service unavailable", ignoreCase = true) ||
+                                        errorMsg.contains("HTTP 50", ignoreCase = true) ->
+                                            "Routing service unavailable. Try again later."
+                                        
+                                        errorMsg.contains("Too many requests", ignoreCase = true) ||
+                                        errorMsg.contains("HTTP 429", ignoreCase = true) ->
+                                            "Too many requests. Please wait a moment."
+                                        
+                                        // Invalid input
+                                        errorMsg.contains("Invalid", ignoreCase = true) ||
+                                        errorMsg.contains("coordinates", ignoreCase = true) ->
+                                            "Invalid location. Please check GPS."
+                                        
+                                        // Default fallback
+                                        else -> 
+                                            "Routing unavailable. Using direct path."
+                                    }
+                                    
+                                    Toast.makeText(
+                                        context,
+                                        userMessage,
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                    
+                                    // Fallback to straight line on error (don't show toast, already shown above)
+                                    fallbackToStraightLine(map, userLocation, nearestEvac, context, showToast = false)
+                                }
                             }
                         } else {
                             Toast.makeText(
@@ -331,24 +524,21 @@ fun MapScreen() {
             Icon(AppIcons.MyLocation, contentDescription = "My Location")
         }
         
-        // 5. Directions Card - Shows route information
+        // 5. Navigation Card or Directions Card - Shows route information
         routeDestination?.let { destination ->
-            locationOverlay?.myLocation?.let { userLoc ->
-                val distance = LocationUtils.calculateDistance(
-                    userLoc.latitude, userLoc.longitude,
-                    destination.latitude, destination.longitude
-                )
-                val distanceText = LocationUtils.formatDistance(distance)
-                
-                DirectionsCard(
+            if (navigationState.isNavigating) {
+                // Show Navigation Card with turn-by-turn instructions
+                NavigationCard(
+                    navigationState = navigationState,
                     destination = destination,
-                    distance = distanceText,
+                    navigationManager = navigationManager,
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .padding(start = 16.dp, bottom = 130.dp)
-                        .fillMaxWidth(0.85f),
+                        .fillMaxWidth(0.7f), // Reduced from 0.9f to 0.7f for less screen space
                     onClose = {
-                        // Clear route
+                        // Stop navigation and clear route
+                        navigationManager.stopNavigation()
                         currentRoutePolyline?.let { route ->
                             mapView?.overlays?.remove(route)
                             mapView?.invalidate()
@@ -357,6 +547,49 @@ fun MapScreen() {
                         routeDestination = null
                     }
                 )
+            } else {
+                // Show simple Directions Card
+                locationOverlay?.myLocation?.let { userLoc ->
+                    val distance = LocationUtils.calculateDistance(
+                        userLoc.latitude, userLoc.longitude,
+                        destination.latitude, destination.longitude
+                    )
+                    val distanceText = LocationUtils.formatDistance(distance)
+                    
+                    DirectionsCard(
+                        destination = destination,
+                        distance = distanceText,
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(start = 16.dp, bottom = 130.dp)
+                            .fillMaxWidth(0.85f),
+                        onClose = {
+                            // Clear route
+                            navigationManager.stopNavigation()
+                            currentRoutePolyline?.let { route ->
+                                mapView?.overlays?.remove(route)
+                                mapView?.invalidate()
+                            }
+                            currentRoutePolyline = null
+                            routeDestination = null
+                        }
+                    )
+                }
+            }
+        }
+        
+        // Real-time location tracking for navigation
+        LaunchedEffect(navigationState.isNavigating, locationOverlay) {
+            if (navigationState.isNavigating && locationOverlay != null) {
+                while (navigationState.isNavigating) {
+                    locationOverlay?.myLocation?.let { location ->
+                        navigationManager.updateLocation(
+                            location.latitude,
+                            location.longitude
+                        )
+                    }
+                    delay(2000) // Update every 2 seconds
+                }
             }
         }
     }
@@ -634,6 +867,250 @@ fun DirectionsCard(
                 )
             }
         }
+    }
+}
+
+/**
+ * Navigation Card with turn-by-turn instructions and real-time navigation info
+ */
+@Composable
+fun NavigationCard(
+    navigationState: com.example.emergencycommunicationsystem.data.models.NavigationState,
+    destination: SafeZone,
+    navigationManager: com.example.emergencycommunicationsystem.util.NavigationManager,
+    modifier: Modifier = Modifier,
+    onClose: () -> Unit
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp), // Reduced from 16.dp
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 8.dp // Reduced from 12.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp), // Reduced from 16.dp
+            verticalArrangement = Arrangement.spacedBy(6.dp) // Reduced from 12.dp
+        ) {
+            // Header - more compact
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp) // Reduced from 8.dp
+                ) {
+                    Icon(
+                        Icons.Filled.Navigation,
+                        contentDescription = "Navigation",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp) // Reduced from 24.dp
+                    )
+                    Text(
+                        text = "Navigation",
+                        style = MaterialTheme.typography.titleMedium, // Reduced from titleLarge
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                IconButton(
+                    onClick = onClose,
+                    modifier = Modifier.size(32.dp) // Smaller close button
+                ) {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = "Stop Navigation",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp) // Smaller icon
+                    )
+                }
+            }
+            
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                thickness = 0.5.dp // Thinner divider
+            )
+            
+            // Destination - more compact, single line if possible
+            Text(
+                text = destination.name,
+                style = MaterialTheme.typography.bodyMedium, // Reduced from bodyLarge
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            
+            // Current instruction (highlighted) - more compact
+            navigationState.currentInstruction?.let { instruction ->
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp), // Reduced from 12.dp
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp), // Reduced from 12.dp
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = instruction.instruction,
+                            style = MaterialTheme.typography.bodyMedium, // Reduced from bodyLarge
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 2, // Limit to 2 lines
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = LocationUtils.formatDistance(instruction.distance / 1000.0), // Convert meters to km
+                                style = MaterialTheme.typography.bodySmall, // Reduced from bodyMedium
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                    }
+                }
+            }
+            
+            // Route stats - more compact, single row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Remaining:",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = LocationUtils.formatDistance(navigationState.remainingDistance / 1000.0), // Convert meters to km
+                        style = MaterialTheme.typography.bodySmall, // Reduced from bodyMedium
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "ETA:",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = navigationManager.formatETA(navigationState.remainingDuration),
+                        style = MaterialTheme.typography.bodySmall, // Reduced from bodyMedium
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+            
+            // Next instruction - only show if there's space, make it smaller
+            navigationState.nextInstruction?.let { nextInstruction ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp) // Reduced from 8.dp
+                ) {
+                    Icon(
+                        Icons.Filled.Place,
+                        contentDescription = "Next",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(14.dp) // Reduced from 16.dp
+                    )
+                    Text(
+                        text = "Then: ${nextInstruction.instruction}",
+                        style = MaterialTheme.typography.labelMedium, // Reduced from bodySmall
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1, // Single line only
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Helper function to decode step geometries as fallback
+ */
+private fun decodeStepGeometries(route: com.example.emergencycommunicationsystem.data.models.Route): List<org.osmdroid.util.GeoPoint> {
+    return try {
+        route.legs.flatMap { leg ->
+            leg.steps.flatMap { step ->
+                try {
+                    val stepGeom = when (val geom = step.geometry) {
+                        is String -> geom
+                        is Map<*, *> -> {
+                            val gson = com.google.gson.Gson()
+                            gson.toJson(geom)
+                        }
+                        else -> null
+                    }
+                    if (stepGeom != null) {
+                        com.example.emergencycommunicationsystem.data.network.RoutingService.decodeGeometry(stepGeom)
+                    } else {
+                        emptyList()
+                    }
+                } catch (e: Exception) {
+                    // Suppress individual step geometry errors to avoid spam
+                    emptyList()
+                }
+            }
+        }
+    } catch (e: Exception) {
+        LogFilter.e(TAG, "Error in decodeStepGeometries: ${e.message}", e)
+        emptyList()
+    }
+}
+
+/**
+ * Helper function to fallback to straight line route
+ * @param showToast If true, shows a toast message (set to false if toast is already shown)
+ */
+private fun fallbackToStraightLine(
+    map: org.osmdroid.views.MapView,
+    userLocation: org.osmdroid.util.GeoPoint,
+    destination: com.example.emergencycommunicationsystem.data.models.SafeZone,
+    context: android.content.Context,
+    showToast: Boolean = true
+) {
+    LogFilter.d(TAG, "Using fallback straight line route")
+    val routePolyline = org.osmdroid.views.overlay.Polyline().apply {
+        val routePoints = listOf(
+            userLocation,
+            org.osmdroid.util.GeoPoint(destination.latitude, destination.longitude)
+        )
+        setPoints(routePoints)
+        color = androidx.compose.ui.graphics.Color(0xFFFF9800).toArgb() // Orange color for route
+        width = 12.0f
+        isGeodesic = true
+    }
+    map.overlays.add(routePolyline)
+    
+    val evacPoint = org.osmdroid.util.GeoPoint(destination.latitude, destination.longitude)
+    map.controller.animateTo(evacPoint)
+    map.controller.setZoom(15.0)
+    map.invalidate()
+    
+    if (showToast) {
+        android.widget.Toast.makeText(
+            context,
+            "Using direct route (routing unavailable)",
+            android.widget.Toast.LENGTH_SHORT
+        ).show()
     }
 }
 

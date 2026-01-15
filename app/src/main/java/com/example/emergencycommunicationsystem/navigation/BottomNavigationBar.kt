@@ -51,7 +51,7 @@ import androidx.compose.animation.animateContentSize
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 
 const val navOverlayHeight = 92
-const val navOverlayLift = 36
+const val navOverlayLift = 50 // Increased from 36 to 50 to position it higher
 
 @Composable
 fun BottomNavigationBar(
