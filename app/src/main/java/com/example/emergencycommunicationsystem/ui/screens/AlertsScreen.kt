@@ -15,6 +15,9 @@ import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -216,8 +219,9 @@ fun getSeverityColor(severity: String): Color {
 
 /**
  * Get category name from numeric ID or fallback to string/title analysis
+ * Returns English category name - will be translated in composable
  */
-fun getCategoryName(alert: Alert, localeContext: android.content.Context): String {
+private fun getCategoryNameEn(alert: Alert): String {
     // Handle numeric category IDs from API (category comes as string "1", "2", "4", "5")
     val categoryId = try {
         alert.category?.toIntOrNull() ?: 0
@@ -238,8 +242,38 @@ fun getCategoryName(alert: Alert, localeContext: android.content.Context): Strin
         "fire" in title || "wildfire" in title -> "Fire"
         "health" in title -> "Health"
         "traffic" in title || "road" in title || "power" in title || "emergency" in title -> "General"
-        else -> localeContext.getString(R.string.general)
+        else -> "General"
     }
+}
+
+/**
+ * Get category name with translation support
+ */
+@Composable
+fun getCategoryName(alert: Alert, localeContext: android.content.Context): String {
+    val context = LocalContext.current
+    val categoryNameEn = getCategoryNameEn(alert)
+    
+    // Get current language preference
+    val currentLanguage by com.example.emergencycommunicationsystem.data.UserPrefs.getLanguage(context)
+        .collectAsState(initial = "en")
+    
+    // State for translated category name
+    var translatedCategory by remember { mutableStateOf(categoryNameEn) }
+    
+    // Translate category name when language changes
+    LaunchedEffect(categoryNameEn, currentLanguage) {
+        if (currentLanguage != "en") {
+            translatedCategory = com.example.emergencycommunicationsystem.util.TranslationService.translate(
+                categoryNameEn,
+                currentLanguage
+            )
+        } else {
+            translatedCategory = categoryNameEn
+        }
+    }
+    
+    return translatedCategory
 }
 
 /**
@@ -264,7 +298,7 @@ private fun getAlertTypeFromAlert(alert: Alert): String {
 }
 
 /**
- * Get compact emergency instructions for a single alert
+* Get compact emergency instructions for a single alert (returns English, will be translated in composable)
  */
 private fun getCompactInstructions(alertType: String, @Suppress("UNUSED_PARAMETER") timeOfDay: String): Pair<String, List<String>> {
     return when (alertType) {
@@ -295,6 +329,10 @@ fun CompactEmergencyInstructions(
     alert: Alert,
     modifier: Modifier = Modifier
 ) {
+    val localeContext = getLocaleContext()
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    
     val alertType = getAlertTypeFromAlert(alert)
     val currentHour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
     val timeOfDay = when (currentHour) {
@@ -303,7 +341,45 @@ fun CompactEmergencyInstructions(
         in 18..22 -> "evening"
         else -> "night"
     }
-    val (mainInstruction, steps) = getCompactInstructions(alertType, timeOfDay)
+    val (mainInstructionEn, stepsEn) = getCompactInstructions(alertType, timeOfDay)
+    
+    // Get current language preference
+    val currentLanguage by com.example.emergencycommunicationsystem.data.UserPrefs.getLanguage(context)
+        .collectAsState(initial = "en")
+    
+    // State for translated strings
+    var translatedMainInstruction by remember { mutableStateOf(mainInstructionEn) }
+    var translatedSteps by remember { mutableStateOf(stepsEn) }
+    var translatedLabel by remember { mutableStateOf("What To Do:") }
+    
+    // Translate strings when language changes
+    LaunchedEffect(alertType, currentLanguage) {
+        if (currentLanguage != "en") {
+            coroutineScope.launch {
+                // Translate "What To Do:" label
+                translatedLabel = com.example.emergencycommunicationsystem.util.TranslationService.translate(
+                    "What To Do:",
+                    currentLanguage
+                )
+                
+                // Translate main instruction
+                translatedMainInstruction = com.example.emergencycommunicationsystem.util.TranslationService.translate(
+                    mainInstructionEn,
+                    currentLanguage
+                )
+                
+                // Translate steps
+                translatedSteps = com.example.emergencycommunicationsystem.util.TranslationService.translateBatch(
+                    stepsEn,
+                    currentLanguage
+                )
+            }
+        } else {
+            translatedLabel = "What To Do:"
+            translatedMainInstruction = mainInstructionEn
+            translatedSteps = stepsEn
+        }
+    }
     
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -325,7 +401,7 @@ fun CompactEmergencyInstructions(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "🧠 What To Do: $mainInstruction",
+                    text = "🧠 $translatedLabel $translatedMainInstruction",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -335,7 +411,7 @@ fun CompactEmergencyInstructions(
             Spacer(modifier = Modifier.height(8.dp))
             
             // Compact steps (show first 3)
-            steps.take(3).forEach { step ->
+            translatedSteps.take(3).forEach { step ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -380,8 +456,9 @@ fun AlertItem(
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
+                    val categoryName = getCategoryName(alert, localeContext)
                     Text(
-                        text = getCategoryName(alert, localeContext).uppercase(),
+                        text = categoryName.uppercase(),
                         color = getColorForCategory(alert),
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp

@@ -40,6 +40,7 @@ import com.example.emergencycommunicationsystem.ui.theme.EmergencyCommunicationS
 import com.example.emergencycommunicationsystem.util.LocationUpdater
 import com.example.emergencycommunicationsystem.util.LocationUtils
 import com.example.emergencycommunicationsystem.util.LocaleProvider
+import com.example.emergencycommunicationsystem.util.LocaleManager
 import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModel
 import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModelFactory
 import com.example.emergencycommunicationsystem.ui.screens.SignUpViewModel
@@ -60,10 +61,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Set locale early in onCreate
+        // Set locale early in onCreate (for UI strings)
         lifecycleScope.launch(Dispatchers.IO) {
             val lang = UserPrefs.getLanguage(this@MainActivity).first()
-            val locale = LocaleHelper.getLocaleFromCode(lang)
+            val locale = LocaleManager.getLocaleFromCode(lang)
             Locale.setDefault(locale)
         }
 
@@ -313,13 +314,13 @@ fun EmergencyApp() {
                         currentLanguage = currentLanguage,
                         onConfirm = { lang ->
                             coroutineScope.launch(Dispatchers.IO) {
-                                // Save the language preference and wait for it to complete
+                                // Save the language preference
                                 UserPrefs.saveLanguage(context, lang)
-                                // Small delay to ensure DataStore write is persisted
-                                kotlinx.coroutines.delay(200)
-                                // Recreate activity for full locale update
+                                // No activity recreation needed - Compose will recompose automatically
+                                // Alerts will be re-translated when language changes
                                 withContext(Dispatchers.Main) {
-                                    activity?.recreate()
+                                    // Just navigate back - LocaleProvider will handle UI string updates
+                                    navController.popBackStack()
                                 }
                             }
                         },

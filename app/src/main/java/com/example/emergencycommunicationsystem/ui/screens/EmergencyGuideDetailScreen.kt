@@ -27,15 +27,26 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.emergencycommunicationsystem.data.EmergencyGuidesData
+import com.example.emergencycommunicationsystem.data.UserPrefs
 import com.example.emergencycommunicationsystem.data.models.EmergencyGuide
 import com.example.emergencycommunicationsystem.data.models.TipPriority
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
+import com.example.emergencycommunicationsystem.util.TranslationService
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,13 +54,43 @@ fun EmergencyGuideDetailScreen(
     guideId: String,
     onBackPressed: () -> Unit
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
+    
     val guide = EmergencyGuidesData.getGuideById(guideId)
+    
+    // Translated UI strings
+    var translatedNotFoundTitle by remember { mutableStateOf("Guide Not Found") }
+    var translatedNotFoundMessage by remember { mutableStateOf("Emergency guide not found") }
+    var translatedWhatToDo by remember { mutableStateOf("What to Do:") }
+    var translatedRemember by remember { mutableStateOf("💡 Remember") }
+    var translatedFooterNote by remember { mutableStateOf("In any emergency, call your local emergency services (911) immediately. These tips are general guidance and should not replace professional medical or emergency advice.") }
+    
+    // Translate UI strings
+    LaunchedEffect(currentLanguage) {
+        if (currentLanguage != "en") {
+            coroutineScope.launch {
+                translatedNotFoundTitle = TranslationService.translate("Guide Not Found", currentLanguage)
+                translatedNotFoundMessage = TranslationService.translate("Emergency guide not found", currentLanguage)
+                translatedWhatToDo = TranslationService.translate("What to Do:", currentLanguage)
+                translatedRemember = TranslationService.translate("💡 Remember", currentLanguage)
+                translatedFooterNote = TranslationService.translate("In any emergency, call your local emergency services (911) immediately. These tips are general guidance and should not replace professional medical or emergency advice.", currentLanguage)
+            }
+        } else {
+            translatedNotFoundTitle = "Guide Not Found"
+            translatedNotFoundMessage = "Emergency guide not found"
+            translatedWhatToDo = "What to Do:"
+            translatedRemember = "💡 Remember"
+            translatedFooterNote = "In any emergency, call your local emergency services (911) immediately. These tips are general guidance and should not replace professional medical or emergency advice."
+        }
+    }
     
     if (guide == null) {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("Guide Not Found") },
+                    title = { Text(translatedNotFoundTitle) },
                     navigationIcon = {
                         IconButton(onClick = onBackPressed) {
                             Icon(
@@ -67,16 +108,33 @@ fun EmergencyGuideDetailScreen(
                     .padding(it),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Emergency guide not found")
+                Text(translatedNotFoundMessage)
             }
         }
         return
     }
     
+    // Translated guide content
+    var translatedTitle by remember { mutableStateOf(guide.title) }
+    var translatedDescription by remember { mutableStateOf(guide.description) }
+    
+    // Translate guide content
+    LaunchedEffect(guide.id, currentLanguage) {
+        if (currentLanguage != "en") {
+            coroutineScope.launch {
+                translatedTitle = TranslationService.translate(guide.title, currentLanguage)
+                translatedDescription = TranslationService.translate(guide.description, currentLanguage)
+            }
+        } else {
+            translatedTitle = guide.title
+            translatedDescription = guide.description
+        }
+    }
+    
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(guide.title) },
+                title = { Text(translatedTitle) },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
                         Icon(
@@ -129,14 +187,14 @@ fun EmergencyGuideDetailScreen(
                         
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = guide.title,
+                                text = translatedTitle,
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = guide.description,
+                                text = translatedDescription,
                                 fontSize = 14.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -148,7 +206,7 @@ fun EmergencyGuideDetailScreen(
             // Tips Section
             item {
                 Text(
-                    text = "What to Do:",
+                    text = translatedWhatToDo,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -158,7 +216,8 @@ fun EmergencyGuideDetailScreen(
             itemsIndexed(guide.tips) { index, tip ->
                 EmergencyTipCard(
                     tip = tip,
-                    number = index + 1
+                    number = index + 1,
+                    currentLanguage = currentLanguage
                 )
             }
             
@@ -173,14 +232,14 @@ fun EmergencyGuideDetailScreen(
                         modifier = Modifier.padding(16.dp)
                     ) {
                         Text(
-                            text = "💡 Remember",
+                            text = translatedRemember,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "In any emergency, call your local emergency services (911) immediately. These tips are general guidance and should not replace professional medical or emergency advice.",
+                            text = translatedFooterNote,
                             fontSize = 14.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -194,12 +253,34 @@ fun EmergencyGuideDetailScreen(
 @Composable
 fun EmergencyTipCard(
     tip: com.example.emergencycommunicationsystem.data.models.EmergencyTip,
-    number: Int
+    number: Int,
+    currentLanguage: String
 ) {
+    val coroutineScope = rememberCoroutineScope()
     val priorityColor = when (tip.priority) {
         TipPriority.CRITICAL -> MaterialTheme.colorScheme.error
         TipPriority.HIGH -> MaterialTheme.colorScheme.errorContainer
         TipPriority.NORMAL -> MaterialTheme.colorScheme.primary
+    }
+    
+    // Translated tip content
+    var translatedTitle by remember { mutableStateOf(tip.title) }
+    var translatedDescription by remember { mutableStateOf(tip.description) }
+    var translatedPriority by remember { mutableStateOf(tip.priority.name) }
+    
+    // Translate tip content
+    LaunchedEffect(tip.title, tip.description, tip.priority.name, currentLanguage) {
+        if (currentLanguage != "en") {
+            coroutineScope.launch {
+                translatedTitle = TranslationService.translate(tip.title, currentLanguage)
+                translatedDescription = TranslationService.translate(tip.description, currentLanguage)
+                translatedPriority = TranslationService.translate(tip.priority.name, currentLanguage)
+            }
+        } else {
+            translatedTitle = tip.title
+            translatedDescription = tip.description
+            translatedPriority = tip.priority.name
+        }
     }
     
     Card(
@@ -241,7 +322,7 @@ fun EmergencyTipCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = tip.title,
+                        text = translatedTitle,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -254,7 +335,7 @@ fun EmergencyTipCard(
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(
-                            text = tip.priority.name,
+                            text = translatedPriority,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = priorityColor,
@@ -266,7 +347,7 @@ fun EmergencyTipCard(
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 Text(
-                    text = tip.description,
+                    text = translatedDescription,
                     fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 20.sp

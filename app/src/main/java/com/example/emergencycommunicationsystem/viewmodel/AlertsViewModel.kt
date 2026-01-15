@@ -21,7 +21,10 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
 
     init {
         val database = AppDatabase.getDatabase(application)
-        repository = AlertsRepository(database.alertDao())
+        repository = AlertsRepository(
+            database.alertDao(),
+            application
+        )
         loadAlerts()
     }
 

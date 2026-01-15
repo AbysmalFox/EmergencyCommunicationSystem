@@ -48,6 +48,14 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,6 +72,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.emergencycommunicationsystem.util.getLocaleContext
+import com.example.emergencycommunicationsystem.util.TranslationService
+import com.example.emergencycommunicationsystem.data.UserPrefs
 import com.example.emergencycommunicationsystem.data.models.WeatherState
 import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.navigation.Screen
@@ -438,13 +448,34 @@ fun WeatherDetailItem(icon: ImageVector, label: String, value: String) {
 
 @Composable
 fun WeatherAdvice(advice: String) {
-    var displayedText by remember(advice) { mutableStateOf("") }
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val currentLanguage by com.example.emergencycommunicationsystem.data.UserPrefs.getLanguage(context)
+        .collectAsState(initial = "en")
+    
+    // Translate the advice text
+    var translatedAdvice by remember { mutableStateOf(advice) }
+    
+    LaunchedEffect(advice, currentLanguage) {
+        if (currentLanguage != "en" && advice.isNotBlank()) {
+            coroutineScope.launch {
+                translatedAdvice = com.example.emergencycommunicationsystem.util.TranslationService.translate(
+                    advice,
+                    currentLanguage
+                )
+            }
+        } else {
+            translatedAdvice = advice
+        }
+    }
+    
+    var displayedText by remember(translatedAdvice) { mutableStateOf("") }
 
-    LaunchedEffect(advice) {
+    LaunchedEffect(translatedAdvice) {
         displayedText = ""
         delay(200)
-        advice.forEachIndexed { index, _ ->
-            displayedText = advice.substring(0, index + 1)
+        translatedAdvice.forEachIndexed { index, _ ->
+            displayedText = translatedAdvice.substring(0, index + 1)
             delay(30)
         }
     }
@@ -624,10 +655,26 @@ fun HorizontalForecastWidget(forecastItems: List<com.example.emergencycommunicat
 
     if (dayPairs.isEmpty()) return
 
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
+    var translatedForecastLabel by remember { mutableStateOf("6-Day Forecast") }
+    
+    // Translate forecast label
+    LaunchedEffect(currentLanguage) {
+        if (currentLanguage != "en") {
+            coroutineScope.launch {
+                translatedForecastLabel = TranslationService.translate("6-Day Forecast", currentLanguage)
+            }
+        } else {
+            translatedForecastLabel = "6-Day Forecast"
+        }
+    }
+    
     val dayNameFormat = java.text.SimpleDateFormat("EEE", Locale.getDefault())
     Column {
         Text(
-            text = "6-Day Forecast",
+            text = translatedForecastLabel,
             fontWeight = FontWeight.SemiBold,
             fontSize = 14.sp,
             color = MaterialTheme.colorScheme.onSurface,
@@ -811,6 +858,11 @@ fun EmergencyInstructions(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val currentLanguage by com.example.emergencycommunicationsystem.data.UserPrefs.getLanguage(context)
+        .collectAsState(initial = "en")
+    
     val currentHour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
     val timeOfDay = when (currentHour) {
         in 5..11 -> "morning"
@@ -821,7 +873,46 @@ fun EmergencyInstructions(
     
     // Determine primary alert type from active alerts
     val primaryAlertType = getPrimaryAlertType(alerts)
-    val instructions = getEmergencyInstructions(primaryAlertType, timeOfDay, userLat != null && userLon != null)
+    val instructionsEn = getEmergencyInstructions(primaryAlertType, timeOfDay, userLat != null && userLon != null)
+    
+    // Translated strings
+    var translatedHeader by remember { mutableStateOf("🧠 Emergency Instructions") }
+    var translatedMain by remember { mutableStateOf(instructionsEn.main) }
+    var translatedSteps by remember { mutableStateOf(instructionsEn.steps) }
+    var translatedContextNote by remember { mutableStateOf(instructionsEn.contextNote) }
+    
+    // Translate all instruction text
+    LaunchedEffect(primaryAlertType, timeOfDay, currentLanguage) {
+        if (currentLanguage != "en") {
+            coroutineScope.launch {
+                translatedHeader = com.example.emergencycommunicationsystem.util.TranslationService.translate(
+                    "🧠 Emergency Instructions",
+                    currentLanguage
+                )
+                translatedMain = com.example.emergencycommunicationsystem.util.TranslationService.translate(
+                    instructionsEn.main,
+                    currentLanguage
+                )
+                translatedSteps = com.example.emergencycommunicationsystem.util.TranslationService.translateBatch(
+                    instructionsEn.steps,
+                    currentLanguage
+                )
+                if (instructionsEn.contextNote.isNotEmpty()) {
+                    translatedContextNote = com.example.emergencycommunicationsystem.util.TranslationService.translate(
+                        instructionsEn.contextNote,
+                        currentLanguage
+                    )
+                } else {
+                    translatedContextNote = ""
+                }
+            }
+        } else {
+            translatedHeader = "🧠 Emergency Instructions"
+            translatedMain = instructionsEn.main
+            translatedSteps = instructionsEn.steps
+            translatedContextNote = instructionsEn.contextNote
+        }
+    }
     
     Card(
         modifier = modifier
@@ -854,7 +945,7 @@ fun EmergencyInstructions(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "🧠 Emergency Instructions",
+                    text = translatedHeader,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -874,7 +965,7 @@ fun EmergencyInstructions(
             
             // Main instruction
             Text(
-                text = instructions.main,
+                text = translatedMain,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -884,7 +975,7 @@ fun EmergencyInstructions(
             Spacer(modifier = Modifier.height(12.dp))
             
             // Additional steps
-            instructions.steps.forEachIndexed { index, step ->
+            translatedSteps.forEachIndexed { index, step ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -907,7 +998,7 @@ fun EmergencyInstructions(
             }
             
             // Context note
-            if (instructions.contextNote.isNotEmpty()) {
+            if (translatedContextNote.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Surface(
                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
@@ -915,7 +1006,7 @@ fun EmergencyInstructions(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = instructions.contextNote,
+                        text = translatedContextNote,
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(10.dp)

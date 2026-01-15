@@ -54,6 +54,13 @@ android {
             )
         }
     }
+    
+    // Configure for 16 KB page size compatibility (Android 15+ requirement)
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -103,6 +110,11 @@ dependencies {
     
     // Google Sign-In
     implementation("com.google.android.gms:play-services-auth:21.0.0")
+    
+    // Google ML Kit Translation (Free, on-device translation)
+    // Note: Version 17.0.2 may have 16KB page size compatibility issues
+    // This is a known issue with ML Kit's native library that Google needs to fix
+    implementation("com.google.mlkit:translate:17.0.2")
 
     // Compose ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
@@ -119,6 +131,8 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    // Coroutines support for Google Play Services (for ML Kit Tasks)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
 
     // OSMDroid for OpenStreetMap
     implementation("org.osmdroid:osmdroid-android:6.1.14")

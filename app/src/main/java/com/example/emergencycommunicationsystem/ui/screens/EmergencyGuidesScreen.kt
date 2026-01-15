@@ -27,10 +27,15 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -38,14 +43,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.emergencycommunicationsystem.data.EmergencyGuidesData
+import com.example.emergencycommunicationsystem.data.UserPrefs
 import com.example.emergencycommunicationsystem.data.models.EmergencyCategory
 import com.example.emergencycommunicationsystem.data.models.EmergencyGuide
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
+import com.example.emergencycommunicationsystem.util.TranslationService
+import com.example.emergencycommunicationsystem.util.getLocaleContext
 
 /**
- * Format category name for display
+ * Format category name for display (English version - will be translated)
  */
-private fun formatCategoryName(category: EmergencyCategory): String {
+private fun formatCategoryNameEn(category: EmergencyCategory): String {
     return when (category) {
         EmergencyCategory.MEDICAL -> "Medical"
         EmergencyCategory.NATURAL_DISASTER -> "Natural Disaster"
@@ -62,6 +70,36 @@ fun EmergencyGuidesScreen(
     onBackPressed: () -> Unit,
     onGuideClick: (String) -> Unit
 ) {
+    val localeContext = getLocaleContext()
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    
+    // Get current language preference
+    val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
+    
+    // Translated UI strings
+    var translatedTitle by remember { mutableStateOf("Emergency Guides") }
+    var translatedPlaceholder by remember { mutableStateOf("Search emergency guides...") }
+    var translatedAll by remember { mutableStateOf("All") }
+    var translatedNoGuides by remember { mutableStateOf("No guides found") }
+    
+    // Translate UI strings
+    LaunchedEffect(currentLanguage) {
+        if (currentLanguage != "en") {
+            coroutineScope.launch {
+                translatedTitle = TranslationService.translate("Emergency Guides", currentLanguage)
+                translatedPlaceholder = TranslationService.translate("Search emergency guides...", currentLanguage)
+                translatedAll = TranslationService.translate("All", currentLanguage)
+                translatedNoGuides = TranslationService.translate("No guides found", currentLanguage)
+            }
+        } else {
+            translatedTitle = "Emergency Guides"
+            translatedPlaceholder = "Search emergency guides..."
+            translatedAll = "All"
+            translatedNoGuides = "No guides found"
+        }
+    }
+    
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<EmergencyCategory?>(null) }
     
@@ -82,7 +120,7 @@ fun EmergencyGuidesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Emergency Guides") },
+                title = { Text(translatedTitle) },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
                         Icon(
@@ -106,7 +144,7 @@ fun EmergencyGuidesScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                placeholder = { Text("Search emergency guides...") },
+                placeholder = { Text(translatedPlaceholder) },
                 leadingIcon = {
                     Icon(
                         imageVector = AppIcons.Info,
@@ -129,7 +167,7 @@ fun EmergencyGuidesScreen(
                     ) {
                         // All category chip
                         CategoryChip(
-                            label = "All",
+                            label = translatedAll,
                             isSelected = selectedCategory == null,
                             onClick = { selectedCategory = null }
                         )
@@ -140,10 +178,11 @@ fun EmergencyGuidesScreen(
                                 EmergencyGuidesData.getGuidesByCategory(category).isNotEmpty()
                             }
                             .forEach { category ->
-                                CategoryChip(
-                                    label = formatCategoryName(category),
+                                TranslatedCategoryChip(
+                                    category = category,
                                     isSelected = selectedCategory == category,
-                                    onClick = { selectedCategory = category }
+                                    onClick = { selectedCategory = category },
+                                    currentLanguage = currentLanguage
                                 )
                             }
                     }
@@ -167,7 +206,7 @@ fun EmergencyGuidesScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "No guides found",
+                                text = translatedNoGuides,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -176,7 +215,8 @@ fun EmergencyGuidesScreen(
                     items(guides) { guide ->
                         EmergencyGuideItem(
                             guide = guide,
-                            onClick = { onGuideClick(guide.id) }
+                            onClick = { onGuideClick(guide.id) },
+                            currentLanguage = currentLanguage
                         )
                     }
                 }
@@ -218,10 +258,62 @@ fun CategoryChip(
 }
 
 @Composable
+fun TranslatedCategoryChip(
+    category: EmergencyCategory,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    currentLanguage: String
+) {
+    val categoryNameEn = formatCategoryNameEn(category)
+    var translatedLabel by remember { mutableStateOf(categoryNameEn) }
+    val coroutineScope = rememberCoroutineScope()
+    
+    LaunchedEffect(categoryNameEn, currentLanguage) {
+        if (currentLanguage != "en") {
+            coroutineScope.launch {
+                translatedLabel = TranslationService.translate(categoryNameEn, currentLanguage)
+            }
+        } else {
+            translatedLabel = categoryNameEn
+        }
+    }
+    
+    CategoryChip(
+        label = translatedLabel,
+        isSelected = isSelected,
+        onClick = onClick
+    )
+}
+
+@Composable
 fun EmergencyGuideItem(
     guide: EmergencyGuide,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    currentLanguage: String
 ) {
+    val coroutineScope = rememberCoroutineScope()
+    
+    // Translated guide content
+    var translatedTitle by remember { mutableStateOf(guide.title) }
+    var translatedDescription by remember { mutableStateOf(guide.description) }
+    var translatedTipsText by remember { mutableStateOf("${guide.tips.size} tips available") }
+    
+    // Translate guide content
+    LaunchedEffect(guide.id, currentLanguage) {
+        if (currentLanguage != "en") {
+            coroutineScope.launch {
+                translatedTitle = TranslationService.translate(guide.title, currentLanguage)
+                translatedDescription = TranslationService.translate(guide.description, currentLanguage)
+                val tipsText = "${guide.tips.size} tips available"
+                translatedTipsText = TranslationService.translate(tipsText, currentLanguage)
+            }
+        } else {
+            translatedTitle = guide.title
+            translatedDescription = guide.description
+            translatedTipsText = "${guide.tips.size} tips available"
+        }
+    }
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -260,21 +352,21 @@ fun EmergencyGuideItem(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = guide.title,
+                    text = translatedTitle,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = guide.description,
+                    text = translatedDescription,
                     fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${guide.tips.size} tips available",
+                    text = translatedTipsText,
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.primary
                 )
