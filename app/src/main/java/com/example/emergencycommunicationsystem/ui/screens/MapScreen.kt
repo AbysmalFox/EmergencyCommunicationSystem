@@ -83,6 +83,7 @@ fun MapScreen() {
     var locationOverlay by remember { mutableStateOf<MyLocationNewOverlay?>(null) }
     var currentRoutePolyline by remember { mutableStateOf<Polyline?>(null) }
     var routeDestination by remember { mutableStateOf<SafeZone?>(null) }
+    var isCalculatingRoute by remember { mutableStateOf(false) }
     
     // Navigation Manager for real-time navigation
     val navigationManager = remember {
@@ -276,13 +277,18 @@ fun MapScreen() {
                         )
                         
                         if (nearestEvac != null) {
-                            // Store destination
-                            routeDestination = nearestEvac
+                            // Clear previous destination and route to prevent showing old card
+                            routeDestination = null
+                            isCalculatingRoute = true
                             
                             // Remove previous route if exists
                             currentRoutePolyline?.let { oldRoute ->
                                 map.overlays.remove(oldRoute)
                             }
+                            currentRoutePolyline = null
+                            
+                            // Stop any existing navigation
+                            navigationManager.stopNavigation()
                             
                             // Show loading toast
                             Toast.makeText(
@@ -366,9 +372,15 @@ fun MapScreen() {
                                                 destLon = nearestEvac.longitude,
                                                 onSuccess = { navGeometry ->
                                                     LogFilter.d(TAG, "Navigation started successfully with ${navGeometry.size} points")
+                                                    // Only set destination after navigation is ready to prevent card flash
+                                                    routeDestination = nearestEvac
+                                                    isCalculatingRoute = false
                                                 },
                                                 onError = { error ->
                                                     LogFilter.e(TAG, "Navigation manager error: $error")
+                                                    // Set destination even on navigation error so user can see the route
+                                                    routeDestination = nearestEvac
+                                                    isCalculatingRoute = false
                                                     Toast.makeText(
                                                         context,
                                                         "Navigation error: $error",
@@ -411,6 +423,10 @@ fun MapScreen() {
                                             map.overlays.add(routePolyline)
                                             currentRoutePolyline = routePolyline
                                             
+                                            // Set destination after route is drawn
+                                            routeDestination = nearestEvac
+                                            isCalculatingRoute = false
+                                            
                                             val evacPoint = GeoPoint(nearestEvac.latitude, nearestEvac.longitude)
                                             map.controller.animateTo(evacPoint)
                                             map.controller.setZoom(15.0)
@@ -425,7 +441,11 @@ fun MapScreen() {
                                         map.invalidate()
                                     } else {
                                         LogFilter.e(TAG, "Route response contains no routes")
-                                        fallbackToStraightLine(map, userLocation, nearestEvac, context)
+                                        val fallbackPolyline = fallbackToStraightLine(map, userLocation, nearestEvac, context)
+                                        currentRoutePolyline = fallbackPolyline
+                                        // Set destination after fallback route is drawn
+                                        routeDestination = nearestEvac
+                                        isCalculatingRoute = false
                                     }
                                 }.onFailure { error ->
                                     val errorMsg = error.message ?: "Unknown error"
@@ -483,7 +503,11 @@ fun MapScreen() {
                                     ).show()
                                     
                                     // Fallback to straight line on error (don't show toast, already shown above)
-                                    fallbackToStraightLine(map, userLocation, nearestEvac, context, showToast = false)
+                                    val fallbackPolyline = fallbackToStraightLine(map, userLocation, nearestEvac, context, showToast = false)
+                                    currentRoutePolyline = fallbackPolyline
+                                    // Set destination after fallback route is drawn
+                                    routeDestination = nearestEvac
+                                    isCalculatingRoute = false
                                 }
                             }
                         } else {
@@ -531,10 +555,12 @@ fun MapScreen() {
         }
         
         // 5. Navigation Card or Directions Card - Shows route information
-        routeDestination?.let { destination ->
-            if (navigationState.isNavigating) {
-                // Show Navigation Card with turn-by-turn instructions
-                NavigationCard(
+        // Only show card if route is calculated (not during calculation)
+        if (!isCalculatingRoute) {
+            routeDestination?.let { destination ->
+                if (navigationState.isNavigating) {
+                    // Show Navigation Card with turn-by-turn instructions
+                    NavigationCard(
                     navigationState = navigationState,
                     destination = destination,
                     navigationManager = navigationManager,
@@ -581,6 +607,7 @@ fun MapScreen() {
                         }
                     )
                 }
+            }
             }
         }
         
@@ -1099,6 +1126,7 @@ private fun decodeStepGeometries(route: com.example.emergencycommunicationsystem
 /**
  * Helper function to fallback to straight line route
  * @param showToast If true, shows a toast message (set to false if toast is already shown)
+ * @return The created Polyline so it can be tracked for removal
  */
 private fun fallbackToStraightLine(
     map: org.osmdroid.views.MapView,
@@ -1106,7 +1134,7 @@ private fun fallbackToStraightLine(
     destination: com.example.emergencycommunicationsystem.data.models.SafeZone,
     context: android.content.Context,
     showToast: Boolean = true
-) {
+): org.osmdroid.views.overlay.Polyline {
     LogFilter.d(TAG, "Using fallback straight line route")
     val routePolyline = org.osmdroid.views.overlay.Polyline().apply {
         val routePoints = listOf(
@@ -1132,6 +1160,8 @@ private fun fallbackToStraightLine(
             android.widget.Toast.LENGTH_SHORT
         ).show()
     }
+    
+    return routePolyline
 }
 
 /**
