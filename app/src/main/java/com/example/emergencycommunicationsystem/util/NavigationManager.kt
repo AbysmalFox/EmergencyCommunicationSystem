@@ -256,18 +256,26 @@ class NavigationManager(
             val currentInstruction = state.instructions.getOrNull(currentStepIndex)
             val nextInstruction = state.instructions.getOrNull(currentStepIndex + 1)
             
-            // Only log step changes to reduce verbosity
-            if (currentStepIndex != state.currentStepIndex) {
-                LogFilter.d(TAG, "Step changed: ${state.currentStepIndex} -> $currentStepIndex")
-            }
+            // Only update state if something actually changed to avoid unnecessary recompositions
+            val hasSignificantChange = 
+                currentStepIndex != state.currentStepIndex ||
+                kotlin.math.abs(remainingDistance - state.remainingDistance) > 10.0 || // Only update if distance changed by more than 10m
+                kotlin.math.abs(remainingDuration - state.remainingDuration) > 5.0 // Only update if duration changed by more than 5s
+            
+            if (hasSignificantChange) {
+                // Only log step changes to reduce verbosity
+                if (currentStepIndex != state.currentStepIndex) {
+                    LogFilter.d(TAG, "Step changed: ${state.currentStepIndex} -> $currentStepIndex")
+                }
 
-            _navigationState.value = state.copy(
-                currentStepIndex = currentStepIndex,
-                remainingDistance = remainingDistance,
-                remainingDuration = remainingDuration,
-                currentInstruction = currentInstruction,
-                nextInstruction = nextInstruction
-            )
+                _navigationState.value = state.copy(
+                    currentStepIndex = currentStepIndex,
+                    remainingDistance = remainingDistance,
+                    remainingDuration = remainingDuration,
+                    currentInstruction = currentInstruction,
+                    nextInstruction = nextInstruction
+                )
+            }
         } catch (e: Exception) {
             LogFilter.e(TAG, "Error updating location: ${e.message}", e)
         }

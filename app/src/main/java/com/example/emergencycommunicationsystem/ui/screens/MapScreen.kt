@@ -38,6 +38,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.example.emergencycommunicationsystem.util.NavigationManager
 import com.example.emergencycommunicationsystem.data.network.RoutingService
 import androidx.compose.ui.Alignment
@@ -146,9 +147,8 @@ fun MapScreen() {
                         // Disable built-in zoom controls to reduce tile update triggers
                         setBuiltInZoomControls(false)
                         
-                        // Disable hardware acceleration for this view to reduce HWUI usage
-                        // This uses software rendering which may be slower but reduces native log spam
-                        setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
+                        // Keep hardware acceleration enabled for better performance
+                        // Software rendering was causing significant frame rate drops
                     } catch (e: Exception) {
                         // Some methods might not be available on all Android versions
                         LogFilter.w(TAG, "Could not apply all tile optimizations: ${e.message}")
@@ -208,40 +208,46 @@ fun MapScreen() {
             alertsViewModel.loadAlerts()
         }
         
-        // Update alert markers when alerts state changes
+        // Track previous alerts to avoid unnecessary marker updates
+        var previousAlertIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+        
+        // Update alert markers when alerts state changes - optimized to only update when data actually changes
         LaunchedEffect(alertsState) {
             mapView?.let { mapView ->
-                // Remove existing alert markers (keep boundary, user location, and safe zones)
-                val markersToRemove = mapView.overlays
-                    .filterIsInstance<Marker>()
-                    .filter { marker ->
-                        // Only remove alert markers (red), keep safe zone markers (green/blue)
-                        marker.title?.let { title ->
-                            // Alert markers start with "🚨 Alert:", safe zones start with "🏥 Hospital:" or "🛟 Evacuation:"
-                            title.startsWith("🚨 Alert:")
-                        } ?: false
-                    }
-                    .toList()
-                markersToRemove.forEach { mapView.overlays.remove(it) }
-                
-                // Add new alert markers
                 when (val state = alertsState) {
                     is com.example.emergencycommunicationsystem.util.Resource.Success -> {
-                        state.data
-                            .filter { it.latitude != null && it.longitude != null }
-                            .forEach { alert ->
+                        val currentAlerts = state.data.filter { it.latitude != null && it.longitude != null }
+                        val currentAlertIds = currentAlerts.map { it.id.toString() }.toSet()
+                        
+                        // Only update markers if alerts have actually changed
+                        if (currentAlertIds != previousAlertIds) {
+                            // Remove existing alert markers (keep boundary, user location, and safe zones)
+                            val markersToRemove = mapView.overlays
+                                .filterIsInstance<Marker>()
+                                .filter { marker ->
+                                    marker.title?.let { title ->
+                                        title.startsWith("🚨 Alert:")
+                                    } ?: false
+                                }
+                                .toList()
+                            markersToRemove.forEach { mapView.overlays.remove(it) }
+                            
+                            // Add new alert markers
+                            currentAlerts.forEach { alert ->
                                 val marker = Marker(mapView).apply {
                                     position = GeoPoint(alert.latitude!!, alert.longitude!!)
-                                    // Add alert prefix to title for clarity
                                     title = "🚨 Alert: ${alert.title ?: "Emergency Alert"}"
                                     snippet = alert.location ?: alert.content ?: "Emergency alert in this area"
                                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                                    // Use red color for alert markers
                                     icon = createAlertMarkerIcon(mapView.context)
                                 }
                                 mapView.overlays.add(marker)
                             }
-                        mapView.invalidate()
+                            
+                            // Only invalidate once after all markers are added
+                            mapView.invalidate()
+                            previousAlertIds = currentAlertIds
+                        }
                     }
                     else -> {}
                 }
@@ -578,17 +584,31 @@ fun MapScreen() {
             }
         }
         
-        // Real-time location tracking for navigation
+        // Real-time location tracking for navigation - optimized for performance
         LaunchedEffect(navigationState.isNavigating, locationOverlay) {
             if (navigationState.isNavigating && locationOverlay != null) {
+                var lastLocation: org.osmdroid.util.GeoPoint? = null
                 while (navigationState.isNavigating) {
                     locationOverlay?.myLocation?.let { location ->
-                        navigationManager.updateLocation(
-                            location.latitude,
-                            location.longitude
-                        )
+                        // Only update if location has changed significantly (at least 10 meters)
+                        val shouldUpdate = lastLocation == null || 
+                            LocationUtils.calculateDistance(
+                                lastLocation!!.latitude, lastLocation!!.longitude,
+                                location.latitude, location.longitude
+                            ) * 1000 > 10.0 // Convert km to meters, check if > 10m
+                        
+                        if (shouldUpdate) {
+                            // Perform update on background thread to avoid blocking UI
+                            kotlinx.coroutines.withContext(Dispatchers.Default) {
+                                navigationManager.updateLocation(
+                                    location.latitude,
+                                    location.longitude
+                                )
+                            }
+                            lastLocation = location
+                        }
                     }
-                    delay(2000) // Update every 2 seconds
+                    delay(3000) // Update every 3 seconds (reduced frequency for better performance)
                 }
             }
         }
