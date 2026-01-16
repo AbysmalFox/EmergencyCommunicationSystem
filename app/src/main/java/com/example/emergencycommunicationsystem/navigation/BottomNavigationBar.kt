@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -37,9 +38,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,10 +51,11 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.animation.animateContentSize
+import com.example.emergencycommunicationsystem.ui.theme.SoftShadow
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 
-const val navOverlayHeight = 92
-const val navOverlayLift = 50 // Increased from 36 to 50 to position it higher
+const val navOverlayHeight = 80 // Reduced slightly
+const val navOverlayLift = 24 // Adjusted lift
 
 @Composable
 fun BottomNavigationBar(
@@ -74,11 +78,17 @@ fun BottomNavigationBar(
             .height(navOverlayHeight.dp)
             .padding(horizontal = 20.dp)
             .offset(y = (-navOverlayLift).dp)
+            .shadow(
+                elevation = 20.dp,
+                shape = RoundedCornerShape(32.dp),
+                spotColor = SoftShadow.copy(alpha = 0.1f),
+                ambientColor = SoftShadow.copy(alpha = 0.1f)
+            )
             .clip(RoundedCornerShape(32.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .border( // Add the border here
-                width = 2.dp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), // Subtle outline
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)) // Glass-like opacity
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), // Very subtle border
                 shape = RoundedCornerShape(32.dp)
             )
     ) {
@@ -99,7 +109,8 @@ fun BottomNavigationBar(
                 .fillMaxHeight()
                 .padding(vertical = 12.dp, horizontal = 8.dp)
                 .clip(RoundedCornerShape(24.dp))
-                .background(MaterialTheme.colorScheme.surface)
+                // Subtle indicator background
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
         )
 
         Row(
@@ -128,8 +139,9 @@ private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, onClick: () ->
     val haptic = LocalHapticFeedback.current
     val localeContext = getLocaleContext()
 
+    // Animate color: Active = Primary, Inactive = Gray
     val iconColor by animateColorAsState(
-        targetValue = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
         animationSpec = tween(300),
         label = "iconColor"
     )
@@ -182,7 +194,9 @@ private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, onClick: () ->
                     painter = painterResource(id = tablerIconRes),
                     contentDescription = localizedTitle,
                     tint = iconColor,
-                    modifier = Modifier.offset(y = iconOffsetY)
+                    modifier = Modifier
+                        .offset(y = iconOffsetY)
+                        .size(if (isSelected) 26.dp else 24.dp) // Slightly larger when selected
                 )
 
                 AnimatedVisibility(
@@ -192,9 +206,10 @@ private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, onClick: () ->
                 ) {
                     Text(
                         text = localizedTitle,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(top = 6.dp)
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 4.dp)
                     )
                 }
             }

@@ -32,8 +32,8 @@ private val AppDarkColorScheme = darkColorScheme(
 private val AppLightColorScheme = lightColorScheme(
     primary = Slate,
     secondary = Teal,
-    background = Color(0xFFF0F2F5),
-    surface = White,
+    background = Color(0xFFE5E5EA), // Darker grey background
+    surface = Color.White,          // Pure white surface for contrast
     onPrimary = White,
     onSecondary = DarkNavy,
     onBackground = DarkNavy,
@@ -67,7 +67,7 @@ fun EmergencyCommunicationSystemTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = AppTypography,
         content = content
     )
 }

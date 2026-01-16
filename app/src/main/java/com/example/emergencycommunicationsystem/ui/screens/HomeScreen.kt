@@ -52,11 +52,13 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.emergencycommunicationsystem.R
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.data.models.WeatherState
 import com.example.emergencycommunicationsystem.ui.components.ActionGrid
 import com.example.emergencycommunicationsystem.ui.components.SafeOverlay
 import com.example.emergencycommunicationsystem.ui.components.WeatherWidget
 import com.example.emergencycommunicationsystem.ui.components.EmergencyInstructions
+import com.example.emergencycommunicationsystem.util.Resource
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
 import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
@@ -81,8 +83,8 @@ fun HomeScreen(
     
     // Alerts ViewModel
     val alertsViewModel: AlertsViewModel = viewModel()
-    val alertsState by alertsViewModel.uiState.collectAsState()
-    val weatherState by weatherViewModel.weatherState.collectAsState()
+    val alertsState by alertsViewModel.uiState.collectAsState(initial = Resource.Loading)
+    val weatherState by weatherViewModel.weatherState.collectAsState(initial = WeatherState.Loading)
     
     // Get user location for distance calculation
     val userLocation = when (val state = weatherState) {
@@ -137,7 +139,7 @@ fun HomeScreen(
         modifier = Modifier.fillMaxSize()
     ) {
         // Reserve bottom padding so the last content (weather widget) scrolls above the floating nav
-        val bottomNavReserved = 160.dp // Increased padding as requested
+        val bottomNavReserved = 140.dp // Increased padding
         val listState = rememberLazyListState()
         
         Box(modifier = Modifier.fillMaxSize()) {
@@ -145,10 +147,10 @@ fun HomeScreen(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = bottomNavReserved),
-                verticalArrangement = Arrangement.spacedBy(27.dp) // Reduced spacing
+                verticalArrangement = Arrangement.spacedBy(24.dp) // Adjusted spacing
             ) {
             item {
-                Spacer(modifier = Modifier.height(9.dp)) // Reduced spacing
+                Spacer(modifier = Modifier.height(12.dp))
                 AnimatedVisibility(
                     visibleState = animationState,
                     enter = fadeIn(animationSpec = tween(durationMillis = 500)) +
@@ -158,14 +160,15 @@ fun HomeScreen(
                     androidx.compose.foundation.layout.Column {
                         Text(
                             localeContext.getString(R.string.emergency_dashboard),
-                            fontSize = 26.sp,
+                            fontSize = 28.sp, // Slightly larger
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
+                            color = MaterialTheme.colorScheme.onBackground // High contrast color
                         )
                         Text(
                             localeContext.getString(R.string.dashboard_subtitle),
                             fontSize = 15.sp,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                            modifier = Modifier.padding(top = 4.dp)
                         )
                     }
                 }

@@ -31,6 +31,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import com.example.emergencycommunicationsystem.ui.theme.VibrantRed
 import com.example.emergencycommunicationsystem.ui.theme.CardBorder
+import com.example.emergencycommunicationsystem.ui.theme.SoftShadow
+import com.example.emergencycommunicationsystem.ui.theme.StatusDanger
+import com.example.emergencycommunicationsystem.ui.theme.StatusInfo
+import com.example.emergencycommunicationsystem.ui.theme.StatusSafe
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -63,6 +67,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -145,48 +150,60 @@ fun SegmentedButtonRow(options: List<String>, selectedOption: String, onOptionSe
 fun EmergencyCallButton(onClick: () -> Unit) {
     val localeContext = getLocaleContext()
     val shape = RoundedCornerShape(24.dp)
-    Button(
-        onClick = onClick,
-        shape = shape,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = VibrantRed
-        ),
+    
+    // Gradient: Top-light to Bottom-dark Red
+    val gradientBrush = Brush.verticalGradient(
+        colors = listOf(
+            Color(0xFFFF5E5E), // Lighter red
+            VibrantRed,        // Standard red
+            Color(0xFFB00020)  // Darker red
+        )
+    )
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
+            .height(88.dp) // Increased height slightly
             .shadow(
-                elevation = 12.dp,
+                elevation = 16.dp, // Increased elevation
                 shape = shape,
-                spotColor = VibrantRed,
-                ambientColor = VibrantRed.copy(alpha = 0.4f)
+                spotColor = VibrantRed.copy(alpha = 0.6f),
+                ambientColor = VibrantRed.copy(alpha = 0.3f)
             )
-            .height(80.dp)
+            .clip(shape)
+            .background(gradientBrush)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 24.dp),
+        contentAlignment = Alignment.Center
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
+            // Thicker icon stroke simulated by using a larger size and potentially a different icon if available
+            // Since we can't easily change the vector path here, we'll keep the icon but ensure it's prominent
             Icon(
                 painter = painterResource(id = R.drawable.ic_tabler_phone),
                 contentDescription = localeContext.getString(R.string.emergency_call_label),
                 tint = Color.White,
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier.size(36.dp) // Increased size
             )
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(20.dp))
             Column {
                 Text(
-                    text = localeContext.getString(R.string.emergency_call_label),
-                    color = Color.White,
+                    text = localeContext.getString(R.string.emergency_call_label).uppercase(),
+                    color = Color.White.copy(alpha = 0.9f),
                     fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    letterSpacing = 1.5.sp
+                    fontSize = 13.sp,
+                    letterSpacing = 1.sp
                 )
                 Text(
                     text = localeContext.getString(R.string.call_button),
                     color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp,
-                    letterSpacing = 1.5.sp
+                    fontWeight = FontWeight.ExtraBold, // Extra bold
+                    fontSize = 26.sp,
+                    letterSpacing = 0.5.sp
                 )
             }
         }
@@ -210,14 +227,18 @@ fun ActionGrid(
                 onClick = onReportClick,
                 modifier = Modifier.weight(1f),
                 useTablerIcon = true,
-                tablerIconRes = R.drawable.ic_tabler_file_alert
+                tablerIconRes = R.drawable.ic_tabler_file_alert,
+                accentColor = StatusDanger,
+                isFilled = true
             )
             ActionGridItem(
                 title = localeContext.getString(R.string.i_am_safe),
                 onClick = onSafeClick,
                 modifier = Modifier.weight(1f),
                 useTablerIcon = true,
-                tablerIconRes = R.drawable.ic_tabler_shield_check
+                tablerIconRes = R.drawable.ic_tabler_shield_check,
+                accentColor = StatusSafe,
+                isFilled = true
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(15.dp)) {
@@ -226,7 +247,10 @@ fun ActionGrid(
                 onClick = onMessageClick,
                 modifier = Modifier.weight(1f),
                 useTablerIcon = true,
-                tablerIconRes = R.drawable.ic_tabler_message_plus
+                tablerIconRes = R.drawable.ic_tabler_message_plus,
+                accentColor = StatusInfo,
+                isFilled = false,
+                isCentered = true
             )
         }
     }
@@ -239,40 +263,57 @@ fun ActionGridItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     useTablerIcon: Boolean = false,
-    @androidx.annotation.DrawableRes tablerIconRes: Int? = null
+    @androidx.annotation.DrawableRes tablerIconRes: Int? = null,
+    accentColor: Color = MaterialTheme.colorScheme.primary,
+    isFilled: Boolean = false,
+    isCentered: Boolean = false
 ) {
     val shape = RoundedCornerShape(24.dp)
-    Button(
+    
+    // Filled style uses solid accent color with white icon
+    // Non-filled style uses subtle tint with colored icon
+    val circleBackgroundColor = if (isFilled) accentColor else accentColor.copy(alpha = 0.1f)
+    val iconTintColor = if (isFilled) Color.White else accentColor
+    
+    Card(
         onClick = onClick,
         shape = shape,
-        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         modifier = modifier
-            .shadow(elevation = 6.dp, shape = shape, spotColor = Color.Black.copy(alpha = 0.1f))
-            .height(80.dp),
-        border = BorderStroke(1.dp, CardBorder)
+            .shadow(elevation = 8.dp, shape = shape, spotColor = SoftShadow, ambientColor = SoftShadow)
+            .height(84.dp),
+        border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.1f))
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+            horizontalArrangement = if (isCentered) Arrangement.Center else Arrangement.Start
         ) {
-            if (useTablerIcon && tablerIconRes != null) {
-                Icon(
-                    painter = painterResource(id = tablerIconRes),
-                    contentDescription = title,
-                    tint = Color.White,
-                    modifier = Modifier.size(37.dp)
-                )
-            } else if (icon != null) {
-                Icon(icon, contentDescription = title, tint = Color.White, modifier = Modifier.size(32.dp))
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(circleBackgroundColor),
+                contentAlignment = Alignment.Center
+            ) {
+                if (useTablerIcon && tablerIconRes != null) {
+                    Icon(
+                        painter = painterResource(id = tablerIconRes),
+                        contentDescription = title,
+                        tint = iconTintColor,
+                        modifier = Modifier.size(28.dp)
+                    )
+                } else if (icon != null) {
+                    Icon(icon, contentDescription = title, tint = iconTintColor, modifier = Modifier.size(28.dp))
+                }
             }
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = title.uppercase(),
-                color = Color.White,
+                text = title,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold,
-                fontSize = 12.sp,
-                letterSpacing = 0.5.sp
+                fontSize = 13.sp,
+                lineHeight = 16.sp
             )
         }
     }
@@ -299,10 +340,10 @@ fun WeatherWidget(state: WeatherState) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(elevation = 6.dp, shape = shape, spotColor = Color.Black.copy(alpha = 0.1f))
+                    .shadow(elevation = 8.dp, shape = shape, spotColor = SoftShadow, ambientColor = SoftShadow)
                     .clip(shape)
-                    .border(1.dp, CardBorder, shape)
                     .background(MaterialTheme.colorScheme.surface)
+                    .border(1.dp, Color.Black.copy(alpha = 0.1f), shape)
                     .padding(24.dp)
             ) {
                 Row(
@@ -753,23 +794,23 @@ fun CompactAlertCard(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .shadow(elevation = 4.dp, shape = RoundedCornerShape(16.dp), spotColor = Color.Black.copy(alpha = 0.1f)),
+            .shadow(elevation = 8.dp, shape = RoundedCornerShape(16.dp), spotColor = SoftShadow, ambientColor = SoftShadow),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, CardBorder)
+        border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.1f))
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Severity indicator bar
+            // Severity indicator bar - made wider
             Box(
                 modifier = Modifier
-                    .width(4.dp)
+                    .width(6.dp) // Widen to 6px
                     .height(60.dp)
-                    .background(severityColor, RoundedCornerShape(2.dp))
+                    .background(severityColor, RoundedCornerShape(3.dp))
             )
             
             Spacer(modifier = Modifier.width(12.dp))
@@ -797,14 +838,15 @@ fun CompactAlertCard(
                         fontWeight = FontWeight.Bold,
                         color = severityColor
                     )
+                    // Semi-transparent badge styling
                     Box(
                         modifier = Modifier
-                            .background(severityColor.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .background(severityColor.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
                             text = severity,
-                            fontSize = 9.sp,
+                            fontSize = 10.sp, // Slightly larger
                             fontWeight = FontWeight.Bold,
                             color = severityColor
                         )
@@ -816,14 +858,14 @@ fun CompactAlertCard(
                 // Title
                 Text(
                     text = alert.title ?: localeContext.getString(R.string.no_title),
-                    fontSize = 14.sp,
+                    fontSize = 15.sp, // Increased size
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     modifier = Modifier.fillMaxWidth()
                 )
                 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 
                 // Distance and location
                 Row(
@@ -834,13 +876,14 @@ fun CompactAlertCard(
                         Icon(
                             imageVector = AppIcons.Location,
                             contentDescription = "Distance",
-                            modifier = Modifier.size(12.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            modifier = Modifier.size(14.dp),
+                            tint = Color.Gray // Medium gray
                         )
                         Text(
                             text = com.example.emergencycommunicationsystem.util.LocationUtils.formatDistance(distanceKm),
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            fontSize = 13.sp, // Increased font size
+                            color = Color.Gray, // Medium gray
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
@@ -926,11 +969,13 @@ fun EmergencyInstructions(
                 } else {
                     Modifier
                 }
-            ),
+            )
+            .shadow(elevation = 8.dp, shape = RoundedCornerShape(16.dp), spotColor = SoftShadow, ambientColor = SoftShadow),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.1f))
     ) {
         Column(
             modifier = Modifier.padding(16.dp)

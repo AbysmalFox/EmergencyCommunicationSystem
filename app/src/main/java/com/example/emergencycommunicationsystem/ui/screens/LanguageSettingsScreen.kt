@@ -53,7 +53,10 @@ fun LanguageSettingsScreen(
     val languages = listOf(
         "en" to context.getString(R.string.language_english),
         "fil" to context.getString(R.string.language_filipino),
-        "es" to context.getString(R.string.language_spanish)
+        "es" to context.getString(R.string.language_spanish),
+        "bcl" to context.getString(R.string.language_bicolano),
+        "ceb" to context.getString(R.string.language_bisaya),
+        "war" to context.getString(R.string.language_waray)
     )
 
     Scaffold(

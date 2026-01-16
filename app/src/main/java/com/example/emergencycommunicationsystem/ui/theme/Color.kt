@@ -17,12 +17,22 @@ val SignalRed = Color(0xFFFF3B30) // For High alerts
 val LightBackground = Color(0xFFF2F2F7) // Light grey background
 val CardBorder = Color(0xFFE5E5EA) // Very thin light-grey border
 
+// Refined Palette (User Request)
+val NeutralBackground = Color(0xFFF8F9FA) // Warm/Cool off-white
+val DeepNavy = Color(0xFF0D1B2A) // High contrast for headers
+val SoftShadow = Color(0x1A000000) // Soft drop shadow color
+
+// Status Colors
+val StatusSafe = Color(0xFF28A745)
+val StatusWarning = Color(0xFFFFC107)
+val StatusDanger = Color(0xFFDC3545)
+val StatusInfo = Color(0xFF17A2B8)
+
 // You can keep old colors or remove them
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)
 val Pink80 = Color(0xFFEFB8C8)
 
 val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 =
-        Color(0xFF625b71)
+val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)

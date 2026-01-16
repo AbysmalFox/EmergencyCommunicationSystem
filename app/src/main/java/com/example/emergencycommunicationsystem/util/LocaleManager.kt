@@ -35,7 +35,11 @@ object LocaleManager {
         return when (langCode) {
             "fil" -> Locale("fil")
             "es" -> Locale("es")
-            else -> Locale("en")
+            "bcl" -> Locale("bcl")
+            "ceb" -> Locale("ceb")
+            "war" -> Locale("war")
+            "en" -> Locale("en")
+            else -> Locale(langCode)
         }
     }
 }
