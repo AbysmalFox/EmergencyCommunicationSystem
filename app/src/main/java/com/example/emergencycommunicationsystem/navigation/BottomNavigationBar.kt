@@ -52,6 +52,9 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.animation.animateContentSize
 import com.example.emergencycommunicationsystem.ui.theme.SoftShadow
+import com.example.emergencycommunicationsystem.ui.theme.Slate
+import com.example.emergencycommunicationsystem.ui.theme.DarkNavy
+import androidx.compose.ui.graphics.Color
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 
 const val navOverlayHeight = 80 // Reduced slightly
@@ -72,6 +75,10 @@ fun BottomNavigationBar(
         }.coerceAtLeast(0)
     }
 
+    // Detect dark mode to adjust colors
+    val bgColor = MaterialTheme.colorScheme.background
+    val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
+    
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -79,16 +86,29 @@ fun BottomNavigationBar(
             .padding(horizontal = 20.dp)
             .offset(y = (-navOverlayLift).dp)
             .shadow(
-                elevation = 20.dp,
+                elevation = 24.dp, // Stronger shadow
                 shape = RoundedCornerShape(32.dp),
-                spotColor = SoftShadow.copy(alpha = 0.1f),
-                ambientColor = SoftShadow.copy(alpha = 0.1f)
+                spotColor = Color.Black.copy(alpha = 0.5f),
+                ambientColor = Color.Black.copy(alpha = 0.4f)
             )
             .clip(RoundedCornerShape(32.dp))
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)) // Glass-like opacity
+            .background(
+                // Use a significantly different color to stand out
+                if (isDarkMode) {
+                    // Dark mode: Use a darker, more distinct color (darker than Slate)
+                    Color(0xFF1A2332) // Darker blue-gray that stands out from DarkNavy
+                } else {
+                    // Light mode: Use a slightly darker shade
+                    Color(0xFFF5F5F5) // Light gray that stands out from white
+                }
+            )
             .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), // Very subtle border
+                width = 2.dp, // Thicker border for more visibility
+                color = if (isDarkMode) {
+                    Color.White.copy(alpha = 0.2f) // More visible border in dark mode
+                } else {
+                    Color.Black.copy(alpha = 0.15f) // More visible border in light mode
+                },
                 shape = RoundedCornerShape(32.dp)
             )
     ) {

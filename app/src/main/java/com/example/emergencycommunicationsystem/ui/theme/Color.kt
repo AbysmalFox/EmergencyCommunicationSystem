@@ -28,6 +28,11 @@ val StatusWarning = Color(0xFFFFC107)
 val StatusDanger = Color(0xFFDC3545)
 val StatusInfo = Color(0xFF17A2B8)
 
+// Lighter versions for dark mode - significantly lighter to be less harsh
+val StatusSafeLight = Color(0xFF66BB6A) // Much lighter green for dark mode
+val StatusDangerLight = Color(0xFFFF6B6B) // Much lighter red for dark mode  
+val VibrantRedLight = Color(0xFFFF6B6B) // Much lighter red for emergency button in dark mode
+
 // You can keep old colors or remove them
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)

@@ -10,7 +10,14 @@ package com.example.emergencycommunicationsystem.ui.components
 import android.content.Intent
 import androidx.core.net.toUri
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -28,13 +35,29 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlin.math.PI
+import kotlin.math.sin
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import com.example.emergencycommunicationsystem.ui.theme.VibrantRed
+import com.example.emergencycommunicationsystem.ui.theme.VibrantRedLight
+import com.example.emergencycommunicationsystem.ui.theme.DarkNavy
+import com.example.emergencycommunicationsystem.ui.theme.Slate
 import com.example.emergencycommunicationsystem.ui.theme.CardBorder
 import com.example.emergencycommunicationsystem.ui.theme.SoftShadow
 import com.example.emergencycommunicationsystem.ui.theme.StatusDanger
+import com.example.emergencycommunicationsystem.ui.theme.StatusDangerLight
 import com.example.emergencycommunicationsystem.ui.theme.StatusInfo
 import com.example.emergencycommunicationsystem.ui.theme.StatusSafe
+import com.example.emergencycommunicationsystem.ui.theme.StatusSafeLight
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -62,6 +85,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -146,17 +170,161 @@ fun SegmentedButtonRow(options: List<String>, selectedOption: String, onOptionSe
     }
 }
 
+/**
+ * Helper function to draw an animated wave pattern
+ */
+private fun DrawScope.drawWavePattern(
+    size: Size,
+    waveOffset: Float,
+    waveColor: Color,
+    waveAmplitude: Float,
+    waveFrequency: Float
+) {
+    val centerY = size.height / 2f
+    val waveLength = size.width / waveFrequency
+    
+    // Draw multiple wave layers for a more dynamic effect
+    for (layer in 0..1) {
+        val path = Path()
+        val layerOffset = waveOffset + (layer * PI.toFloat() / 2f)
+        val layerAmplitude = waveAmplitude * (1f - layer * 0.3f)
+        val layerAlpha = 0.2f - (layer * 0.1f)
+        
+        // Create a filled wave shape
+        path.moveTo(0f, size.height)
+        path.lineTo(0f, centerY)
+        
+        // Draw the wave curve
+        for (x in 0..size.width.toInt() step 3) {
+            val y = centerY + layerAmplitude * sin((x / waveLength) * 2f * PI.toFloat() + layerOffset)
+            path.lineTo(x.toFloat(), y)
+        }
+        
+        // Complete the path to create a filled shape
+        path.lineTo(size.width, size.height)
+        path.close()
+        
+        // Draw filled wave
+        drawPath(
+            path = path,
+            color = waveColor.copy(alpha = layerAlpha)
+        )
+    }
+    
+    // Draw wave outline for definition
+    val outlinePath = Path()
+    outlinePath.moveTo(0f, centerY)
+    
+    for (x in 0..size.width.toInt() step 2) {
+        val y = centerY + waveAmplitude * sin((x / waveLength) * 2f * PI.toFloat() + waveOffset)
+        outlinePath.lineTo(x.toFloat(), y)
+    }
+    
+    drawPath(
+        path = outlinePath,
+        color = waveColor.copy(alpha = 0.3f),
+        style = Stroke(width = 2f)
+    )
+}
+
 @Composable
 fun EmergencyCallButton(onClick: () -> Unit) {
     val localeContext = getLocaleContext()
     val shape = RoundedCornerShape(24.dp)
+    // Use MaterialTheme to detect dark mode (respects user's theme preference)
+    // Check if background is dark by comparing luminance
+    val bgColor = MaterialTheme.colorScheme.background
+    val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
     
-    // Gradient: Top-light to Bottom-dark Red
+    // Use lighter colors in dark mode - significantly lighter
+    val baseRed = if (isDarkMode) VibrantRedLight else VibrantRed
+    val lightRed = if (isDarkMode) Color(0xFFFF9A9A) else Color(0xFFFF5E5E) // Even lighter in dark mode
+    val darkRed = if (isDarkMode) Color(0xFFFF6B6B) else Color(0xFFB00020)
+    
+    // Pulsing animation - makes the red lighter periodically (more noticeable)
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val pulseProgress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing), // Slightly faster
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse_progress"
+    )
+    
+    // Wave animation - horizontal wave movement
+    val waveOffset by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 2 * PI.toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(3000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "wave_offset"
+    )
+    
+    // Incoming call animation for the phone icon - subtle horizontal shake like phone ringing
+    val phoneShake by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(600, easing = LinearEasing), // Slower, more chill
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "phone_shake"
+    )
+    
+    // Get density for dp to px conversion
+    val density = LocalDensity.current
+    
+    // Calculate horizontal shake (left to right like phone vibrating)
+    // More subtle: moves between -2 and +2 dp
+    val shakeOffsetDp = (phoneShake * 4f) - 2f // Moves between -2 and +2 dp
+    val shakeOffsetX = with(density) { shakeOffsetDp.dp.toPx() }
+    
+    // Very subtle vertical movement (barely noticeable)
+    val subtleBounceDp = (phoneShake * 1f) - 0.5f // Moves between -0.5 and +0.5 dp
+    val shakeOffsetY = with(density) { subtleBounceDp.dp.toPx() }
+    
+    // Very subtle rotation (gentle sway)
+    val rotationAngle = (phoneShake - 0.5f) * 2f // Rotates between -1 and +1 degrees (very subtle)
+    
+    // Very subtle scale (gentle pulse)
+    val iconScale = 1f + (phoneShake * 0.03f) // Scales between 1.0 and 1.03 (very subtle)
+    
+    // Interpolate between lighter and base colors - make animation more noticeable
+    // Pulse between 30% lighter and 100% base for more visible effect
+    val lightnessFactor = 0.3f + (pulseProgress * 0.7f) // Oscillates between 0.3 and 1.0
+    
+    // Manual color interpolation
+    fun lerpColor(start: Color, end: Color, fraction: Float): Color {
+        val startRed = start.red
+        val endRed = end.red
+        val startGreen = start.green
+        val endGreen = end.green
+        val startBlue = start.blue
+        val endBlue = end.blue
+        val startAlpha = start.alpha
+        val endAlpha = end.alpha
+        
+        return Color(
+            red = startRed + (endRed - startRed) * fraction,
+            green = startGreen + (endGreen - startGreen) * fraction,
+            blue = startBlue + (endBlue - startBlue) * fraction,
+            alpha = startAlpha + (endAlpha - startAlpha) * fraction
+        )
+    }
+    
+    val animatedLightRed = lerpColor(lightRed, baseRed, lightnessFactor)
+    val animatedBaseRed = lerpColor(baseRed, lightRed, (1f - lightnessFactor) * 0.3f)
+    
+    // Gradient: Top-light to Bottom-dark Red with animation
     val gradientBrush = Brush.verticalGradient(
         colors = listOf(
-            Color(0xFFFF5E5E), // Lighter red
-            VibrantRed,        // Standard red
-            Color(0xFFB00020)  // Darker red
+            animatedLightRed,
+            animatedBaseRed,
+            darkRed
         )
     )
 
@@ -167,11 +335,21 @@ fun EmergencyCallButton(onClick: () -> Unit) {
             .shadow(
                 elevation = 16.dp, // Increased elevation
                 shape = shape,
-                spotColor = VibrantRed.copy(alpha = 0.6f),
-                ambientColor = VibrantRed.copy(alpha = 0.3f)
+                spotColor = baseRed.copy(alpha = 0.6f),
+                ambientColor = baseRed.copy(alpha = 0.3f)
             )
             .clip(shape)
             .background(gradientBrush)
+            .drawBehind {
+                // Draw animated wave pattern
+                drawWavePattern(
+                    size = size,
+                    waveOffset = waveOffset,
+                    waveColor = Color.White.copy(alpha = 0.25f),
+                    waveAmplitude = size.height * 0.25f,
+                    waveFrequency = 1.5f
+                )
+            }
             .clickable(onClick = onClick)
             .padding(horizontal = 24.dp),
         contentAlignment = Alignment.Center
@@ -183,11 +361,20 @@ fun EmergencyCallButton(onClick: () -> Unit) {
         ) {
             // Thicker icon stroke simulated by using a larger size and potentially a different icon if available
             // Since we can't easily change the vector path here, we'll keep the icon but ensure it's prominent
+            // Add incoming call animation - bounce, rotate, and scale
             Icon(
                 painter = painterResource(id = R.drawable.ic_tabler_phone),
                 contentDescription = localeContext.getString(R.string.emergency_call_label),
                 tint = Color.White,
-                modifier = Modifier.size(36.dp) // Increased size
+                modifier = Modifier
+                    .size(36.dp) // Increased size
+                    .graphicsLayer(
+                        translationX = shakeOffsetX, // Horizontal shake (left to right)
+                        translationY = shakeOffsetY, // Very subtle vertical movement
+                        rotationZ = rotationAngle, // Gentle sway
+                        scaleX = iconScale,
+                        scaleY = iconScale
+                    )
             )
             Spacer(modifier = Modifier.width(20.dp))
             Column {
@@ -269,11 +456,22 @@ fun ActionGridItem(
     isCentered: Boolean = false
 ) {
     val shape = RoundedCornerShape(24.dp)
+    // Use MaterialTheme to detect dark mode (respects user's theme preference)
+    // Check if background is dark by comparing luminance
+    val bgColor = MaterialTheme.colorScheme.background
+    val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
+    
+    // Use lighter colors in dark mode for red and green - significantly lighter
+    val adjustedAccentColor = when {
+        isDarkMode && accentColor == StatusDanger -> StatusDangerLight
+        isDarkMode && accentColor == StatusSafe -> StatusSafeLight
+        else -> accentColor
+    }
     
     // Filled style uses solid accent color with white icon
     // Non-filled style uses subtle tint with colored icon
-    val circleBackgroundColor = if (isFilled) accentColor else accentColor.copy(alpha = 0.1f)
-    val iconTintColor = if (isFilled) Color.White else accentColor
+    val circleBackgroundColor = if (isFilled) adjustedAccentColor else adjustedAccentColor.copy(alpha = 0.1f)
+    val iconTintColor = if (isFilled) Color.White else adjustedAccentColor
     
     Card(
         onClick = onClick,
@@ -562,6 +760,10 @@ fun HotlineItem(name: String, number: String) {
 @Composable
 fun AppBottomNavigation(selectedScreen: Screen, onScreenSelected: (Screen) -> Unit) {
     val items = listOf(Screen.Home, Screen.Alerts, Screen.Profile)
+    
+    // Detect dark mode to adjust colors
+    val bgColor = MaterialTheme.colorScheme.background
+    val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
 
     Box(
         modifier = Modifier
@@ -572,11 +774,29 @@ fun AppBottomNavigation(selectedScreen: Screen, onScreenSelected: (Screen) -> Un
         Surface(
             modifier = Modifier
                 .shadow(
-                    elevation = 8.dp,
+                    elevation = 20.dp, // Increased elevation for more prominence
                     shape = RoundedCornerShape(50),
+                    spotColor = Color.Black.copy(alpha = 0.4f),
+                    ambientColor = Color.Black.copy(alpha = 0.3f)
+                )
+                .border(
+                    width = 1.5.dp,
+                    color = if (isDarkMode) {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                    } else {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                    },
+                    shape = RoundedCornerShape(50)
                 ),
             shape = RoundedCornerShape(50),
-            color = MaterialTheme.colorScheme.surface,
+            // Use a more distinct color to stand out from content
+            color = if (isDarkMode) {
+                // Dark mode: use a lighter, more distinct surface color
+                Slate.copy(alpha = 0.95f) // Use Slate color which is lighter than DarkNavy
+            } else {
+                // Light mode: use a slightly darker, more distinct surface
+                Color.White.copy(alpha = 0.98f) // Almost white but distinct
+            },
         ) {
             Row(
                 modifier = Modifier
