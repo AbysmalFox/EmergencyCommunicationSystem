@@ -171,7 +171,7 @@ fun SegmentedButtonRow(options: List<String>, selectedOption: String, onOptionSe
 }
 
 /**
- * Helper function to draw an animated wave pattern
+ * Helper function to draw an animated wave pattern (optimized for performance)
  */
 private fun DrawScope.drawWavePattern(
     size: Size,
@@ -183,47 +183,30 @@ private fun DrawScope.drawWavePattern(
     val centerY = size.height / 2f
     val waveLength = size.width / waveFrequency
     
-    // Draw multiple wave layers for a more dynamic effect
-    for (layer in 0..1) {
-        val path = Path()
-        val layerOffset = waveOffset + (layer * PI.toFloat() / 2f)
-        val layerAmplitude = waveAmplitude * (1f - layer * 0.3f)
-        val layerAlpha = 0.2f - (layer * 0.1f)
-        
-        // Create a filled wave shape
-        path.moveTo(0f, size.height)
-        path.lineTo(0f, centerY)
-        
-        // Draw the wave curve
-        for (x in 0..size.width.toInt() step 3) {
-            val y = centerY + layerAmplitude * sin((x / waveLength) * 2f * PI.toFloat() + layerOffset)
-            path.lineTo(x.toFloat(), y)
-        }
-        
-        // Complete the path to create a filled shape
-        path.lineTo(size.width, size.height)
-        path.close()
-        
-        // Draw filled wave
-        drawPath(
-            path = path,
-            color = waveColor.copy(alpha = layerAlpha)
-        )
-    }
+    // Optimized: Use fewer points for better performance (step 8 instead of 3)
+    val stepSize = 8f // Larger step = fewer calculations = better performance
     
-    // Draw wave outline for definition
-    val outlinePath = Path()
-    outlinePath.moveTo(0f, centerY)
+    // Simplified: Draw only one wave layer instead of multiple
+    val path = Path()
+    path.moveTo(0f, size.height)
+    path.lineTo(0f, centerY)
     
-    for (x in 0..size.width.toInt() step 2) {
+    // Draw the wave curve with fewer points
+    var x = 0f
+    while (x <= size.width) {
         val y = centerY + waveAmplitude * sin((x / waveLength) * 2f * PI.toFloat() + waveOffset)
-        outlinePath.lineTo(x.toFloat(), y)
+        path.lineTo(x, y)
+        x += stepSize
     }
     
+    // Complete the path to create a filled shape
+    path.lineTo(size.width, size.height)
+    path.close()
+    
+    // Draw single filled wave (simplified from multiple layers)
     drawPath(
-        path = outlinePath,
-        color = waveColor.copy(alpha = 0.3f),
-        style = Stroke(width = 2f)
+        path = path,
+        color = waveColor.copy(alpha = 0.15f) // Reduced opacity for subtlety
     )
 }
 
@@ -253,12 +236,12 @@ fun EmergencyCallButton(onClick: () -> Unit) {
         label = "pulse_progress"
     )
     
-    // Wave animation - horizontal wave movement
+    // Wave animation - horizontal wave movement (slower for better performance)
     val waveOffset by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 2 * PI.toFloat(),
         animationSpec = infiniteRepeatable(
-            animation = tween(3000, easing = LinearEasing),
+            animation = tween(4000, easing = LinearEasing), // Slower = fewer updates = better performance
             repeatMode = RepeatMode.Restart
         ),
         label = "wave_offset"
@@ -297,27 +280,21 @@ fun EmergencyCallButton(onClick: () -> Unit) {
     // Pulse between 30% lighter and 100% base for more visible effect
     val lightnessFactor = 0.3f + (pulseProgress * 0.7f) // Oscillates between 0.3 and 1.0
     
-    // Manual color interpolation
-    fun lerpColor(start: Color, end: Color, fraction: Float): Color {
-        val startRed = start.red
-        val endRed = end.red
-        val startGreen = start.green
-        val endGreen = end.green
-        val startBlue = start.blue
-        val endBlue = end.blue
-        val startAlpha = start.alpha
-        val endAlpha = end.alpha
-        
-        return Color(
-            red = startRed + (endRed - startRed) * fraction,
-            green = startGreen + (endGreen - startGreen) * fraction,
-            blue = startBlue + (endBlue - startBlue) * fraction,
-            alpha = startAlpha + (endAlpha - startAlpha) * fraction
-        )
-    }
+    // Optimized inline color interpolation (no function call overhead)
+    val animatedLightRed = Color(
+        red = lightRed.red + (baseRed.red - lightRed.red) * lightnessFactor,
+        green = lightRed.green + (baseRed.green - lightRed.green) * lightnessFactor,
+        blue = lightRed.blue + (baseRed.blue - lightRed.blue) * lightnessFactor,
+        alpha = lightRed.alpha + (baseRed.alpha - lightRed.alpha) * lightnessFactor
+    )
     
-    val animatedLightRed = lerpColor(lightRed, baseRed, lightnessFactor)
-    val animatedBaseRed = lerpColor(baseRed, lightRed, (1f - lightnessFactor) * 0.3f)
+    val factor = (1f - lightnessFactor) * 0.3f
+    val animatedBaseRed = Color(
+        red = baseRed.red + (lightRed.red - baseRed.red) * factor,
+        green = baseRed.green + (lightRed.green - baseRed.green) * factor,
+        blue = baseRed.blue + (lightRed.blue - baseRed.blue) * factor,
+        alpha = baseRed.alpha + (lightRed.alpha - baseRed.alpha) * factor
+    )
     
     // Gradient: Top-light to Bottom-dark Red with animation
     val gradientBrush = Brush.verticalGradient(
@@ -341,14 +318,17 @@ fun EmergencyCallButton(onClick: () -> Unit) {
             .clip(shape)
             .background(gradientBrush)
             .drawBehind {
-                // Draw animated wave pattern
-                drawWavePattern(
-                    size = size,
-                    waveOffset = waveOffset,
-                    waveColor = Color.White.copy(alpha = 0.25f),
-                    waveAmplitude = size.height * 0.25f,
-                    waveFrequency = 1.5f
-                )
+                // Draw animated wave pattern (optimized for performance)
+                // Only draw if size is valid to avoid unnecessary calculations
+                if (size.width > 0 && size.height > 0) {
+                    drawWavePattern(
+                        size = size,
+                        waveOffset = waveOffset,
+                        waveColor = Color.White.copy(alpha = 0.2f), // Reduced opacity
+                        waveAmplitude = size.height * 0.2f, // Smaller amplitude
+                        waveFrequency = 1.2f // Lower frequency = fewer waves = better performance
+                    )
+                }
             }
             .clickable(onClick = onClick)
             .padding(horizontal = 24.dp),
@@ -476,11 +456,29 @@ fun ActionGridItem(
     Card(
         onClick = onClick,
         shape = shape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDarkMode) {
+                MaterialTheme.colorScheme.surface
+            } else {
+                Color.White
+            }
+        ),
         modifier = modifier
-            .shadow(elevation = 8.dp, shape = shape, spotColor = SoftShadow, ambientColor = SoftShadow)
+            .shadow(
+                elevation = if (isDarkMode) 8.dp else 4.dp,
+                shape = shape,
+                spotColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.08f),
+                ambientColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.05f)
+            )
             .height(84.dp),
-        border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.1f))
+        border = BorderStroke(
+            width = if (isDarkMode) 1.dp else 0.5.dp,
+            color = if (isDarkMode) {
+                Color.Black.copy(alpha = 0.1f)
+            } else {
+                adjustedAccentColor.copy(alpha = 0.2f)
+            }
+        )
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(12.dp),
@@ -535,13 +533,35 @@ fun WeatherWidget(state: WeatherState) {
             }
         }
         is WeatherState.Success -> {
+            val bgColor = MaterialTheme.colorScheme.background
+            val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
+            
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(elevation = 8.dp, shape = shape, spotColor = SoftShadow, ambientColor = SoftShadow)
+                    .shadow(
+                        elevation = if (isDarkMode) 8.dp else 6.dp,
+                        shape = shape,
+                        spotColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.1f),
+                        ambientColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.06f)
+                    )
                     .clip(shape)
-                    .background(MaterialTheme.colorScheme.surface)
-                    .border(1.dp, Color.Black.copy(alpha = 0.1f), shape)
+                    .background(
+                        if (isDarkMode) {
+                            MaterialTheme.colorScheme.surface
+                        } else {
+                            Color.White
+                        }
+                    )
+                    .border(
+                        width = if (isDarkMode) 1.dp else 0.5.dp,
+                        color = if (isDarkMode) {
+                            Color.Black.copy(alpha = 0.1f)
+                        } else {
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        },
+                        shape = shape
+                    )
                     .padding(24.dp)
             ) {
                 Row(
@@ -1009,28 +1029,54 @@ fun CompactAlertCard(
 ) {
     val localeContext = getLocaleContext()
     val severityColor = getSeverityColor(severity)
+    val bgColor = MaterialTheme.colorScheme.background
+    val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
     
     Card(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .shadow(elevation = 8.dp, shape = RoundedCornerShape(16.dp), spotColor = SoftShadow, ambientColor = SoftShadow),
+            .shadow(
+                elevation = if (isDarkMode) 8.dp else 4.dp,
+                shape = RoundedCornerShape(18.dp),
+                spotColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.08f),
+                ambientColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.05f)
+            ),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = if (isDarkMode) {
+                MaterialTheme.colorScheme.surface
+            } else {
+                Color.White // Pure white in light mode for better contrast
+            }
         ),
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.1f))
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(
+            width = if (isDarkMode) 1.dp else 0.5.dp,
+            color = if (isDarkMode) {
+                Color.Black.copy(alpha = 0.1f)
+            } else {
+                severityColor.copy(alpha = 0.2f) // Subtle colored border in light mode
+            }
+        )
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Severity indicator bar - made wider
+            // Severity indicator bar - enhanced for light mode
             Box(
                 modifier = Modifier
-                    .width(6.dp) // Widen to 6px
-                    .height(60.dp)
-                    .background(severityColor, RoundedCornerShape(3.dp))
+                    .width(if (isDarkMode) 6.dp else 5.dp)
+                    .height(64.dp)
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                            colors = listOf(
+                                severityColor,
+                                severityColor.copy(alpha = 0.8f)
+                            )
+                        ),
+                        shape = RoundedCornerShape(if (isDarkMode) 3.dp else 2.5.dp)
+                    )
             )
             
             Spacer(modifier = Modifier.width(12.dp))
@@ -1180,6 +1226,9 @@ fun EmergencyInstructions(
         }
     }
     
+    val bgColor = MaterialTheme.colorScheme.background
+    val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
+    
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -1190,12 +1239,28 @@ fun EmergencyInstructions(
                     Modifier
                 }
             )
-            .shadow(elevation = 8.dp, shape = RoundedCornerShape(16.dp), spotColor = SoftShadow, ambientColor = SoftShadow),
+            .shadow(
+                elevation = if (isDarkMode) 8.dp else 6.dp,
+                shape = RoundedCornerShape(18.dp),
+                spotColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.1f),
+                ambientColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.06f)
+            ),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = if (isDarkMode) {
+                MaterialTheme.colorScheme.surface
+            } else {
+                Color.White
+            }
         ),
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.1f))
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(
+            width = if (isDarkMode) 1.dp else 0.5.dp,
+            color = if (isDarkMode) {
+                Color.Black.copy(alpha = 0.1f)
+            } else {
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+            }
+        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp)

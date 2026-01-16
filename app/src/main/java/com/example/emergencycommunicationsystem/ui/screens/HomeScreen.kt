@@ -147,28 +147,50 @@ fun HomeScreen(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = bottomNavReserved),
-                verticalArrangement = Arrangement.spacedBy(24.dp) // Adjusted spacing
+                verticalArrangement = Arrangement.spacedBy(20.dp) // Better spacing
             ) {
             item {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 AnimatedVisibility(
                     visibleState = animationState,
                     enter = fadeIn(animationSpec = tween(durationMillis = 500)) +
                             slideInVertically(initialOffsetY = { -40 }, animationSpec = tween(durationMillis = 500))
                 ) {
                     val localeContext = getLocaleContext()
-                    androidx.compose.foundation.layout.Column {
+                    val bgColor = MaterialTheme.colorScheme.background
+                    val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
+                    
+                    androidx.compose.foundation.layout.Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                    colors = if (isDarkMode) {
+                                        listOf(Color.Transparent, Color.Transparent)
+                                    } else {
+                                        listOf(
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+                                            Color.Transparent
+                                        )
+                                    }
+                                )
+                            )
+                            .padding(vertical = 16.dp, horizontal = 4.dp)
+                    ) {
                         Text(
                             localeContext.getString(R.string.emergency_dashboard),
-                            fontSize = 28.sp, // Slightly larger
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground // High contrast color
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            letterSpacing = (-0.5).sp
                         )
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             localeContext.getString(R.string.dashboard_subtitle),
-                            fontSize = 15.sp,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                            modifier = Modifier.padding(top = 4.dp)
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                            fontWeight = FontWeight.Medium,
+                            letterSpacing = 0.2.sp
                         )
                     }
                 }
