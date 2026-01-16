@@ -45,6 +45,9 @@
     <string name="language_english">Ingles</string>
     <string name="language_filipino">Filipino</string>
     <string name="language_spanish">Espanyol</string>
+    <string name="language_bicolano">Bicolano</string>
+    <string name="language_bisaya">Bisaya</string>
+    <string name="language_waray">Waray</string>
     <!-- Weather advice -->
     <string name="weather_advice_feels_much_hotter">Mas mainit ang pakiramdam kaysa sa aktwal na temperatura.</string>
     <string name="weather_advice_feels_much_cooler">Mas malamig ang pakiramdam kaysa sa aktwal na temperatura.</string>

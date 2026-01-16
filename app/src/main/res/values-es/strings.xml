@@ -45,6 +45,9 @@
     <string name="language_english">Inglés</string>
     <string name="language_filipino">Filipino</string>
     <string name="language_spanish">Español</string>
+    <string name="language_bicolano">Bicolano</string>
+    <string name="language_bisaya">Bisaya</string>
+    <string name="language_waray">Waray</string>
     <!-- Weather advice -->
     <string name="weather_advice_feels_much_hotter">Se siente mucho más caluroso que la temperatura real.</string>
     <string name="weather_advice_feels_much_cooler">Se siente mucho más fresco que la temperatura real.</string>
