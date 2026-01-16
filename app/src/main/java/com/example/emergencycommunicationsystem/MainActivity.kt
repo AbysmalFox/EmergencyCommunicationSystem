@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -61,23 +62,18 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Set locale early in onCreate (for UI strings)
+        // Set locale early in onCreate
         lifecycleScope.launch(Dispatchers.IO) {
             val lang = UserPrefs.getLanguage(this@MainActivity).first()
             val locale = LocaleManager.getLocaleFromCode(lang)
             Locale.setDefault(locale)
         }
 
-        // Required OSMDroid configuration
         Configuration.getInstance().userAgentValue = packageName
 
-        // Initialize background tasks off the Main thread
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                // Initialize AuthManager first as it's purely local
                 AuthManager.initialize(applicationContext)
-                
-                // Then perform the production network check
                 ApiClient.initializeAndCheckConnection(applicationContext)
                 Log.i("MainActivity", "System initialization completed successfully.")
             } catch (e: Exception) {
@@ -88,10 +84,24 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            EmergencyCommunicationSystemTheme {
-                // Wrap with LocaleProvider to provide locale-aware context to all screens
+            val context = LocalContext.current
+            val currentTheme by UserPrefs.getTheme(context).collectAsState(initial = "system")
+            val isDarkTheme = when (currentTheme) {
+                "light" -> false
+                "dark" -> true
+                else -> isSystemInDarkTheme()
+            }
+
+            EmergencyCommunicationSystemTheme(darkTheme = isDarkTheme) {
                 LocaleProvider {
-                EmergencyApp()
+                    EmergencyApp(
+                        currentTheme = currentTheme,
+                        onThemeChange = { newTheme ->
+                            lifecycleScope.launch(Dispatchers.IO) {
+                                UserPrefs.saveTheme(context, newTheme)
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -99,12 +109,14 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun EmergencyApp() {
+fun EmergencyApp(
+    currentTheme: String,
+    onThemeChange: (String) -> Unit
+) {
     val navController = rememberNavController()
     val weatherViewModel: WeatherViewModel = viewModel()
     val weatherState by weatherViewModel.weatherState.collectAsState()
     val context = LocalContext.current
-    val activity = (LocalContext.current as? ComponentActivity)
     val coroutineScope = rememberCoroutineScope()
 
     val messagingRepository = remember { MessagingRepository() }
@@ -116,7 +128,6 @@ fun EmergencyApp() {
     val currentRoute = navBackStackEntry?.destination?.route
 
     val mainScreens = listOf(Screen.Home.route, Screen.Alerts.route, Screen.Map.route, Screen.Profile.route)
-    val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
 
     if (isLoggedIn) {
         LocationUpdater {
@@ -173,13 +184,10 @@ fun EmergencyApp() {
                         },
                         onAlertClick = { _ ->
                             navController.navigate(Screen.Alerts.route) {
-                                // Pop up to the start destination to avoid building up a back stack
                                 popUpTo(navController.graph.findStartDestination().id) {
                                     saveState = true
                                 }
-                                // Avoid multiple copies of the same destination
                                 launchSingleTop = true
-                                // Restore state when reselecting a previously selected item
                                 restoreState = true
                             }
                         },
@@ -192,11 +200,11 @@ fun EmergencyApp() {
                 composable(Screen.Alerts.route) {
                     AlertsScreen(
                         onMessageClick = { alertId, alertTitle ->
-                            try { // <-- PROPER ERROR HANDLING
+                            try {
                                 Log.d("Navigation", "Attempting to navigate for alertId: '''$alertId'''")
                                 val userId = AuthManager.getUserId()
                                 if (userId > 0) {
-                                    val alertIdInt = alertId.toInt() // The risky operation
+                                    val alertIdInt = alertId.toInt()
                                     val encodedTitle = URLEncoder.encode(alertTitle, "UTF-8")
                                     val userName = AuthManager.getUsername() ?: "User"
                                     navController.navigate("${Screen.Messaging.route}?alertId=$alertIdInt&alertTitle=$encodedTitle&userId=$userId&userName=$userName")
@@ -206,12 +214,9 @@ fun EmergencyApp() {
                                     Toast.makeText(context, "Please log in to send a message", Toast.LENGTH_SHORT).show()
                                 }
                             } catch (e: NumberFormatException) {
-                                // THIS IS THE LOGCAT MESSAGE YOU NEED
                                 Log.e("NavigationError", "Failed to navigate. The alert ID '''$alertId''' is not a valid integer.", e)
-                                // Also show a user-friendly message
                                 Toast.makeText(context, "Error: Invalid alert data. Cannot open message.", Toast.LENGTH_LONG).show()
                             } catch (e: Exception) {
-                                // Catch any other unexpected errors during navigation
                                 Log.e("NavigationError", "An unexpected error occurred during navigation for alert: $alertTitle", e)
                                 Toast.makeText(context, "An unexpected error occurred.", Toast.LENGTH_LONG).show()
                             }
@@ -231,6 +236,8 @@ fun EmergencyApp() {
                         username = if (isLoggedIn) AuthManager.getUsername() else null,
                         email = if (isLoggedIn) AuthManager.getEmail() else null,
                         phone = if (isLoggedIn) AuthManager.getPhone() else null,
+                        currentTheme = currentTheme,
+                        onThemeChange = onThemeChange,
                         onLoginClick = { navController.navigate(Screen.Login.route) },
                         onSignUpClick = { navController.navigate(Screen.SignUp.route) },
                         onLogoutClick = {
@@ -311,15 +318,11 @@ fun EmergencyApp() {
                 }
                 composable(Screen.LanguageSettings.route) {
                     LanguageSettingsScreen(
-                        currentLanguage = currentLanguage,
+                        currentLanguage = UserPrefs.getLanguage(context).collectAsState(initial = "en").value,
                         onConfirm = { lang ->
                             coroutineScope.launch(Dispatchers.IO) {
-                                // Save the language preference
                                 UserPrefs.saveLanguage(context, lang)
-                                // No activity recreation needed - Compose will recompose automatically
-                                // Alerts will be re-translated when language changes
                                 withContext(Dispatchers.Main) {
-                                    // Just navigate back - LocaleProvider will handle UI string updates
                                     navController.popBackStack()
                                 }
                             }
@@ -378,7 +381,7 @@ fun EmergencyApp() {
                     navController = navController,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(bottom = 16.dp) // Add bottom padding to position it higher
+                        .padding(bottom = 16.dp)
                 )
             }
         }

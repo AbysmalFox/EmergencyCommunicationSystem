@@ -2,22 +2,49 @@ package com.example.emergencycommunicationsystem.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
-import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.runtime.derivedStateOf
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -30,12 +57,18 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.emergencycommunicationsystem.AuthManager
 import com.example.emergencycommunicationsystem.R
+import com.example.emergencycommunicationsystem.data.UserPrefs
 import com.example.emergencycommunicationsystem.data.models.Alert
+import com.example.emergencycommunicationsystem.ui.icons.AppIcons
+import com.example.emergencycommunicationsystem.ui.theme.SafetyOrange
+import com.example.emergencycommunicationsystem.ui.theme.SignalRed
 import com.example.emergencycommunicationsystem.util.Resource
+import com.example.emergencycommunicationsystem.util.TranslationService
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
+import kotlinx.coroutines.launch
+import java.util.Calendar
 import java.util.Locale
-import androidx.compose.foundation.shape.RoundedCornerShape
 import kotlin.math.max
 import kotlin.math.min
 
@@ -171,6 +204,8 @@ fun getColorForCategory(alert: Alert): Color {
  * Determine severity level based on alert category and content
  * Returns: "High", "Medium", or "Low"
  */
+// Suppressing unused warning as this might be used in future or other parts
+@Suppress("unused")
 fun getAlertSeverity(alert: Alert): String {
     // Handle numeric category IDs from API (category comes as string "1", "2", "4", "5")
     val categoryId = try {
@@ -208,10 +243,11 @@ fun getAlertSeverity(alert: Alert): String {
  * Get severity color (Yellow/Orange/Red)
  */
 @Composable
+@Suppress("unused")
 fun getSeverityColor(severity: String): Color {
     return when (severity) {
-        "High" -> Color(0xFFD32F2F) // Red
-        "Medium" -> Color(0xFFF57C00) // Orange
+        "High" -> SignalRed
+        "Medium" -> SafetyOrange
         "Low" -> Color(0xFFFBC02D) // Yellow
         else -> Color(0xFF757575) // Gray (default)
     }
@@ -255,7 +291,7 @@ fun getCategoryName(alert: Alert, localeContext: android.content.Context): Strin
     val categoryNameEn = getCategoryNameEn(alert)
     
     // Get current language preference
-    val currentLanguage by com.example.emergencycommunicationsystem.data.UserPrefs.getLanguage(context)
+    val currentLanguage by UserPrefs.getLanguage(context)
         .collectAsState(initial = "en")
     
     // State for translated category name
@@ -264,7 +300,7 @@ fun getCategoryName(alert: Alert, localeContext: android.content.Context): Strin
     // Translate category name when language changes
     LaunchedEffect(categoryNameEn, currentLanguage) {
         if (currentLanguage != "en") {
-            translatedCategory = com.example.emergencycommunicationsystem.util.TranslationService.translate(
+            translatedCategory = TranslationService.translate(
                 categoryNameEn,
                 currentLanguage
             )
@@ -334,7 +370,7 @@ fun CompactEmergencyInstructions(
     val coroutineScope = rememberCoroutineScope()
     
     val alertType = getAlertTypeFromAlert(alert)
-    val currentHour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+    val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
     val timeOfDay = when (currentHour) {
         in 5..11 -> "morning"
         in 12..17 -> "afternoon"
@@ -344,7 +380,7 @@ fun CompactEmergencyInstructions(
     val (mainInstructionEn, stepsEn) = getCompactInstructions(alertType, timeOfDay)
     
     // Get current language preference
-    val currentLanguage by com.example.emergencycommunicationsystem.data.UserPrefs.getLanguage(context)
+    val currentLanguage by UserPrefs.getLanguage(context)
         .collectAsState(initial = "en")
     
     // State for translated strings
@@ -357,19 +393,19 @@ fun CompactEmergencyInstructions(
         if (currentLanguage != "en") {
             coroutineScope.launch {
                 // Translate "What To Do:" label
-                translatedLabel = com.example.emergencycommunicationsystem.util.TranslationService.translate(
+                translatedLabel = TranslationService.translate(
                     "What To Do:",
                     currentLanguage
                 )
                 
                 // Translate main instruction
-                translatedMainInstruction = com.example.emergencycommunicationsystem.util.TranslationService.translate(
+                translatedMainInstruction = TranslationService.translate(
                     mainInstructionEn,
                     currentLanguage
                 )
                 
                 // Translate steps
-                translatedSteps = com.example.emergencycommunicationsystem.util.TranslationService.translateBatch(
+                translatedSteps = TranslationService.translateBatch(
                     stepsEn,
                     currentLanguage
                 )

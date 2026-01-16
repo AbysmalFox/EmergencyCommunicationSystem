@@ -75,7 +75,7 @@ fun BottomNavigationBar(
             .padding(horizontal = 20.dp)
             .offset(y = (-navOverlayLift).dp)
             .clip(RoundedCornerShape(32.dp))
-            .background(MaterialTheme.colorScheme.background)
+            .background(MaterialTheme.colorScheme.surface)
             .border( // Add the border here
                 width = 2.dp,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), // Subtle outline

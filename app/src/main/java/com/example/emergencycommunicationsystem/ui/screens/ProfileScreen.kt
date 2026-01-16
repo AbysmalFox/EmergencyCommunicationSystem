@@ -34,6 +34,8 @@ fun ProfileScreen(
     username: String?,
     email: String?,
     phone: String?,
+    currentTheme: String, // "system", "light", "dark"
+    onThemeChange: (String) -> Unit,
     onLoginClick: () -> Unit,
     onSignUpClick: () -> Unit,
     onLogoutClick: () -> Unit,
@@ -44,6 +46,8 @@ fun ProfileScreen(
 ) {
     var showNotificationSettings by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showThemeDialog by remember { mutableStateOf(false) }
+    
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -68,6 +72,38 @@ fun ProfileScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Theme Selection Dialog
+    if (showThemeDialog) {
+        AlertDialog(
+            onDismissRequest = { showThemeDialog = false },
+            title = { Text("Choose Appearance") },
+            text = {
+                Column {
+                    ThemeOption(
+                        text = "System Default",
+                        selected = currentTheme == "system",
+                        onClick = { onThemeChange("system"); showThemeDialog = false }
+                    )
+                    ThemeOption(
+                        text = "Light",
+                        selected = currentTheme == "light",
+                        onClick = { onThemeChange("light"); showThemeDialog = false }
+                    )
+                    ThemeOption(
+                        text = "Dark",
+                        selected = currentTheme == "dark",
+                        onClick = { onThemeChange("dark"); showThemeDialog = false }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showThemeDialog = false }) {
                     Text("Cancel")
                 }
             }
@@ -137,8 +173,8 @@ fun ProfileScreen(
 
             SettingsItem(
                 text = "Appearance",
-                valueText = "Dark",
-                onClick = { Toast.makeText(context, "Appearance settings coming soon", Toast.LENGTH_SHORT).show() }
+                valueText = currentTheme.replaceFirstChar { it.uppercase() },
+                onClick = { showThemeDialog = true }
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -212,6 +248,28 @@ fun ProfileScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun ThemeOption(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp, horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(
+            selected = selected,
+            onClick = null // Handled by Row click
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(text = text, style = MaterialTheme.typography.bodyLarge)
     }
 }
 

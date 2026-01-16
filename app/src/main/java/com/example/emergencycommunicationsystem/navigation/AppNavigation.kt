@@ -56,7 +56,10 @@ import java.net.URLDecoder
 import java.net.URLEncoder
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(
+    currentTheme: String,
+    onThemeChange: (String) -> Unit
+) {
     val navController = rememberNavController()
     val weatherViewModel: WeatherViewModel = viewModel()
     val weatherState by weatherViewModel.weatherState.collectAsState()
@@ -189,6 +192,8 @@ fun AppNavigation() {
                         username = if (isLoggedIn) AuthManager.getUsername() else null,
                         email = if (isLoggedIn) AuthManager.getEmail() else null,
                         phone = if (isLoggedIn) AuthManager.getPhone() else null,
+                        currentTheme = currentTheme,
+                        onThemeChange = onThemeChange,
                         onLoginClick = { navController.navigate(Screen.Login.route) },
                         onSignUpClick = { navController.navigate(Screen.SignUp.route) },
                         onLogoutClick = {

@@ -12,6 +12,7 @@ import androidx.core.net.toUri
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +29,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
+import com.example.emergencycommunicationsystem.ui.theme.VibrantRed
+import com.example.emergencycommunicationsystem.ui.theme.CardBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -56,17 +59,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -78,6 +76,7 @@ import com.example.emergencycommunicationsystem.data.models.WeatherState
 import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.navigation.Screen
 import com.example.emergencycommunicationsystem.ui.screens.getIconForCategory
+import com.example.emergencycommunicationsystem.ui.screens.getSeverityColor
 import kotlinx.coroutines.delay
 import java.util.Locale
 
@@ -150,17 +149,17 @@ fun EmergencyCallButton(onClick: () -> Unit) {
         onClick = onClick,
         shape = shape,
         colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFFC93F3F) // Red color from image
+            containerColor = VibrantRed
         ),
         modifier = Modifier
             .fillMaxWidth()
             .shadow(
-                elevation = 10.dp, // Reduced elevation
+                elevation = 12.dp,
                 shape = shape,
-                spotColor = Color.Red,
-                ambientColor = Color.Red.copy(alpha = 0.4f)
+                spotColor = VibrantRed,
+                ambientColor = VibrantRed.copy(alpha = 0.4f)
             )
-            .height(80.dp) // Reduced height
+            .height(80.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -171,7 +170,7 @@ fun EmergencyCallButton(onClick: () -> Unit) {
                 painter = painterResource(id = R.drawable.ic_tabler_phone),
                 contentDescription = localeContext.getString(R.string.emergency_call_label),
                 tint = Color.White,
-                modifier = Modifier.size(32.dp) // Reduced icon size
+                modifier = Modifier.size(32.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column {
@@ -179,14 +178,14 @@ fun EmergencyCallButton(onClick: () -> Unit) {
                     text = localeContext.getString(R.string.emergency_call_label),
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp, // Reduced font size
+                    fontSize = 15.sp,
                     letterSpacing = 1.5.sp
                 )
                 Text(
                     text = localeContext.getString(R.string.call_button),
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp, // Reduced font size
+                    fontSize = 24.sp,
                     letterSpacing = 1.5.sp
                 )
             }
@@ -203,7 +202,7 @@ fun ActionGrid(
     onMessageClick: () -> Unit = {}
 ) {
     val localeContext = getLocaleContext()
-    Column(verticalArrangement = Arrangement.spacedBy(15.dp)) { // Reduced spacing
+    Column(verticalArrangement = Arrangement.spacedBy(15.dp)) {
         EmergencyCallButton(onClick = onEmergencyCallClick)
         Row(horizontalArrangement = Arrangement.spacedBy(15.dp)) {
             ActionGridItem(
@@ -248,9 +247,9 @@ fun ActionGridItem(
         shape = shape,
         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface),
         modifier = modifier
-            .shadow(elevation = 4.dp, shape = shape, spotColor = Color.Black.copy(alpha = 0.3f))
-            .height(80.dp), // Reduced height
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+            .shadow(elevation = 6.dp, shape = shape, spotColor = Color.Black.copy(alpha = 0.1f))
+            .height(80.dp),
+        border = BorderStroke(1.dp, CardBorder)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -300,8 +299,9 @@ fun WeatherWidget(state: WeatherState) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(elevation = 4.dp, shape = shape, spotColor = Color.Black.copy(alpha = 0.3f))
+                    .shadow(elevation = 6.dp, shape = shape, spotColor = Color.Black.copy(alpha = 0.1f))
                     .clip(shape)
+                    .border(1.dp, CardBorder, shape)
                     .background(MaterialTheme.colorScheme.surface)
                     .padding(24.dp)
             ) {
@@ -747,15 +747,18 @@ fun CompactAlertCard(
     modifier: Modifier = Modifier
 ) {
     val localeContext = getLocaleContext()
-    val severityColor = com.example.emergencycommunicationsystem.ui.screens.getSeverityColor(severity)
+    val severityColor = getSeverityColor(severity)
     
     Card(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .shadow(elevation = 4.dp, shape = RoundedCornerShape(16.dp), spotColor = Color.Black.copy(alpha = 0.1f)),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, CardBorder)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),

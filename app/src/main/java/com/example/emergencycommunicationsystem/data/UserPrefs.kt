@@ -12,10 +12,17 @@ object UserPrefs {
     private val Context.dataStore by preferencesDataStore("settings")
 
     private val LANGUAGE_KEY = stringPreferencesKey("app_language")
+    private val THEME_KEY = stringPreferencesKey("app_theme")
 
     suspend fun saveLanguage(context: Context, langCode: String) {
         context.dataStore.edit { prefs ->
             prefs[LANGUAGE_KEY] = langCode
+        }
+    }
+
+    suspend fun saveTheme(context: Context, theme: String) {
+        context.dataStore.edit { prefs ->
+            prefs[THEME_KEY] = theme
         }
     }
 
@@ -26,5 +33,10 @@ object UserPrefs {
                 "fil", "tl" -> "fil"
                 else -> "en"
             }
+        }
+
+    fun getTheme(context: Context): Flow<String> =
+        context.dataStore.data.map { prefs ->
+            prefs[THEME_KEY] ?: "system"
         }
 }

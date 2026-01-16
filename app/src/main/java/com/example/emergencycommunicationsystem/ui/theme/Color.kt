@@ -9,6 +9,14 @@ val Teal = Color(0xFF48E0D8)       // Vibrant teal for primary accent
 val White = Color(0xFFFFFFFF)     // For text on dark backgrounds
 val LightGray = Color(0xFFCCCCCC) // For less important text
 
+// Redesign Colors
+val OffBlack = Color(0xFF1A1A1A)
+val VibrantRed = Color(0xFFE02E2E) // For Emergency Button
+val SafetyOrange = Color(0xFFFF7D00) // For Medium alerts
+val SignalRed = Color(0xFFFF3B30) // For High alerts
+val LightBackground = Color(0xFFF2F2F7) // Light grey background
+val CardBorder = Color(0xFFE5E5EA) // Very thin light-grey border
+
 // You can keep old colors or remove them
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)

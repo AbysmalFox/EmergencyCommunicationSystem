@@ -137,7 +137,7 @@ fun HomeScreen(
         modifier = Modifier.fillMaxSize()
     ) {
         // Reserve bottom padding so the last content (weather widget) scrolls above the floating nav
-        val bottomNavReserved = 136.dp // navOverlayHeight (92) + navOverlayLift (36) + extra (8)
+        val bottomNavReserved = 160.dp // Increased padding as requested
         val listState = rememberLazyListState()
         
         Box(modifier = Modifier.fillMaxSize()) {
@@ -160,12 +160,12 @@ fun HomeScreen(
                             localeContext.getString(R.string.emergency_dashboard),
                             fontSize = 26.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
                             localeContext.getString(R.string.dashboard_subtitle),
                             fontSize = 15.sp,
-                            color = Color.White.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                         )
                     }
                 }

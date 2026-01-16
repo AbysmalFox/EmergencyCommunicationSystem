@@ -50,7 +50,7 @@ fun EmergencyCommunicationSystemTheme(
     val colorScheme = when {
         // We will default to our custom dark theme as it matches the palette
         darkTheme -> AppDarkColorScheme
-        else -> AppDarkColorScheme // Or use AppLightColorScheme if you want to support a light version
+        else -> AppLightColorScheme
     }
 
     val view = LocalView.current
@@ -58,6 +58,7 @@ fun EmergencyCommunicationSystemTheme(
         SideEffect {
             val window = (view.context as Activity).window
             // With edge-to-edge, we make the status bar transparent to let the app's background show.
+            @Suppress("DEPRECATION")
             window.statusBarColor = Color.Transparent.toArgb()
             // This controls whether the status bar icons (clock, battery) are light or dark.
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
