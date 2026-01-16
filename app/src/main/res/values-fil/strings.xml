@@ -25,6 +25,7 @@
     <string name="alerts">Mga Alerto</string>
     <string name="map">Mapa</string>
     <string name="profile">Profile</string>
+    <string name="logout">Mag-logout</string>
     <!-- Alerts Screen -->
     <string name="alerts_and_notifications">Mga Alerto at Abiso</string>
     <string name="message">Mensahe</string>

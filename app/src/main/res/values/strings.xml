@@ -24,6 +24,7 @@
     <string name="alerts">Alerts</string>
     <string name="map">Map</string>
     <string name="profile">Profile</string>
+    <string name="logout">Logout</string>
     <!-- Alerts Screen -->
     <string name="alerts_and_notifications">Alerts &amp; Notifications</string>
     <string name="message">Message</string>

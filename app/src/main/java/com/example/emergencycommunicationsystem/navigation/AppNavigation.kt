@@ -332,6 +332,8 @@ fun AppNavigation() {
                             Toast.makeText(context, "Invalid chat session.", Toast.LENGTH_SHORT).show()
                             navController.popBackStack()
                         }
+
+
                     }
                 }
             }
