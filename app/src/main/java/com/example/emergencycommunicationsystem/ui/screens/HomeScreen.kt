@@ -15,6 +15,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -68,6 +69,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import kotlin.math.max
 import kotlin.math.min
@@ -100,6 +102,15 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+
+// The primary teal color from Alertaraqc widget
+val AlertaraTeal = Color(0xFF508684)
+val AlertaraTealLight = Color(0xFF669997)
+val AlertaraTealAccent = Color(0xFFB2DFDB)
+
+// General background colors (lighter greenish)
+val AlertaraBgLight = Color(0xFFE8F3F1) // More visible light greenish
+val AlertaraBgDark = Color(0xFF121F1E)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -160,133 +171,137 @@ fun HomeScreen(
     // state to control the safe overlay
     var showSafeOverlay by remember { mutableStateOf(false) }
 
-    PullToRefreshBox(
-        state = pullToRefreshState,
-        isRefreshing = isRefreshing,
-        onRefresh = {
-            scope.launch {
-                isRefreshing = true
-                try {
-                    weatherViewModel.requestLocationAndFetchWeather()
-                    alertsViewModel.loadAlerts()
-                } finally {
-                    isRefreshing = false
-                }
-            }
-        },
-        modifier = Modifier.fillMaxSize()
-    ) {
-        val bottomNavReserved = 140.dp
-        val listState = rememberLazyListState()
-        val bgColor = MaterialTheme.colorScheme.background
-        val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
-        
-        Box(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = bottomNavReserved, top = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Hero Section with Stats
-                item {
-                    AnimatedVisibility(
-                        visibleState = animationState,
-                        enter = fadeIn(animationSpec = tween(durationMillis = 500)) +
-                                slideInVertically(initialOffsetY = { -40 }, animationSpec = tween(durationMillis = 500))
-                    ) {
-                        DashboardHeroSection(
-                            alertsState = alertsState,
-                            weatherState = weatherState,
-                            isDarkMode = isDarkMode
-                        )
+    // Use explicit system theme detection
+    val isDarkMode = isSystemInDarkTheme()
+    val screenBgColor = if (isDarkMode) AlertaraBgDark else AlertaraBgLight
+
+    Box(modifier = Modifier.fillMaxSize().background(screenBgColor)) {
+        PullToRefreshBox(
+            state = pullToRefreshState,
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                scope.launch {
+                    isRefreshing = true
+                    try {
+                        weatherViewModel.requestLocationAndFetchWeather()
+                        alertsViewModel.loadAlerts()
+                    } finally {
+                        isRefreshing = false
                     }
                 }
-                
-                // Emergency Call Button - Prominent
-                item {
-                    AnimatedVisibility(
-                        visibleState = animationState,
-                        enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = 100)) +
-                                slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(durationMillis = 500, delayMillis = 100))
-                    ) {
-                        EmergencyCallButton(onClick = onEmergencyCallClick)
-                    }
-                }
-                
-                // Quick Actions Grid
-                item {
-                    AnimatedVisibility(
-                        visibleState = animationState,
-                        enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = 200)) +
-                                slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(durationMillis = 500, delayMillis = 200))
-                    ) {
-                        QuickActionsGrid(
-                            onReportClick = onReportIncidentClick,
-                            onSafeClick = { if (!showSafeOverlay) showSafeOverlay = true },
-                            onMessageClick = onMessageClick,
-                            isDarkMode = isDarkMode
-                        )
-                    }
-                }
-                
-                // Active Alerts Section
-                item {
-                    AnimatedVisibility(
-                        visibleState = animationState,
-                        enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = 300)) +
-                                slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(durationMillis = 500, delayMillis = 300))
-                    ) {
-                        ModernAlertsSection(
-                            alertsState = alertsState,
-                            userLat = userLat,
-                            userLon = userLon,
-                            onAlertClick = onAlertClick,
-                            isDarkMode = isDarkMode
-                        )
-                    }
-                }
-                
-                // Weather & Instructions Row
-                item {
-                    AnimatedVisibility(
-                        visibleState = animationState,
-                        enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = 400)) +
-                                slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(durationMillis = 500, delayMillis = 400))
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+            },
+            modifier = Modifier.fillMaxSize()
+        ) {
+            val bottomNavReserved = 140.dp
+            val listState = rememberLazyListState()
+            
+            Box(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = bottomNavReserved, top = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Hero Section with Stats
+                    item {
+                        AnimatedVisibility(
+                            visibleState = animationState,
+                            enter = fadeIn(animationSpec = tween(durationMillis = 500)) +
+                                    slideInVertically(initialOffsetY = { -40 }, animationSpec = tween(durationMillis = 500))
                         ) {
-                            // Weather Widget - Enhanced
-                            when (val state = weatherState) {
-                                is WeatherState.Success -> {
-                                    CompactWeatherCard(state, isDarkMode)
-                                }
-                                else -> {}
-                            }
-                            
-                            // Emergency Instructions - Enhanced
-                            val alerts = (alertsState as? Resource.Success)?.data ?: emptyList()
-                            CompactInstructionsCard(
-                                alerts = alerts,
-                                onClick = onEmergencyGuidesClick,
+                            DashboardHeroSection(
+                                alertsState = alertsState,
+                                weatherState = weatherState,
                                 isDarkMode = isDarkMode
                             )
                         }
                     }
+                    
+                    // Emergency Call Button - Prominent
+                    item {
+                        AnimatedVisibility(
+                            visibleState = animationState,
+                            enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = 100)) +
+                                    slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(durationMillis = 500, delayMillis = 100))
+                        ) {
+                            EmergencyCallButton(onClick = onEmergencyCallClick)
+                        }
+                    }
+                    
+                    // Quick Actions Grid
+                    item {
+                        AnimatedVisibility(
+                            visibleState = animationState,
+                            enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = 200)) +
+                                    slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(durationMillis = 500, delayMillis = 200))
+                        ) {
+                            QuickActionsGrid(
+                                onReportClick = onReportIncidentClick,
+                                onSafeClick = { if (!showSafeOverlay) showSafeOverlay = true },
+                                onMessageClick = onMessageClick,
+                                isDarkMode = isDarkMode
+                            )
+                        }
+                    }
+                    
+                    // Active Alerts Section
+                    item {
+                        AnimatedVisibility(
+                            visibleState = animationState,
+                            enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = 300)) +
+                                    slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(durationMillis = 500, delayMillis = 300))
+                        ) {
+                            ModernAlertsSection(
+                                alertsState = alertsState,
+                                userLat = userLat,
+                                userLon = userLon,
+                                onAlertClick = onAlertClick,
+                                isDarkMode = isDarkMode
+                            )
+                        }
+                    }
+                    
+                    // Weather & Instructions Row
+                    item {
+                        AnimatedVisibility(
+                            visibleState = animationState,
+                            enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = 400)) +
+                                    slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(durationMillis = 500, delayMillis = 400))
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                // Weather Widget - Enhanced
+                                when (val state = weatherState) {
+                                    is WeatherState.Success -> {
+                                        CompactWeatherCard(state, isDarkMode)
+                                    }
+                                    else -> {}
+                                }
+                                
+                                // Emergency Instructions - Enhanced
+                                val alerts = (alertsState as? Resource.Success)?.data ?: emptyList()
+                                CompactInstructionsCard(
+                                    alerts = alerts,
+                                    onClick = onEmergencyGuidesClick,
+                                    isDarkMode = isDarkMode
+                                )
+                            }
+                        }
+                    }
+                    
+                    item { Spacer(modifier = Modifier.height(8.dp)) }
                 }
                 
-                item { Spacer(modifier = Modifier.height(8.dp)) }
+                // Scroll Indicator
+                ScrollIndicator(
+                    listState = listState,
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 4.dp)
+                )
             }
-            
-            // Scroll Indicator
-            ScrollIndicator(
-                listState = listState,
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 4.dp)
-            )
         }
 
         // Overlay is drawn on top
@@ -336,7 +351,7 @@ fun QCRealTimeClock(useLightColor: Boolean = false) {
     
     val baseTextColor = if (useLightColor) Color.White else MaterialTheme.colorScheme.onBackground
     val secondaryTextColor = if (useLightColor) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-    val accentColor = if (useLightColor) Color(0xFFB2DFDB) else MaterialTheme.colorScheme.primary
+    val accentColor = if (useLightColor) AlertaraTealAccent else MaterialTheme.colorScheme.primary
     
     Column(
         horizontalAlignment = Alignment.End,
@@ -403,9 +418,6 @@ fun DashboardHeroSection(
     weatherState: WeatherState,
     isDarkMode: Boolean
 ) {
-    val tealBg = Color(0xFF508684)
-    val highlightColor = Color(0xFF669997) // Subtle light sweep color
-    
     val infiniteTransition = rememberInfiniteTransition(label = "heroBgAnimation")
     val shimmerTranslate by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -420,11 +432,11 @@ fun DashboardHeroSection(
     // A subtle diagonal light sweep effect
     val animatedBrush = Brush.linearGradient(
         colors = listOf(
-            tealBg,
-            tealBg,
-            highlightColor,
-            tealBg,
-            tealBg
+            AlertaraTeal,
+            AlertaraTeal,
+            AlertaraTealLight,
+            AlertaraTeal,
+            AlertaraTeal
         ),
         start = Offset(shimmerTranslate - 1000f, shimmerTranslate - 1000f),
         end = Offset(shimmerTranslate, shimmerTranslate)
@@ -456,7 +468,7 @@ fun DashboardHeroSection(
             ),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = tealBg // Base color fallback
+            containerColor = AlertaraTeal // Base color fallback
         )
     ) {
         Column(
@@ -487,7 +499,7 @@ fun DashboardHeroSection(
                         text = "qc",
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Black,
-                        color = Color(0xFFB2DFDB), // Light teal accent
+                        color = AlertaraTealAccent, // Light teal accent
                         letterSpacing = (-1.5).sp
                     )
                 }
@@ -542,13 +554,10 @@ fun StatCard(
     modifier: Modifier = Modifier,
     onTeal: Boolean = false
 ) {
-    val bgColor = MaterialTheme.colorScheme.background
-    val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
-    
     Column(
         modifier = modifier
             .background(
-                color = if (onTeal) Color.White.copy(alpha = 0.15f) else color.copy(alpha = if (isDarkMode) 0.12f else 0.08f),
+                color = if (onTeal) Color.White.copy(alpha = 0.15f) else color.copy(alpha = 0.08f),
                 shape = RoundedCornerShape(16.dp)
             )
             .padding(12.dp),
@@ -612,7 +621,7 @@ fun QuickActionsGrid(
         QuickActionCard(
             title = "Message",
             icon = R.drawable.ic_tabler_message_plus,
-            color = MaterialTheme.colorScheme.primary,
+            color = AlertaraTeal,
             onClick = onMessageClick,
             modifier = Modifier.weight(1f),
             isDarkMode = isDarkMode
@@ -641,15 +650,7 @@ fun QuickActionCard(
             ),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isDarkMode) {
-                MaterialTheme.colorScheme.surface
-            } else {
-                Color.White
-            }
-        ),
-        border = androidx.compose.foundation.BorderStroke(
-            width = if (isDarkMode) 1.dp else 0.5.dp,
-            color = color.copy(alpha = if (isDarkMode) 0.3f else 0.2f)
+            containerColor = AlertaraTeal
         )
     ) {
         Column(
@@ -663,13 +664,13 @@ fun QuickActionCard(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
-                    .background(color.copy(alpha = if (isDarkMode) 1f else 0.15f)),
+                    .background(Color.White.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    painter = androidx.compose.ui.res.painterResource(id = icon),
+                    painter = painterResource(id = icon),
                     contentDescription = title,
-                    tint = if (isDarkMode) Color.White else color,
+                    tint = Color.White,
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -678,7 +679,7 @@ fun QuickActionCard(
                 text = title,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = Color.White,
                 maxLines = 1
             )
         }
@@ -714,11 +715,7 @@ fun ModernAlertsSection(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(
-                            color = if (isDarkMode) {
-                                MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
-                            } else {
-                                Color.White
-                            },
+                            color = AlertaraTeal,
                             shape = RoundedCornerShape(20.dp)
                         )
                         .padding(16.dp)
@@ -732,12 +729,12 @@ fun ModernAlertsSection(
                             text = "Active Alerts",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
+                            color = Color.White
                         )
                         Box(
                             modifier = Modifier
                                 .background(
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                    color = Color.White.copy(alpha = 0.15f),
                                     shape = RoundedCornerShape(12.dp)
                                 )
                                 .padding(horizontal = 10.dp, vertical = 4.dp)
@@ -746,7 +743,7 @@ fun ModernAlertsSection(
                                 text = "${alertsState.data.size}",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                                color = Color.White
                             )
                         }
                     }
@@ -781,6 +778,41 @@ fun ModernAlertsSection(
 }
 
 /**
+ * Typewriter Text Animation Component
+ */
+@Composable
+fun TypewriterText(
+    text: String,
+    modifier: Modifier = Modifier,
+    speedMillis: Long = 40,
+    style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.bodyMedium,
+    color: Color = Color.Unspecified,
+    fontWeight: FontWeight? = null,
+    fontSize: androidx.compose.ui.unit.TextUnit = androidx.compose.ui.unit.TextUnit.Unspecified,
+    lineHeight: androidx.compose.ui.unit.TextUnit = androidx.compose.ui.unit.TextUnit.Unspecified
+) {
+    var textToDisplay by remember { mutableStateOf("") }
+
+    LaunchedEffect(text) {
+        textToDisplay = ""
+        text.forEach { char ->
+            textToDisplay += char
+            delay(speedMillis)
+        }
+    }
+
+    Text(
+        text = textToDisplay,
+        modifier = modifier,
+        style = style,
+        color = color,
+        fontWeight = fontWeight,
+        fontSize = fontSize,
+        lineHeight = lineHeight
+    )
+}
+
+/**
  * Enhanced Weather Card with Hourly Forecast and More Details
  */
 @Composable
@@ -797,7 +829,7 @@ fun CompactWeatherCard(
             ),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+            containerColor = AlertaraTeal
         )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -812,19 +844,19 @@ fun CompactWeatherCard(
                         text = "Weather",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = Color.White
                     )
                     Text(
                         text = weatherState.location,
                         fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        color = Color.White.copy(alpha = 0.7f)
                     )
                 }
                 Text(
                     text = "${weatherState.temperature.substringBefore(".")}°C",
                     fontSize = 36.sp,
                     fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = Color.White
                 )
             }
             
@@ -835,9 +867,9 @@ fun CompactWeatherCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                WeatherDetailItem(Icons.Default.LightMode, "Feels", "${weatherState.feelsLike.substringBefore(".")}°")
-                WeatherDetailItem(Icons.Default.WaterDrop, "Humidity", weatherState.humidity)
-                WeatherDetailItem(Icons.Default.Air, "Wind", weatherState.windSpeed)
+                WeatherDetailItem(Icons.Default.LightMode, "Feels", "${weatherState.feelsLike.substringBefore(".")}°", true)
+                WeatherDetailItem(Icons.Default.WaterDrop, "Humidity", weatherState.humidity, true)
+                WeatherDetailItem(Icons.Default.Air, "Wind", weatherState.windSpeed, true)
             }
             
             Spacer(modifier = Modifier.height(16.dp))
@@ -848,7 +880,7 @@ fun CompactWeatherCard(
                     text = "Forecast",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = Color.White,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 LazyRow(
@@ -860,33 +892,33 @@ fun CompactWeatherCard(
                         val time = timeFormatter.format(Date(item.dt * 1000L))
                         
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = time, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                            Text(text = time, fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = "${item.main.temp.toInt()}°",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = Color.White
                             )
                         }
                     }
                 }
             }
             
-            // Advice Bar
+            // Advice Bar with Typewriter Effect
             if (weatherState.advice.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
+                        .background(Color.White.copy(alpha = 0.15f))
                         .padding(10.dp)
                 ) {
-                    Text(
+                    TypewriterText(
                         text = weatherState.advice,
                         fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = Color.White,
                         fontWeight = FontWeight.Medium,
                         lineHeight = 14.sp
                     )
@@ -897,18 +929,27 @@ fun CompactWeatherCard(
 }
 
 @Composable
-fun WeatherDetailItem(icon: ImageVector, label: String, value: String) {
+fun WeatherDetailItem(icon: ImageVector, label: String, value: String, onTeal: Boolean = false) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             modifier = Modifier.size(14.dp),
-            tint = MaterialTheme.colorScheme.primary
+            tint = if (onTeal) Color.White else MaterialTheme.colorScheme.primary
         )
         Spacer(modifier = Modifier.width(4.dp))
         Column {
-            Text(text = label, fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
-            Text(text = value, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+            Text(
+                text = label, 
+                fontSize = 9.sp, 
+                color = if (onTeal) Color.White.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+            )
+            Text(
+                text = value, 
+                fontSize = 12.sp, 
+                fontWeight = FontWeight.Bold, 
+                color = if (onTeal) Color.White else MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }
@@ -943,7 +984,7 @@ fun CompactInstructionsCard(
             ),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+            containerColor = AlertaraTeal
         )
     ) {
         Row(
@@ -957,7 +998,7 @@ fun CompactInstructionsCard(
                     Icon(
                         imageVector = AppIcons.Info,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = Color.White,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -965,16 +1006,14 @@ fun CompactInstructionsCard(
                         text = "Preparedness Guide",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = Color.White
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
+                TypewriterText(
                     text = contextualTip,
                     fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
+                    color = Color.White.copy(alpha = 0.9f),
                     lineHeight = 18.sp
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -982,14 +1021,14 @@ fun CompactInstructionsCard(
                     text = "TAP FOR FULL GUIDES",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                    color = Color.White.copy(alpha = 0.7f)
                 )
             }
             
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                tint = Color.White.copy(alpha = 0.5f)
             )
         }
     }
@@ -1074,7 +1113,7 @@ private fun ScrollIndicator(
                 .height(thumbHeight)
                 .offset(y = thumbOffset)
                 .background(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                    color = AlertaraTeal.copy(alpha = 0.8f),
                     shape = RoundedCornerShape(2.dp)
                 )
         )

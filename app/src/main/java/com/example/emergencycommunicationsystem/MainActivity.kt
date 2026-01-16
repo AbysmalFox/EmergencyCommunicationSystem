@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
@@ -129,6 +130,16 @@ fun EmergencyApp(
 
     val mainScreens = listOf(Screen.Home.route, Screen.Alerts.route, Screen.Map.route, Screen.Profile.route)
 
+    // Custom greenish background colors
+    val isDarkMode = when (currentTheme) {
+        "light" -> false
+        "dark" -> true
+        else -> isSystemInDarkTheme()
+    }
+    val alertaraBgLight = Color(0xFFE8F3F1)
+    val alertaraBgDark = Color(0xFF121F1E)
+    val screenBgColor = if (isDarkMode) alertaraBgDark else alertaraBgLight
+
     if (isLoggedIn) {
         LocationUpdater {
             latitude, longitude, accuracy ->
@@ -166,7 +177,9 @@ fun EmergencyApp(
         }
     }
 
-    Scaffold { innerPadding ->
+    Scaffold(
+        containerColor = screenBgColor // Apply custom greenish background here
+    ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
             NavHost(
                 navController = navController,
