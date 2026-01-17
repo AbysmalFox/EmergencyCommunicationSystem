@@ -8,6 +8,13 @@ val AlertaraSurface = Color(0xFF56817B)
 val AlertaraPrimary = Color(0xFFE02E2E) 
 val AlertaraSecondary = Color(0xFF48E0D8)
 
+// Home Screen Specific Colors (Refined)
+val AlertaraTeal = Color(0xFF508684)
+val AlertaraTealLight = Color(0xFF669997)
+val AlertaraTealAccent = Color(0xFFB2DFDB)
+val AlertaraBgLight = Color(0xFFF5F7FA) // Changed to match "Clean" light theme
+val AlertaraBgDark = Color(0xFF0A192F)  // Changed to match "Clean" dark theme
+
 // Dark Theme Palette
 val DarkNavy = Color(0xFF0A192F)
 val Slate = Color(0xFF334B6A)
