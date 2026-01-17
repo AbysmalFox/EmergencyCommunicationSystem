@@ -16,35 +16,30 @@ import androidx.compose.ui.unit.dp
 object ThemeManager {
 
     /**
-     * Checks if the app is currently in Dark Mode based on the MaterialTheme's background luminance.
+     * Checks if the app is currently in Dark Mode.
+     * Updated: Now checks Surface luminance instead of Background, because our 
+     * light theme uses a dark greenish background but light cards (surfaces).
      */
     @Composable
     fun isDarkMode(): Boolean {
-        val bgColor = MaterialTheme.colorScheme.background
-        // Simple luminance check: (R+G+B)/3
-        return (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
+        val surfaceColor = MaterialTheme.colorScheme.surface
+        // Luminance check: (R+G+B)/3
+        return (surfaceColor.red + surfaceColor.green + surfaceColor.blue) / 3f < 0.5f
     }
 
     /**
      * Returns a color that is optimized for the current theme mode.
-     * Useful for elements that need custom colors but must stay readable.
      */
     @Composable
     fun getAdaptiveColor(lightColor: Color, darkColor: Color): Color {
         return if (isDarkMode()) darkColor else lightColor
     }
 
-    /**
-     * Ensures that surface containers (Cards/Boxes) have proper contrast.
-     */
     @Composable
     fun getSurfaceColor(): Color {
         return MaterialTheme.colorScheme.surface
     }
 
-    /**
-     * Provides a standard "Clean" border color based on the current theme.
-     */
     @Composable
     fun getBorderColor(alpha: Float = 0.1f): Color {
         return if (isDarkMode()) {
@@ -54,9 +49,6 @@ object ThemeManager {
         }
     }
 
-    /**
-     * Helper to get high-contrast text color for the current background.
-     */
     @Composable
     fun getOnBackgroundColor(): Color {
         return MaterialTheme.colorScheme.onBackground

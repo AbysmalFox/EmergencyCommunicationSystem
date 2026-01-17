@@ -14,6 +14,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -96,6 +97,11 @@ import com.example.emergencycommunicationsystem.util.LocationUtils
 import com.example.emergencycommunicationsystem.util.getAlertSeverity
 import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
 import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
+import com.example.emergencycommunicationsystem.ui.theme.ThemeManager
+import com.example.emergencycommunicationsystem.ui.theme.themeShadow
+import com.example.emergencycommunicationsystem.ui.theme.AlertaraBackground
+import com.example.emergencycommunicationsystem.ui.theme.BrandMintBG
+import com.example.emergencycommunicationsystem.ui.theme.BrandTealAccent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -108,10 +114,6 @@ import java.util.TimeZone
 val AlertaraTeal = Color(0xFF508684)
 val AlertaraTealLight = Color(0xFF669997)
 val AlertaraTealAccent = Color(0xFFB2DFDB)
-
-// General background colors (darker for better hierarchy)
-val AlertaraBgLight = Color(0xFF2D5A57) // Darker greenish background for better visual hierarchy
-val AlertaraBgDark = Color(0xFF121F1E)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -151,7 +153,7 @@ fun HomeScreen(
                 permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false)) {
                 weatherViewModel.requestLocationAndFetchWeather()
             } else {
-                weatherViewModel.setLocationPermissionDenied()
+                weatherViewModel.requestLocationAndFetchWeather()
             }
         }
     }
@@ -172,9 +174,9 @@ fun HomeScreen(
     // state to control the safe overlay
     var showSafeOverlay by remember { mutableStateOf(false) }
 
-    // Use explicit system theme detection
-    val isDarkMode = isSystemInDarkTheme()
-    val screenBgColor = if (isDarkMode) AlertaraBgDark else AlertaraBgLight
+    // Use Main Theme palette
+    val isDarkMode = ThemeManager.isDarkMode()
+    val screenBgColor = MaterialTheme.colorScheme.background
 
     Box(modifier = Modifier.fillMaxSize().background(screenBgColor)) {
         PullToRefreshBox(
@@ -461,11 +463,9 @@ fun DashboardHeroSection(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
+            .themeShadow(
                 elevation = if (isDarkMode) 12.dp else 8.dp,
-                shape = RoundedCornerShape(24.dp),
-                spotColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.1f),
-                ambientColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.06f)
+                shape = RoundedCornerShape(24.dp)
             ),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
@@ -643,16 +643,15 @@ fun QuickActionCard(
         onClick = onClick,
         modifier = modifier
             .height(100.dp)
-            .shadow(
+            .themeShadow(
                 elevation = if (isDarkMode) 8.dp else 4.dp,
-                shape = RoundedCornerShape(20.dp),
-                spotColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.08f),
-                ambientColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.05f)
+                shape = RoundedCornerShape(20.dp)
             ),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = AlertaraTeal
-        )
+            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
     ) {
         Column(
             modifier = Modifier
@@ -665,13 +664,13 @@ fun QuickActionCard(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.15f)),
+                    .background(color.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     painter = painterResource(id = icon),
                     contentDescription = title,
-                    tint = Color.White,
+                    tint = color,
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -680,7 +679,7 @@ fun QuickActionCard(
                 text = title,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1
             )
         }
@@ -716,7 +715,7 @@ fun ModernAlertsSection(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(
-                            color = AlertaraTeal,
+                            color = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White.copy(alpha = 0.1f),
                             shape = RoundedCornerShape(20.dp)
                         )
                         .padding(16.dp)
@@ -730,12 +729,12 @@ fun ModernAlertsSection(
                             text = "Active Alerts",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                         Box(
                             modifier = Modifier
                                 .background(
-                                    color = Color.White.copy(alpha = 0.15f),
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
                                     shape = RoundedCornerShape(12.dp)
                                 )
                                 .padding(horizontal = 10.dp, vertical = 4.dp)
@@ -744,7 +743,7 @@ fun ModernAlertsSection(
                                 text = "${alertsState.data.size}",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
@@ -824,14 +823,15 @@ fun CompactWeatherCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
+            .themeShadow(
                 elevation = if (isDarkMode) 8.dp else 4.dp,
                 shape = RoundedCornerShape(20.dp)
             ),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = AlertaraTeal
-        )
+            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // Top Section: Temperature and Main Condition
@@ -845,19 +845,19 @@ fun CompactWeatherCard(
                         text = "Weather",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = weatherState.location,
                         fontSize = 11.sp,
-                        color = Color.White.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Text(
                     text = "${weatherState.temperature.substringBefore(".")}°C",
                     fontSize = 36.sp,
                     fontWeight = FontWeight.Black,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
             
@@ -868,9 +868,9 @@ fun CompactWeatherCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                WeatherDetailItem(Icons.Default.LightMode, "Feels", "${weatherState.feelsLike.substringBefore(".")}°", true)
-                WeatherDetailItem(Icons.Default.WaterDrop, "Humidity", weatherState.humidity, true)
-                WeatherDetailItem(Icons.Default.Air, "Wind", weatherState.windSpeed, true)
+                WeatherDetailItem(Icons.Default.LightMode, "Feels", "${weatherState.feelsLike.substringBefore(".")}°", false)
+                WeatherDetailItem(Icons.Default.WaterDrop, "Humidity", weatherState.humidity, false)
+                WeatherDetailItem(Icons.Default.Air, "Wind", weatherState.windSpeed, false)
             }
             
             Spacer(modifier = Modifier.height(16.dp))
@@ -881,7 +881,7 @@ fun CompactWeatherCard(
                     text = "Forecast",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 LazyRow(
@@ -893,13 +893,13 @@ fun CompactWeatherCard(
                         val time = timeFormatter.format(Date(item.dt * 1000L))
                         
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = time, fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))
+                            Text(text = time, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = "${item.main.temp.toInt()}°",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -913,13 +913,13 @@ fun CompactWeatherCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White.copy(alpha = 0.15f))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
                         .padding(10.dp)
                 ) {
                     TypewriterText(
                         text = weatherState.advice,
                         fontSize = 11.sp,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Medium,
                         lineHeight = 14.sp
                     )
@@ -979,14 +979,15 @@ fun CompactInstructionsCard(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
+            .themeShadow(
                 elevation = if (isDarkMode) 8.dp else 4.dp,
                 shape = RoundedCornerShape(20.dp)
             ),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = AlertaraTeal
-        )
+            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
     ) {
         Row(
             modifier = Modifier
@@ -999,7 +1000,7 @@ fun CompactInstructionsCard(
                     Icon(
                         imageVector = AppIcons.Info,
                         contentDescription = null,
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -1007,14 +1008,14 @@ fun CompactInstructionsCard(
                         text = "Preparedness Guide",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 TypewriterText(
                     text = contextualTip,
                     fontSize = 13.sp,
-                    color = Color.White.copy(alpha = 0.9f),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
                     lineHeight = 18.sp
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -1022,14 +1023,14 @@ fun CompactInstructionsCard(
                     text = "TAP FOR FULL GUIDES",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Black,
-                    color = Color.White.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
                 )
             }
             
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = Color.White.copy(alpha = 0.5f)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             )
         }
     }
@@ -1114,7 +1115,7 @@ private fun ScrollIndicator(
                 .height(thumbHeight)
                 .offset(y = thumbOffset)
                 .background(
-                    color = AlertaraTeal.copy(alpha = 0.8f),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
                     shape = RoundedCornerShape(2.dp)
                 )
         )
