@@ -45,6 +45,13 @@ val StatusSafeLight = Color(0xFF66BB6A) // Much lighter green for dark mode
 val StatusDangerLight = Color(0xFFFF6B6B) // Much lighter red for dark mode  
 val VibrantRedLight = Color(0xFFFF6961) // Much lighter red for emergency button in dark mode
 
+// Refined Light Mode Palette
+val RefinedLightBackground = Color(0xFFF8F9FA)
+val RefinedLightSurface = Color(0xFFFFFFFF)
+val RefinedLightSecondary = Color(0xFF48E0D8)
+val RefinedLightTextPrimary = Color(0xFF1A1A1A)
+val RefinedLightTextSecondary = Color(0xFF666666)
+
 // You can keep old colors or remove them
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)

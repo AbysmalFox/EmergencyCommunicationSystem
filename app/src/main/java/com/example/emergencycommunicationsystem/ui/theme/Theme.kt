@@ -28,21 +28,23 @@ private val AppDarkColorScheme = darkColorScheme(
     onError = Color.White
 )
 
-// Alertara Light Scheme (matching the provided image)
+// Improved Light Scheme - Cleaner, more professional, and easier to read
 private val AlertaraLightColorScheme = lightColorScheme(
-    primary = AlertaraPrimary,      // Emergency Red for buttons/actions
+    primary = EmergencyRedMain,      // Striking Emergency Red
     onPrimary = White,
-    secondary = AlertaraSecondary,
-    onSecondary = AlertaraBackground,
-    background = AlertaraBackground, // The deep teal-green background
-    onBackground = White,
-    surface = AlertaraSurface,      // The lighter teal-green for cards/sections
-    onSurface = White,
-    surfaceVariant = AlertaraSurface.copy(alpha = 0.7f),
-    onSurfaceVariant = White.copy(alpha = 0.8f),
-    primaryContainer = AlertaraPrimary,
-    onPrimaryContainer = White,
-    outline = AlertaraSurface,
+    secondary = Color(0xFF00838F),   // Deep teal for better contrast in light mode
+    onSecondary = White,
+    background = Color(0xFFF0F2F5),  // Very light gray background for depth
+    onBackground = Color(0xFF1C1E21), // Near-black for text
+    surface = White,                 // Pure white cards
+    onSurface = Color(0xFF1C1E21),
+    surfaceVariant = Color(0xFFE4E6EB),
+    onSurfaceVariant = Color(0xFF65676B),
+    primaryContainer = Color(0xFFFEEBEC), // Very light red tint for boxes
+    onPrimaryContainer = EmergencyRedMain,
+    secondaryContainer = Color(0xFFE0F7FA), // Very light teal tint
+    onSecondaryContainer = Color(0xFF006064),
+    outline = Color(0xFFDDDFE2),     // Subtle borders
     error = StatusDanger,
     onError = White
 )
@@ -66,7 +68,7 @@ fun EmergencyCommunicationSystemTheme(
             val window = (view.context as Activity).window
             // With edge-to-edge, we make the status bar transparent to let the app's background show.
             @Suppress("DEPRECATION")
-            window.statusBarColor = Color.Transparent.toArgb()
+            window.statusBarColor = colorScheme.background.toArgb()
             // This controls whether the status bar icons (clock, battery) are light or dark.
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
