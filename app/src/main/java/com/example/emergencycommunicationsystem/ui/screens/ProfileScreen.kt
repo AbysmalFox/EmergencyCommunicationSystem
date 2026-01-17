@@ -1,6 +1,7 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -34,14 +35,14 @@ fun ProfileScreen(
     username: String?,
     email: String?,
     phone: String?,
-    currentTheme: String, // "system", "light", "dark"
+    currentTheme: String, 
     onThemeChange: (String) -> Unit,
     onLoginClick: () -> Unit,
     onSignUpClick: () -> Unit,
     onLogoutClick: () -> Unit,
     onLanguageSettingsClick: () -> Unit,
     onPrivacyPolicyClick: () -> Unit,
-    onAboutAppClick: () -> Unit, // Using this for Help/Terms
+    onAboutAppClick: () -> Unit,
     profileViewModel: ProfileViewModel
 ) {
     var showNotificationSettings by remember { mutableStateOf(false) }
@@ -137,15 +138,13 @@ fun ProfileScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // B. Settings List (Grouped)
-            
-            // PREFERENCES Group
             SettingsGroupHeader(text = "PREFERENCES")
             
             SettingsItem(
                 text = localeContext.getString(R.string.receive_notifications) ?: "Push Notifications",
                 trailingContent = {
                     Switch(
-                        checked = true, // Placeholder state. Real app would check ViewModel state
+                        checked = true, 
                         onCheckedChange = { 
                              if (isLoggedIn) {
                                  showNotificationSettings = true 
@@ -154,8 +153,9 @@ fun ProfileScreen(
                              }
                         },
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.primary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primaryContainer
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = MaterialTheme.colorScheme.secondary,
+                            uncheckedTrackColor = Color.White.copy(alpha = 0.2f)
                         )
                     )
                 },
@@ -167,7 +167,7 @@ fun ProfileScreen(
 
             SettingsItem(
                 text = localeContext.getString(R.string.language_preference) ?: "Language",
-                valueText = "English", // In real app, bind to current language
+                valueText = "English", 
                 onClick = onLanguageSettingsClick
             )
 
@@ -179,7 +179,6 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // SECURITY Group
             SettingsGroupHeader(text = "SECURITY")
 
             SettingsItem(
@@ -194,37 +193,36 @@ fun ProfileScreen(
 
             SettingsItem(
                 text = "Terms of Service",
-                onClick = onAboutAppClick // Reusing about app for now
+                onClick = onAboutAppClick 
             )
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // C. Logout
             if (isLoggedIn) {
                 TextButton(
                     onClick = { showLogoutDialog = true },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    colors = ButtonDefaults.textButtonColors(contentColor = Color.Red.copy(alpha = 0.8f))
                 ) {
                     Text(
                         text = localeContext.getString(R.string.logout) ?: "Logout",
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
             
-            Spacer(modifier = Modifier.height(100.dp)) // Bottom padding for nav bar
+            Spacer(modifier = Modifier.height(100.dp))
         }
     }
 
-    // Existing Bottom Sheet Logic
     if (showNotificationSettings) {
         ModalBottomSheet(
             onDismissRequest = { showNotificationSettings = false },
-            sheetState = sheetState
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface
         ) {
             val settingsState by profileViewModel.uiState.collectAsState()
             if (settingsState != null) {
@@ -244,7 +242,7 @@ fun ProfileScreen(
                     modifier = Modifier.fillMaxWidth().height(200.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
                 }
             }
         }
@@ -266,14 +264,13 @@ fun ThemeOption(
     ) {
         RadioButton(
             selected = selected,
-            onClick = null // Handled by Row click
+            onClick = null,
+            colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.secondary)
         )
         Spacer(modifier = Modifier.width(16.dp))
         Text(text = text, style = MaterialTheme.typography.bodyLarge)
     }
 }
-
-// --- Components ---
 
 @Composable
 fun ProfileHeader(
@@ -287,38 +284,36 @@ fun ProfileHeader(
             .padding(top = 40.dp, bottom = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Avatar with Badge
         Box(contentAlignment = Alignment.BottomEnd) {
             Surface(
                 modifier = Modifier.size(80.dp),
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer
+                color = Color.White.copy(alpha = 0.15f)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = AppIcons.Person,
                         contentDescription = "Avatar",
                         modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        tint = Color.White
                     )
                 }
             }
-            // Edit Badge
             Surface(
                 modifier = Modifier
                     .size(24.dp)
                     .clip(CircleShape)
                     .clickable { onEditClick() },
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.secondary,
                 shape = CircleShape,
-                border = androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.background)
+                border = BorderStroke(2.dp, MaterialTheme.colorScheme.background)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Default.Edit,
                         contentDescription = "Edit",
                         modifier = Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.onPrimary
+                        tint = Color.White
                     )
                 }
             }
@@ -326,36 +321,29 @@ fun ProfileHeader(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Name
         Text(
             text = username,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
+            fontSize = 24.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = Color.White
         )
 
-        // Email
         Text(
             text = email,
             fontSize = 14.sp,
             fontWeight = FontWeight.Normal,
-            color = Color(0xFFB0BEC5) // Light grey as requested
+            color = Color.White.copy(alpha = 0.7f)
         )
         
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         
-        // Edit Profile Pill Button
-        Surface(
-            shape = RoundedCornerShape(50),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.clickable { onEditClick() }
+        Button(
+            onClick = onEditClick,
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp)
         ) {
-            Text(
-                text = "Edit Profile",
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Text("Edit Profile", fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -371,31 +359,42 @@ fun AnonymousHeader(onLoginClick: () -> Unit, onSignUpClick: () -> Unit) {
         Surface(
             modifier = Modifier.size(80.dp),
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceVariant
+            color = Color.White.copy(alpha = 0.15f)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = AppIcons.Person,
                     contentDescription = "Anonymous",
                     modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = Color.White
                 )
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "Anonymous User",
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
+            fontSize = 24.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = Color.White
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = onLoginClick, shape = RoundedCornerShape(50)) {
-                Text("Login")
+            Button(
+                onClick = onLoginClick, 
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = MaterialTheme.colorScheme.background),
+                modifier = Modifier.height(48.dp).weight(1f).padding(start = 24.dp)
+            ) {
+                Text("Login", fontWeight = FontWeight.ExtraBold)
             }
-            OutlinedButton(onClick = onSignUpClick, shape = RoundedCornerShape(50)) {
-                Text("Sign Up")
+            OutlinedButton(
+                onClick = onSignUpClick, 
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(2.dp, Color.White),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                modifier = Modifier.height(48.dp).weight(1f).padding(end = 24.dp)
+            ) {
+                Text("Sign Up", fontWeight = FontWeight.ExtraBold)
             }
         }
     }
@@ -405,12 +404,13 @@ fun AnonymousHeader(onLoginClick: () -> Unit, onSignUpClick: () -> Unit) {
 fun SettingsGroupHeader(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.primary, // Or grey
-        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.labelLarge,
+        color = Color.White.copy(alpha = 0.6f),
+        fontWeight = FontWeight.Black,
+        letterSpacing = 1.5.sp,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 8.dp)
+            .padding(horizontal = 24.dp, vertical = 12.dp)
     )
 }
 
@@ -425,13 +425,14 @@ fun SettingsItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 24.dp, vertical = 12.dp),
+            .padding(horizontal = 24.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onBackground,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f)
         )
         
@@ -443,14 +444,14 @@ fun SettingsItem(
                     Text(
                         text = valueText,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = Color.White.copy(alpha = 0.6f),
                         modifier = Modifier.padding(end = 8.dp)
                     )
                 }
                 Icon(
                     imageVector = Icons.Default.ChevronRight,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    tint = Color.White.copy(alpha = 0.3f)
                 )
             }
         }
@@ -469,43 +470,49 @@ private fun NotificationSettingsSheet(
         Text(
             "Notification Settings",
             style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(bottom = 24.dp)
         )
 
         androidx.compose.foundation.lazy.LazyColumn {
             items(categories.size) { index ->
                 val category = categories[index]
-                // Reuse SettingsItem-like row or simplified row
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                        .padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
                    Text(
                        text = category.name,
                        style = MaterialTheme.typography.bodyLarge,
+                       color = MaterialTheme.colorScheme.onSurface,
+                       fontWeight = FontWeight.Bold,
                        modifier = Modifier.weight(1f)
                    )
                    Switch(
                        checked = category.isSubscribed == 1,
                        onCheckedChange = { isEnabled ->
                            onSubscriptionChange(category.categoryId, isEnabled)
-                       }
+                       },
+                       colors = SwitchDefaults.colors(
+                           checkedThumbColor = Color.White,
+                           checkedTrackColor = MaterialTheme.colorScheme.secondary
+                       )
                    )
                 }
             }
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(32.dp))
 
         Button(
             onClick = onDoneClick,
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
         ) {
-            Text("Done")
+            Text("Done", fontWeight = FontWeight.Bold, fontSize = 16.sp)
         }
     }
 }

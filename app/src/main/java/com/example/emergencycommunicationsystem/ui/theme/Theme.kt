@@ -29,11 +29,11 @@ private val AppDarkColorScheme = darkColorScheme(
 )
 
 /**
- * Main Light Theme applying the requested "Dark Green BG / Light Green Card" palette.
+ * Main Light Theme applying the requested "Dark Green BG / White Card" palette.
  * background: AlertaraBackground (Dark Greenish)
  * onBackground: White (For contrast on dark BG)
- * surface: BrandMintBG (Light Greenish for Cards)
- * onSurface: BrandDeepTeal (Dark Greenish text for readability on light cards)
+ * surface: White (Pure White for Cards to make them clearer)
+ * onSurface: BrandDeepTeal (Dark Greenish text for readability on white cards)
  */
 private val AlertaraLightColorScheme = lightColorScheme(
     primary = Color.White,      
@@ -42,9 +42,9 @@ private val AlertaraLightColorScheme = lightColorScheme(
     onSecondary = White,
     background = AlertaraBackground, // Dark Greenish (0xFF34635D)
     onBackground = Color.White,      // Readable white text on dark background
-    surface = BrandMintBG,           // Light Greenish (0xFFD1EAE5)
-    onSurface = BrandDeepTeal,       // Dark text on light surface
-    surfaceVariant = BrandTealLight, 
+    surface = Color.White,           // Changed to Pure White for better clarity
+    onSurface = Color.Black,         // Black text for maximum readability on white
+    surfaceVariant = BrandTealLight, // Instruction Box remains light greenish
     onSurfaceVariant = BrandDeepTeal, 
     outline = Color(0xFFB2DFDB),     
     error = StatusDanger,
