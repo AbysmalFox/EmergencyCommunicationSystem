@@ -27,6 +27,7 @@ import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -191,8 +192,8 @@ fun getColorForCategory(alert: Alert): Color {
         categoryId == 5 || "general" in categoryStr || "emergency" in categoryStr || "traffic" in title || "road" in title || "power" in title -> Color(0xFF50E3C2)
         // Category 3: Health - Teal
         categoryId == 3 || "health" in categoryStr -> Color(0xFF50E3C2)
-        // Security - Red
-        "security" in categoryStr -> Color(0xFFD0021B)
+        // Security - Use Teal instead of Red per user request
+        "security" in categoryStr -> Color(0xFF48E0D8)
         // Water/Flood - Blue
         "water" in categoryStr || "flood" in title -> Color(0xFF4A90E2)
         // Default
@@ -240,13 +241,13 @@ fun getAlertSeverity(alert: Alert): String {
 }
 
 /**
- * Get severity color (Yellow/Orange/Red)
+ * Get severity color (Yellow/Orange/Teal instead of Red)
  */
 @Composable
 @Suppress("unused")
 fun getSeverityColor(severity: String): Color {
     return when (severity) {
-        "High" -> SignalRed
+        "High" -> MaterialTheme.colorScheme.secondary // Use greenish/teal for high
         "Medium" -> SafetyOrange
         "Low" -> Color(0xFFFBC02D) // Yellow
         else -> Color(0xFF757575) // Gray (default)
@@ -432,7 +433,7 @@ fun CompactEmergencyInstructions(
                 Icon(
                     imageVector = AppIcons.Info,
                     contentDescription = "Instructions",
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = MaterialTheme.colorScheme.secondary, // Use secondary (teal) instead of primary (red)
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -458,7 +459,7 @@ fun CompactEmergencyInstructions(
                         text = "• ",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.secondary // Use secondary (teal) instead of primary (red)
                     )
                     Text(
                         text = step,
@@ -546,7 +547,8 @@ fun AlertItem(
                             Toast.makeText(context, localeContext.getString(R.string.please_login_to_send_message), Toast.LENGTH_SHORT).show()
                         }
                     },
-                    modifier = Modifier.height(40.dp)
+                    modifier = Modifier.height(40.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary) // Use secondary (teal) instead of primary (red)
                 ) {
                     Icon(
                         imageVector = AppIcons.Message,
@@ -655,7 +657,7 @@ fun AlertsScreen(
                 state = pullRefreshState,
                 modifier = Modifier.align(Alignment.TopCenter),
                 backgroundColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.primary
+                contentColor = MaterialTheme.colorScheme.secondary // Use secondary (teal)
             )
         }
     }
@@ -762,7 +764,7 @@ fun ScrollIndicator(
                 .height(thumbHeight)
                 .offset(y = thumbOffset)
                 .background(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f), // More opaque
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f), // Use secondary (teal)
                     shape = RoundedCornerShape(3.dp)
                 )
         )

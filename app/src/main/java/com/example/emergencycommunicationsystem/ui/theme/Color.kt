@@ -2,6 +2,12 @@ package com.example.emergencycommunicationsystem.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
+// Alertara Specific Palette (from image)
+val AlertaraBackground = Color(0xFF34635D)
+val AlertaraSurface = Color(0xFF56817B)
+val AlertaraPrimary = Color(0xFFE02E2E) // Emergency Red
+val AlertaraSecondary = Color(0xFF48E0D8) // Teal accents
+
 // Define the new color palette
 val DarkNavy = Color(0xFF0A192F) // Very dark blue for backgrounds
 val Slate = Color(0xFF334B6A)     // Lighter, desaturated blue for surfaces
@@ -11,11 +17,17 @@ val LightGray = Color(0xFFCCCCCC) // For less important text
 
 // Redesign Colors
 val OffBlack = Color(0xFF1A1A1A)
-val VibrantRed = Color(0xFFE02E2E) // For Emergency Button
+val VibrantRed = Color(0xFFE31B23) // Refined, more striking Emergency Red
 val SafetyOrange = Color(0xFFFF7D00) // For Medium alerts
 val SignalRed = Color(0xFFFF3B30) // For High alerts
 val LightBackground = Color(0xFFF2F2F7) // Light grey background
 val CardBorder = Color(0xFFE5E5EA) // Very thin light-grey border
+
+// Emergency Button Specific Palette
+val EmergencyRedMain = Color(0xFFE31B23)
+val EmergencyRedLight = Color(0xFFFF4D4D)
+val EmergencyRedDark = Color(0xFF941116)
+val EmergencyRedPulse = Color(0xFFFF6961) // For pulsing in dark mode
 
 // Refined Palette (User Request)
 val NeutralBackground = Color(0xFFF8F9FA) // Warm/Cool off-white
@@ -31,7 +43,7 @@ val StatusInfo = Color(0xFF17A2B8)
 // Lighter versions for dark mode - significantly lighter to be less harsh
 val StatusSafeLight = Color(0xFF66BB6A) // Much lighter green for dark mode
 val StatusDangerLight = Color(0xFFFF6B6B) // Much lighter red for dark mode  
-val VibrantRedLight = Color(0xFFFF6B6B) // Much lighter red for emergency button in dark mode
+val VibrantRedLight = Color(0xFFFF6961) // Much lighter red for emergency button in dark mode
 
 // You can keep old colors or remove them
 val Purple80 = Color(0xFFD0BCFF)

@@ -49,6 +49,10 @@ import kotlin.math.sin
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import com.example.emergencycommunicationsystem.ui.theme.VibrantRed
 import com.example.emergencycommunicationsystem.ui.theme.VibrantRedLight
+import com.example.emergencycommunicationsystem.ui.theme.EmergencyRedMain
+import com.example.emergencycommunicationsystem.ui.theme.EmergencyRedLight
+import com.example.emergencycommunicationsystem.ui.theme.EmergencyRedDark
+import com.example.emergencycommunicationsystem.ui.theme.EmergencyRedPulse
 import com.example.emergencycommunicationsystem.ui.theme.DarkNavy
 import com.example.emergencycommunicationsystem.ui.theme.Slate
 import com.example.emergencycommunicationsystem.ui.theme.CardBorder
@@ -219,10 +223,10 @@ fun EmergencyCallButton(onClick: () -> Unit) {
     val bgColor = MaterialTheme.colorScheme.background
     val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
     
-    // Use lighter colors in dark mode - significantly lighter
-    val baseRed = if (isDarkMode) VibrantRedLight else VibrantRed
-    val lightRed = if (isDarkMode) Color(0xFFFF9A9A) else Color(0xFFFF5E5E) // Even lighter in dark mode
-    val darkRed = if (isDarkMode) Color(0xFFFF6B6B) else Color(0xFFB00020)
+    // Use refined emergency palette
+    val baseRed = if (isDarkMode) VibrantRedLight else EmergencyRedMain
+    val lightRed = if (isDarkMode) EmergencyRedPulse else EmergencyRedLight
+    val darkRed = if (isDarkMode) EmergencyRedMain else EmergencyRedDark
     
     // Pulsing animation - makes the red lighter periodically (more noticeable)
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
@@ -308,15 +312,20 @@ fun EmergencyCallButton(onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(88.dp) // Increased height slightly
+            .height(92.dp) // Slightly increased height for better presence
             .shadow(
-                elevation = 16.dp, // Increased elevation
+                elevation = 20.dp, // Increased elevation for a "floating" look
                 shape = shape,
-                spotColor = baseRed.copy(alpha = 0.6f),
-                ambientColor = baseRed.copy(alpha = 0.3f)
+                spotColor = baseRed.copy(alpha = 0.8f),
+                ambientColor = baseRed.copy(alpha = 0.4f)
             )
             .clip(shape)
             .background(gradientBrush)
+            .border(
+                width = 1.dp,
+                color = Color.White.copy(alpha = 0.2f),
+                shape = shape
+            )
             .drawBehind {
                 // Draw animated wave pattern (optimized for performance)
                 // Only draw if size is valid to avoid unnecessary calculations
@@ -324,9 +333,9 @@ fun EmergencyCallButton(onClick: () -> Unit) {
                     drawWavePattern(
                         size = size,
                         waveOffset = waveOffset,
-                        waveColor = Color.White.copy(alpha = 0.2f), // Reduced opacity
-                        waveAmplitude = size.height * 0.2f, // Smaller amplitude
-                        waveFrequency = 1.2f // Lower frequency = fewer waves = better performance
+                        waveColor = Color.White.copy(alpha = 0.25f), // Slightly more visible
+                        waveAmplitude = size.height * 0.25f, 
+                        waveFrequency = 1.0f 
                     )
                 }
             }
@@ -347,7 +356,7 @@ fun EmergencyCallButton(onClick: () -> Unit) {
                 contentDescription = localeContext.getString(R.string.emergency_call_label),
                 tint = Color.White,
                 modifier = Modifier
-                    .size(36.dp) // Increased size
+                    .size(40.dp) // Increased size
                     .graphicsLayer(
                         translationX = shakeOffsetX, // Horizontal shake (left to right)
                         translationY = shakeOffsetY, // Very subtle vertical movement
@@ -360,16 +369,16 @@ fun EmergencyCallButton(onClick: () -> Unit) {
             Column {
                 Text(
                     text = localeContext.getString(R.string.emergency_call_label).uppercase(),
-                    color = Color.White.copy(alpha = 0.9f),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
-                    letterSpacing = 1.sp
+                    color = Color.White.copy(alpha = 0.85f),
+                    fontWeight = FontWeight.Black, // Heavier weight
+                    fontSize = 14.sp,
+                    letterSpacing = 1.5.sp
                 )
                 Text(
                     text = localeContext.getString(R.string.call_button),
                     color = Color.White,
                     fontWeight = FontWeight.ExtraBold, // Extra bold
-                    fontSize = 26.sp,
+                    fontSize = 28.sp,
                     letterSpacing = 0.5.sp
                 )
             }

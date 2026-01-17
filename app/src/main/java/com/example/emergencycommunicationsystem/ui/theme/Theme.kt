@@ -28,16 +28,23 @@ private val AppDarkColorScheme = darkColorScheme(
     onError = Color.White
 )
 
-// We can define a light scheme too, though the focus is on the dark one
-private val AppLightColorScheme = lightColorScheme(
-    primary = Slate,
-    secondary = Teal,
-    background = Color(0xFFE5E5EA), // Darker grey background
-    surface = Color.White,          // Pure white surface for contrast
+// Alertara Light Scheme (matching the provided image)
+private val AlertaraLightColorScheme = lightColorScheme(
+    primary = AlertaraPrimary,      // Emergency Red for buttons/actions
     onPrimary = White,
-    onSecondary = DarkNavy,
-    onBackground = DarkNavy,
-    onSurface = DarkNavy
+    secondary = AlertaraSecondary,
+    onSecondary = AlertaraBackground,
+    background = AlertaraBackground, // The deep teal-green background
+    onBackground = White,
+    surface = AlertaraSurface,      // The lighter teal-green for cards/sections
+    onSurface = White,
+    surfaceVariant = AlertaraSurface.copy(alpha = 0.7f),
+    onSurfaceVariant = White.copy(alpha = 0.8f),
+    primaryContainer = AlertaraPrimary,
+    onPrimaryContainer = White,
+    outline = AlertaraSurface,
+    error = StatusDanger,
+    onError = White
 )
 
 @Composable
@@ -48,9 +55,9 @@ fun EmergencyCommunicationSystemTheme(
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
-        // We will default to our custom dark theme as it matches the palette
+        // We use Alertara theme for light mode as requested
         darkTheme -> AppDarkColorScheme
-        else -> AppLightColorScheme
+        else -> AlertaraLightColorScheme
     }
 
     val view = LocalView.current

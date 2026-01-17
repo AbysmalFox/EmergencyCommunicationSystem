@@ -10,6 +10,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -130,16 +131,6 @@ fun EmergencyApp(
 
     val mainScreens = listOf(Screen.Home.route, Screen.Alerts.route, Screen.Map.route, Screen.Profile.route)
 
-    // Custom greenish background colors
-    val isDarkMode = when (currentTheme) {
-        "light" -> false
-        "dark" -> true
-        else -> isSystemInDarkTheme()
-    }
-    val alertaraBgLight = Color(0xFFE8F3F1)
-    val alertaraBgDark = Color(0xFF121F1E)
-    val screenBgColor = if (isDarkMode) alertaraBgDark else alertaraBgLight
-
     if (isLoggedIn) {
         LocationUpdater {
             latitude, longitude, accuracy ->
@@ -178,7 +169,7 @@ fun EmergencyApp(
     }
 
     Scaffold(
-        containerColor = screenBgColor // Apply custom greenish background here
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
             NavHost(

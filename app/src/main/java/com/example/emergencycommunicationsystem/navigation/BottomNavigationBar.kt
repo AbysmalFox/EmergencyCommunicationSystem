@@ -59,8 +59,8 @@ import com.example.emergencycommunicationsystem.ui.theme.DarkNavy
 import androidx.compose.ui.graphics.Color
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 
-const val navOverlayHeight = 90 // Increased to accommodate expanded animations and indicators
-const val navOverlayLift = 24 // Adjusted lift
+const val navOverlayHeight = 90 
+const val navOverlayLift = 24 
 
 @Composable
 fun BottomNavigationBar(
@@ -77,9 +77,9 @@ fun BottomNavigationBar(
         }.coerceAtLeast(0)
     }
 
-    // Detect dark mode to adjust colors
-    val bgColor = MaterialTheme.colorScheme.background
-    val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
+    // Detecting Dark Mode vs Light Mode by checking the theme background color
+    // Light Mode uses the deep teal (0xFF34635D), Dark Mode uses DarkNavy (0xFF0A192F)
+    val isDarkMode = MaterialTheme.colorScheme.background == Color(0xFF0A192F)
     
     Box(
         modifier = modifier
@@ -88,28 +88,25 @@ fun BottomNavigationBar(
             .padding(horizontal = 20.dp)
             .offset(y = (-navOverlayLift).dp)
             .shadow(
-                elevation = 24.dp, // Stronger shadow
+                elevation = 24.dp,
                 shape = RoundedCornerShape(32.dp),
                 spotColor = Color.Black.copy(alpha = 0.5f),
                 ambientColor = Color.Black.copy(alpha = 0.4f)
             )
             .clip(RoundedCornerShape(32.dp))
             .background(
-                // Use a significantly different color to stand out
                 if (isDarkMode) {
-                    // Dark mode: Use the same dark greenish background as dashboard
-                    Color(0xFF121F1E) // Dark greenish background to match dashboard theme
+                    Color(0xFF121F1E) // Dark Mode Background
                 } else {
-                    // Light mode: Use the same darker greenish background as dashboard
-                    Color(0xFF2D5A57) // Darker greenish background for better visual hierarchy
+                    Color.White // Light Mode: White background as requested
                 }
             )
             .border(
-                width = 2.dp, // Thicker border for more visibility
+                width = 1.dp,
                 color = if (isDarkMode) {
-                    Color.White.copy(alpha = 0.2f) // More visible border in dark mode
+                    Color.White.copy(alpha = 0.1f)
                 } else {
-                    Color.White.copy(alpha = 0.2f) // Light border for dark green background
+                    Color(0xFFE5E5EA) // Soft border for white background
                 },
                 shape = RoundedCornerShape(32.dp)
             )
@@ -117,7 +114,6 @@ fun BottomNavigationBar(
         val containerWidth = LocalConfiguration.current.screenWidthDp.dp - 40.dp
         val itemWidth = containerWidth / screens.size
 
-        // Sliding pill indicator with a spring animation
         val indicatorOffset: Dp by animateDpAsState(
             targetValue = itemWidth * currentSelectionIndex,
             animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
@@ -131,8 +127,10 @@ fun BottomNavigationBar(
                 .fillMaxHeight()
                 .padding(vertical = 12.dp, horizontal = 7.dp)
                 .clip(RoundedCornerShape(24.dp))
-                // Subtle indicator background
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
+                .background(
+                    if (isDarkMode) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+                    else Color(0xFF34635D).copy(alpha = 0.05f) // Greenish indicator tint
+                )
         )
 
         Row(
@@ -161,37 +159,34 @@ private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, isDarkMode: Bo
     val haptic = LocalHapticFeedback.current
     val localeContext = getLocaleContext()
 
-    // Animate color: In light mode use white, in dark mode use theme colors
+    // Greenish color logic for Light Mode, Theme Primary (Teal) for Dark Mode
+    val accentColor = if (!isDarkMode) Color(0xFF34635D) else MaterialTheme.colorScheme.primary
+
     val iconColor by animateColorAsState(
         targetValue = if (!isDarkMode) {
-            // Light mode: Use white for all icons
-            Color.White
+            if (isSelected) accentColor else Color(0xFF56817B).copy(alpha = 0.6f)
         } else {
-            // Dark mode: Use theme colors
-            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+            if (isSelected) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
         },
-        animationSpec = tween(500), // Longer duration for more visible transition
+        animationSpec = tween(500),
         label = "iconColor"
     )
 
-    // Icon "floats" up more noticeably when selected
     val iconOffsetY by animateDpAsState(
-        targetValue = if (isSelected) (-4).dp else 0.dp, // More pronounced upward movement
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow), // More bouncy effect
+        targetValue = if (isSelected) (-4).dp else 0.dp,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
         label = "iconOffsetY"
     )
 
-    // Scale animation for entire item when selected
     val itemScale by animateFloatAsState(
-        targetValue = if (isSelected) 1.05f else 1.0f, // Subtle scale up effect
+        targetValue = if (isSelected) 1.05f else 1.0f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
         label = "itemScale"
     )
 
-    // Background color animation for selected state indicator
     val backgroundColor by animateColorAsState(
         targetValue = if (isSelected) {
-            if (!isDarkMode) Color.White.copy(alpha = 0.15f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+            accentColor.copy(alpha = 0.1f)
         } else {
             Color.Transparent
         },
@@ -199,7 +194,6 @@ private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, isDarkMode: Bo
         label = "backgroundColor"
     )
 
-    // Get localized title for the screen
     val localizedTitle = when (screen) {
         is Screen.Home -> localeContext.getString(R.string.home)
         is Screen.Alerts -> localeContext.getString(R.string.alerts)
@@ -212,7 +206,7 @@ private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, isDarkMode: Bo
         modifier = Modifier
             .fillMaxHeight()
             .weight(1f)
-            .scale(itemScale) // Apply scale animation
+            .scale(itemScale)
             .padding(horizontal = 7.dp, vertical = 4.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(color = backgroundColor)
@@ -222,7 +216,6 @@ private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, isDarkMode: Bo
             },
         contentAlignment = Alignment.Center
     ) {
-        // Use Tabler icons for bottom navigation
         val tablerIconRes = when (screen) {
             is Screen.Home -> R.drawable.ic_tabler_home
             is Screen.Alerts -> R.drawable.ic_tabler_bell_ringing
@@ -246,7 +239,7 @@ private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, isDarkMode: Bo
                     tint = iconColor,
                     modifier = Modifier
                         .offset(y = iconOffsetY)
-                        .size(if (isSelected) 30.dp else 24.dp) // More pronounced size increase when selected
+                        .size(if (isSelected) 30.dp else 24.dp)
                 )
 
                 AnimatedVisibility(
@@ -256,7 +249,7 @@ private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, isDarkMode: Bo
                 ) {
                     Text(
                         text = localizedTitle,
-                        color = if (!isDarkMode) Color.White else MaterialTheme.colorScheme.primary,
+                        color = accentColor,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(top = 4.dp)
