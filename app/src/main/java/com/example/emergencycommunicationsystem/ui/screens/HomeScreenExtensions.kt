@@ -27,6 +27,7 @@ import com.example.emergencycommunicationsystem.ui.components.CompactAlertCard
 import com.example.emergencycommunicationsystem.util.LocationUtils
 import com.example.emergencycommunicationsystem.util.Resource
 import com.example.emergencycommunicationsystem.util.getLocaleContext
+import com.example.emergencycommunicationsystem.util.getAlertSeverity
 
 @Composable
 fun ActiveAlertsSection(

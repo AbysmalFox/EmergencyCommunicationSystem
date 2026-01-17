@@ -50,7 +50,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -70,6 +69,9 @@ import com.example.emergencycommunicationsystem.util.Resource
 import com.example.emergencycommunicationsystem.util.TranslationService
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
+import com.example.emergencycommunicationsystem.util.getIconForCategory
+import com.example.emergencycommunicationsystem.util.getColorForCategory
+import com.example.emergencycommunicationsystem.util.getAlertSeverity
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.Locale
@@ -104,73 +106,6 @@ fun CategoryIcon(
 }
 
 @Composable
-fun getIconForCategory(alert: Alert): ImageVector {
-    val categoryId = try { alert.category?.toIntOrNull() ?: 0 } catch (_: Exception) { 0 }
-    val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
-    val categoryStr = alert.category?.lowercase(Locale.getDefault()) ?: ""
-    
-    return when {
-        categoryId == 1 || "weather" in categoryStr || "typhoon" in title || "storm" in title -> AppIcons.Weather
-        categoryId == 2 || "earthquake" in categoryStr || "tremor" in title -> AppIcons.Earthquake
-        categoryId == 4 || "fire" in categoryStr -> AppIcons.Fire
-        "security" in categoryStr -> AppIcons.Security
-        "water" in categoryStr || "flood" in title -> AppIcons.Flood
-        else -> AppIcons.Info
-    }
-}
-
-/**
- * Maps categories to the refined "Clean" color palette defined in Color.kt
- */
-@Composable
-fun getColorForCategory(alert: Alert): Color {
-    val categoryId = try { alert.category?.toIntOrNull() ?: 0 } catch (_: Exception) { 0 }
-    val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
-    val categoryStr = alert.category?.lowercase(Locale.getDefault()) ?: ""
-    
-    return when {
-        categoryId == 1 || "weather" in categoryStr || "flood" in title -> CatWeather
-        categoryId == 2 || "earthquake" in categoryStr -> CatEarthquake
-        categoryId == 4 || "fire" in categoryStr -> CatFire
-        categoryId == 3 || "health" in categoryStr -> CatHealth
-        "security" in categoryStr -> CatSecurity
-        else -> CatGeneral
-    }
-}
-
-/**
- * Determine severity level based on alert category and content
- */
-fun getAlertSeverity(alert: Alert): String {
-    val categoryId = try { alert.category?.toIntOrNull() ?: 0 } catch (_: Exception) { 0 }
-    val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
-    val content = alert.content?.lowercase(Locale.getDefault()) ?: ""
-    val allText = "$title $content"
-    
-    val highKeywords = listOf("fire", "flood", "earthquake", "tsunami", "typhoon", "evacuate", "urgent", "emergency")
-    
-    return when {
-        categoryId == 2 || categoryId == 4 -> "High"
-        highKeywords.any { it in allText } -> "High"
-        categoryId == 1 -> "Medium"
-        else -> "Low"
-    }
-}
-
-/**
- * Get severity color
- */
-@Composable
-fun getSeverityColor(severity: String): Color {
-    return when (severity) {
-        "High" -> MaterialTheme.colorScheme.error
-        "Medium" -> SafetyOrange
-        "Low" -> StatusWarning
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-}
-
-@Composable
 fun CompactEmergencyInstructions(alert: Alert, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -194,7 +129,7 @@ fun CompactEmergencyInstructions(alert: Alert, modifier: Modifier = Modifier) {
         }
     }
     
-    val isDarkMode = MaterialTheme.colorScheme.background.let { (it.red + it.green + it.blue) / 3f < 0.5f }
+    val isDarkMode = ThemeManager.isDarkMode()
     val accentColor = getColorForCategory(alert)
 
     Surface(
@@ -234,15 +169,16 @@ fun CompactEmergencyInstructions(alert: Alert, modifier: Modifier = Modifier) {
 @Composable
 fun AlertItem(alert: Alert, onMessageClick: (id: String, title: String) -> Unit) {
     val localeContext = getLocaleContext()
-    val isDarkMode = MaterialTheme.colorScheme.background.let { (it.red + it.green + it.blue) / 3f < 0.5f }
+    val isDarkMode = ThemeManager.isDarkMode()
     val categoryColor = getColorForCategory(alert)
 
     Card(
-        modifier = Modifier.fillMaxWidth().shadow(
-            elevation = if (isDarkMode) 12.dp else 4.dp,
-            shape = RoundedCornerShape(24.dp),
-            spotColor = categoryColor.copy(alpha = 0.2f)
-        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .themeShadow(
+                elevation = if (isDarkMode) 12.dp else 4.dp,
+                shape = RoundedCornerShape(24.dp)
+            ),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(width = 1.dp, color = if (isDarkMode) Color.Transparent else Color(0xFFE1E4E8).copy(alpha = 0.5f))
@@ -318,7 +254,7 @@ fun AlertsScreen(viewModel: AlertsViewModel = viewModel(), onMessageClick: ((ale
     val pullRefreshState = rememberPullRefreshState(refreshing = isRefreshing, onRefresh = { viewModel.loadAlerts() })
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background, // Uses RefinedLightBackground from Theme
+        containerColor = MaterialTheme.colorScheme.background, // Uses Theme background
         topBar = {
             Box(modifier = Modifier.fillMaxWidth().height(64.dp).background(MaterialTheme.colorScheme.background)) {
                 Text(

@@ -108,8 +108,8 @@ import com.example.emergencycommunicationsystem.data.UserPrefs
 import com.example.emergencycommunicationsystem.data.models.WeatherState
 import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.navigation.Screen
-import com.example.emergencycommunicationsystem.ui.screens.getIconForCategory
-import com.example.emergencycommunicationsystem.ui.screens.getSeverityColor
+import com.example.emergencycommunicationsystem.util.getIconForCategory
+import com.example.emergencycommunicationsystem.util.getSeverityColor
 import kotlinx.coroutines.delay
 import java.util.Locale
 

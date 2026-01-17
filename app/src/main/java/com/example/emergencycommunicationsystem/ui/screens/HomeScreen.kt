@@ -93,6 +93,7 @@ import com.example.emergencycommunicationsystem.ui.theme.StatusWarning
 import com.example.emergencycommunicationsystem.util.Resource
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 import com.example.emergencycommunicationsystem.util.LocationUtils
+import com.example.emergencycommunicationsystem.util.getAlertSeverity
 import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
 import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
 import kotlinx.coroutines.delay
