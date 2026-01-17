@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -38,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
@@ -57,7 +59,7 @@ import com.example.emergencycommunicationsystem.ui.theme.DarkNavy
 import androidx.compose.ui.graphics.Color
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 
-const val navOverlayHeight = 80 // Reduced slightly
+const val navOverlayHeight = 90 // Increased to accommodate expanded animations and indicators
 const val navOverlayLift = 24 // Adjusted lift
 
 @Composable
@@ -95,11 +97,11 @@ fun BottomNavigationBar(
             .background(
                 // Use a significantly different color to stand out
                 if (isDarkMode) {
-                    // Dark mode: Use a darker, more distinct color (darker than Slate)
-                    Color(0xFF1A2332) // Darker blue-gray that stands out from DarkNavy
+                    // Dark mode: Use the same dark greenish background as dashboard
+                    Color(0xFF121F1E) // Dark greenish background to match dashboard theme
                 } else {
-                    // Light mode: Use a slightly darker shade
-                    Color(0xFFF5F5F5) // Light gray that stands out from white
+                    // Light mode: Use the same darker greenish background as dashboard
+                    Color(0xFF2D5A57) // Darker greenish background for better visual hierarchy
                 }
             )
             .border(
@@ -107,7 +109,7 @@ fun BottomNavigationBar(
                 color = if (isDarkMode) {
                     Color.White.copy(alpha = 0.2f) // More visible border in dark mode
                 } else {
-                    Color.Black.copy(alpha = 0.15f) // More visible border in light mode
+                    Color.White.copy(alpha = 0.2f) // Light border for dark green background
                 },
                 shape = RoundedCornerShape(32.dp)
             )
@@ -127,7 +129,7 @@ fun BottomNavigationBar(
                 .offset(x = indicatorOffset)
                 .width(itemWidth)
                 .fillMaxHeight()
-                .padding(vertical = 12.dp, horizontal = 8.dp)
+                .padding(vertical = 12.dp, horizontal = 7.dp)
                 .clip(RoundedCornerShape(24.dp))
                 // Subtle indicator background
                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
@@ -140,7 +142,7 @@ fun BottomNavigationBar(
         ) {
             screens.forEachIndexed { index, screen ->
                 val isSelected = currentSelectionIndex == index
-                NavItem(screen = screen, isSelected = isSelected) {
+                NavItem(screen = screen, isSelected = isSelected, isDarkMode = isDarkMode) {
                     if (currentDestination?.route != screen.route) {
                         navController.navigate(screen.route) {
                             popUpTo(navController.graph.findStartDestination().id) { saveState = true }
@@ -155,22 +157,46 @@ fun BottomNavigationBar(
 }
 
 @Composable
-private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, onClick: () -> Unit) {
+private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, isDarkMode: Boolean, onClick: () -> Unit) {
     val haptic = LocalHapticFeedback.current
     val localeContext = getLocaleContext()
 
-    // Animate color: Active = Primary, Inactive = Gray
+    // Animate color: In light mode use white, in dark mode use theme colors
     val iconColor by animateColorAsState(
-        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-        animationSpec = tween(300),
+        targetValue = if (!isDarkMode) {
+            // Light mode: Use white for all icons
+            Color.White
+        } else {
+            // Dark mode: Use theme colors
+            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+        },
+        animationSpec = tween(500), // Longer duration for more visible transition
         label = "iconColor"
     )
 
-    // Icon "floats" up when selected by reducing its offset
+    // Icon "floats" up more noticeably when selected
     val iconOffsetY by animateDpAsState(
-        targetValue = if (isSelected) (-2).dp else 0.dp,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+        targetValue = if (isSelected) (-4).dp else 0.dp, // More pronounced upward movement
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow), // More bouncy effect
         label = "iconOffsetY"
+    )
+
+    // Scale animation for entire item when selected
+    val itemScale by animateFloatAsState(
+        targetValue = if (isSelected) 1.05f else 1.0f, // Subtle scale up effect
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "itemScale"
+    )
+
+    // Background color animation for selected state indicator
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isSelected) {
+            if (!isDarkMode) Color.White.copy(alpha = 0.15f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+        } else {
+            Color.Transparent
+        },
+        animationSpec = tween(300),
+        label = "backgroundColor"
     )
 
     // Get localized title for the screen
@@ -186,6 +212,10 @@ private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, onClick: () ->
         modifier = Modifier
             .fillMaxHeight()
             .weight(1f)
+            .scale(itemScale) // Apply scale animation
+            .padding(horizontal = 7.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(color = backgroundColor)
             .noRippleClickable {
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 onClick()
@@ -216,17 +246,17 @@ private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, onClick: () ->
                     tint = iconColor,
                     modifier = Modifier
                         .offset(y = iconOffsetY)
-                        .size(if (isSelected) 26.dp else 24.dp) // Slightly larger when selected
+                        .size(if (isSelected) 30.dp else 24.dp) // More pronounced size increase when selected
                 )
 
                 AnimatedVisibility(
                     visible = isSelected,
-                    enter = fadeIn(animationSpec = tween(delayMillis = 150)) + slideInVertically { it / 2 },
-                    exit = fadeOut(animationSpec = tween(150))
+                    enter = fadeIn(animationSpec = tween(delayMillis = 200, durationMillis = 400)) + slideInVertically(initialOffsetY = { it }, animationSpec = tween(delayMillis = 200, durationMillis = 400)),
+                    exit = fadeOut(animationSpec = tween(300))
                 ) {
                     Text(
                         text = localizedTitle,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = if (!isDarkMode) Color.White else MaterialTheme.colorScheme.primary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(top = 4.dp)

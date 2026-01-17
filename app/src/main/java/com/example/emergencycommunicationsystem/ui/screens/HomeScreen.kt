@@ -108,8 +108,8 @@ val AlertaraTeal = Color(0xFF508684)
 val AlertaraTealLight = Color(0xFF669997)
 val AlertaraTealAccent = Color(0xFFB2DFDB)
 
-// General background colors (lighter greenish)
-val AlertaraBgLight = Color(0xFFE8F3F1) // More visible light greenish
+// General background colors (darker for better hierarchy)
+val AlertaraBgLight = Color(0xFF2D5A57) // Darker greenish background for better visual hierarchy
 val AlertaraBgDark = Color(0xFF121F1E)
 
 @OptIn(ExperimentalMaterial3Api::class)
