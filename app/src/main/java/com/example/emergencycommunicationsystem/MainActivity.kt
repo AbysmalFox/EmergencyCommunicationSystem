@@ -87,11 +87,12 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val context = LocalContext.current
-            val currentTheme by UserPrefs.getTheme(context).collectAsState(initial = "system")
+            // Changed initial value to "light"
+            val currentTheme by UserPrefs.getTheme(context).collectAsState(initial = "light")
             val isDarkTheme = when (currentTheme) {
                 "light" -> false
                 "dark" -> true
-                else -> isSystemInDarkTheme()
+                else -> false // Changed default fallback to false (Light Mode)
             }
 
             EmergencyCommunicationSystemTheme(darkTheme = isDarkTheme) {

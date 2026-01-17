@@ -37,6 +37,6 @@ object UserPrefs {
 
     fun getTheme(context: Context): Flow<String> =
         context.dataStore.data.map { prefs ->
-            prefs[THEME_KEY] ?: "system"
+            prefs[THEME_KEY] ?: "light" // Default to light mode instead of system
         }
 }

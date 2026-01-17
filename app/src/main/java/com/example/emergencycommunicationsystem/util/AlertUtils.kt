@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
+import com.example.emergencycommunicationsystem.ui.theme.ThemeManager
 import com.example.emergencycommunicationsystem.ui.theme.CatEarthquake
 import com.example.emergencycommunicationsystem.ui.theme.CatFire
 import com.example.emergencycommunicationsystem.ui.theme.CatGeneral
@@ -31,18 +32,34 @@ fun getIconForCategory(alert: Alert): ImageVector {
     }
 }
 
+/**
+ * Returns a theme-aware color for alert categories.
+ * In Light Mode, it shifts towards the "Satisfying Green/Teal" identity.
+ */
+@Composable
 fun getColorForCategory(alert: Alert): Color {
+    val isDark = ThemeManager.isDarkMode()
     val categoryId = try { alert.category?.toIntOrNull() ?: 0 } catch (_: Exception) { 0 }
     val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
     val categoryStr = alert.category?.lowercase(Locale.getDefault()) ?: ""
     
     return when {
-        categoryId == 1 || "weather" in categoryStr || "flood" in title -> CatWeather
-        categoryId == 2 || "earthquake" in categoryStr -> CatEarthquake
-        categoryId == 4 || "fire" in categoryStr -> CatFire
-        categoryId == 3 || "health" in categoryStr -> CatHealth
-        "security" in categoryStr -> CatSecurity
-        else -> CatGeneral
+        // Weather - Move from Blue to Teal for Light Mode
+        categoryId == 1 || "weather" in categoryStr || "flood" in title -> {
+            if (isDark) Color(0xFF80CBC4) else Color(0xFF00ACC1)
+        }
+        // Fire - Use a richer, more professional Red/Orange
+        categoryId == 4 || "fire" in categoryStr -> {
+            if (isDark) Color(0xFFFF8A80) else Color(0xFFE53935)
+        }
+        // Earthquake - Professional Brown/Gray
+        categoryId == 2 || "earthquake" in categoryStr -> {
+            if (isDark) Color(0xFFA1887F) else Color(0xFF795548)
+        }
+        // Health / Security / General - Use the Primary Brand Teal
+        else -> {
+            if (isDark) Color(0xFF4DB6AC) else Color(0xFF00897B)
+        }
     }
 }
 

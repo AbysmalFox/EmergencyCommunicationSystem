@@ -5,7 +5,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -51,7 +50,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -68,19 +66,12 @@ import com.example.emergencycommunicationsystem.ui.theme.*
 import com.example.emergencycommunicationsystem.util.Resource
 import com.example.emergencycommunicationsystem.util.TranslationService
 import com.example.emergencycommunicationsystem.util.getLocaleContext
-import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
 import com.example.emergencycommunicationsystem.util.getIconForCategory
 import com.example.emergencycommunicationsystem.util.getColorForCategory
-import com.example.emergencycommunicationsystem.util.getAlertSeverity
+import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
 import kotlinx.coroutines.launch
-import java.util.Calendar
 import java.util.Locale
-import kotlin.math.max
-import kotlin.math.min
 
-/**
- * Category icon for alerts - Optimized for clean look
- */
 @Composable
 fun CategoryIcon(
     alert: Alert,
@@ -109,57 +100,69 @@ fun CategoryIcon(
 fun CompactEmergencyInstructions(alert: Alert, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val alertType = getAlertTypeFromAlert(alert)
-    val (mainEn, stepsEn) = getCompactInstructions(alertType, "any")
     
+    // Instructions logic
+    val alertType = when {
+        alert.category?.contains("weather", true) == true || alert.title?.contains("typhoon", true) == true -> "flood"
+        alert.category?.contains("fire", true) == true -> "fire"
+        alert.category?.contains("earthquake", true) == true -> "earthquake"
+        else -> "general"
+    }
+    
+    val stepsEn = when (alertType) {
+        "flood" -> listOf("Avoid floodwaters", "Go to highest floor", "Turn off electricity if safe")
+        "fire" -> listOf("Use stairs only", "Stay low to avoid smoke", "Feel doors before opening")
+        "earthquake" -> listOf("Drop to hands and knees", "Cover head and neck", "Hold on to sturdy furniture")
+        else -> listOf("Follow local guidance", "Stay tuned for updates")
+    }
+
     val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
-    var mainText by remember { mutableStateOf(mainEn) }
-    var stepsText by remember { mutableStateOf(stepsEn) }
-    var labelText by remember { mutableStateOf("What To Do:") }
+    var translatedSteps by remember { mutableStateOf(stepsEn) }
+    var translatedLabel by remember { mutableStateOf("What To Do:") }
     
     LaunchedEffect(alertType, currentLanguage) {
         if (currentLanguage != "en") {
             coroutineScope.launch {
-                labelText = TranslationService.translate("What To Do:", currentLanguage)
-                mainText = TranslationService.translate(mainEn, currentLanguage)
-                stepsText = TranslationService.translateBatch(stepsEn, currentLanguage)
+                translatedLabel = TranslationService.translate("What To Do:", currentLanguage)
+                translatedSteps = TranslationService.translateBatch(stepsEn, currentLanguage)
             }
         } else {
-            labelText = "What To Do:"; mainText = mainEn; stepsText = stepsEn
+            translatedLabel = "What To Do:"; translatedSteps = stepsEn
         }
     }
     
-    val isDarkMode = ThemeManager.isDarkMode()
-    val accentColor = getColorForCategory(alert)
-
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f) 
-                else accentColor.copy(alpha = 0.06f), // Very subtle color-coded tint
+        color = MaterialTheme.colorScheme.surfaceVariant, // The "Satisfying Green" tint from Theme.kt
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.1f)) // Color-coded subtle border
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = AppIcons.Info,
                     contentDescription = null,
-                    tint = accentColor,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "🧠 $labelText $mainText",
+                    text = "🧠 $translatedLabel",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
             Spacer(modifier = Modifier.height(10.dp))
-            stepsText.take(3).forEach { step ->
+            translatedSteps.take(3).forEach { step ->
                 Row(modifier = Modifier.padding(vertical = 2.dp), verticalAlignment = Alignment.Top) {
-                    Text(text = "• ", fontSize = 13.sp, fontWeight = FontWeight.Black, color = accentColor)
-                    Text(text = step, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = "• ", 
+                        fontSize = 13.sp, 
+                        fontWeight = FontWeight.Black, 
+                        color = MaterialTheme.colorScheme.onSurfaceVariant 
+                    )
+                    Text(text = step, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
                 }
             }
         }
@@ -167,74 +170,90 @@ fun CompactEmergencyInstructions(alert: Alert, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun AlertItem(alert: Alert, onMessageClick: (id: String, title: String) -> Unit) {
+fun AlertItem(
+    alert: Alert,
+    onMessageClick: (id: String, title: String) -> Unit
+) {
     val localeContext = getLocaleContext()
-    val isDarkMode = ThemeManager.isDarkMode()
     val categoryColor = getColorForCategory(alert)
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .themeShadow(
-                elevation = if (isDarkMode) 12.dp else 4.dp,
-                shape = RoundedCornerShape(24.dp)
-            ),
+            .themeShadow(elevation = 4.dp, shape = RoundedCornerShape(24.dp)),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(width = 1.dp, color = if (isDarkMode) Color.Transparent else Color(0xFFE1E4E8).copy(alpha = 0.5f))
+        border = BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row {
                 Box(
-                    modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(categoryColor.copy(alpha = 0.1f)),
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(categoryColor.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center
                 ) {
                     CategoryIcon(alert = alert, modifier = Modifier.size(24.dp), tint = categoryColor)
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
+                    val categoryName = getCategoryName(alert, localeContext)
                     Text(
-                        text = getCategoryName(alert, localeContext).uppercase(),
+                        text = categoryName.uppercase(),
                         color = categoryColor,
                         fontWeight = FontWeight.Black,
                         fontSize = 11.sp,
-                        letterSpacing = 1.2.sp
+                        letterSpacing = 1.sp
                     )
                     Text(
-                        text = alert.title ?: "Alert",
+                        text = alert.title ?: localeContext.getString(R.string.no_title),
                         fontWeight = FontWeight.ExtraBold,
-                        fontSize = 20.sp,
+                        fontSize = 19.sp,
                         color = MaterialTheme.colorScheme.onSurface,
-                        lineHeight = 26.sp
+                        lineHeight = 24.sp
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = alert.content ?: "",
                         fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                         lineHeight = 20.sp
                     )
                 }
             }
             
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             CompactEmergencyInstructions(alert = alert)
             
-            Spacer(modifier = Modifier.height(18.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Column {
-                    Text(text = alert.source ?: "Source", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(text = alert.timestamp ?: "", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                    Text(
+                        text = alert.source ?: localeContext.getString(R.string.unknown_source),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        text = alert.timestamp ?: "",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
                 }
                 Button(
                     onClick = { onMessageClick(alert.id.toString(), alert.title ?: "Chat") },
                     modifier = Modifier.height(44.dp),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary, // Using theme secondary (teal)
+                        containerColor = MaterialTheme.colorScheme.secondary,
                         contentColor = Color.White
                     ),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 2.dp)
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
                 ) {
                     Icon(imageVector = AppIcons.Message, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
@@ -247,16 +266,27 @@ fun AlertItem(alert: Alert, onMessageClick: (id: String, title: String) -> Unit)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
-fun AlertsScreen(viewModel: AlertsViewModel = viewModel(), onMessageClick: ((alertId: String, alertTitle: String) -> Unit)? = null) {
+fun AlertsScreen(
+    viewModel: AlertsViewModel = viewModel(), 
+    onMessageClick: ((alertId: String, alertTitle: String) -> Unit)? = null
+) {
     val localeContext = getLocaleContext()
     val state by viewModel.uiState.collectAsState()
     val isRefreshing = state is Resource.Loading
-    val pullRefreshState = rememberPullRefreshState(refreshing = isRefreshing, onRefresh = { viewModel.loadAlerts() })
+    val pullRefreshState = rememberPullRefreshState(
+        refreshing = isRefreshing, 
+        onRefresh = { viewModel.loadAlerts() }
+    )
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background, // Uses Theme background
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            Box(modifier = Modifier.fillMaxWidth().height(64.dp).background(MaterialTheme.colorScheme.background)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.background)
+                    .height(64.dp)
+            ) {
                 Text(
                     text = localeContext.getString(R.string.alerts_and_notifications),
                     style = MaterialTheme.typography.titleLarge,
@@ -269,52 +299,56 @@ fun AlertsScreen(viewModel: AlertsViewModel = viewModel(), onMessageClick: ((ale
     ) { padding ->
         Box(modifier = Modifier.padding(padding).pullRefresh(pullRefreshState).fillMaxSize()) {
             when (val resource = state) {
-                is Resource.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.secondary)
+                is Resource.Loading -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center), 
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
                 is Resource.Success -> {
                     val alerts = resource.data.filter { it.title != "General Inquiry" }
-                    if (alerts.isEmpty()) { EmptyAlertsView() } else {
+                    if (alerts.isEmpty()) {
+                        EmptyAlertsView()
+                    } else {
                         val listState = rememberLazyListState()
-                        LazyColumn(
-                            state = listState,
-                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 120.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            items(alerts, key = { it.id }) { alert ->
-                                AlertItem(alert = alert) { id, title -> onMessageClick?.invoke(id, title) }
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            LazyColumn(
+                                state = listState,
+                                contentPadding = PaddingValues(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                items(alerts, key = { it.id }) { alert ->
+                                    AlertItem(alert = alert) { id, title ->
+                                        onMessageClick?.invoke(id, title)
+                                    }
+                                }
+                                item { Spacer(modifier = Modifier.height(100.dp)) }
                             }
+                            
+                            ScrollIndicator(
+                                listState = listState, 
+                                itemCount = alerts.size, 
+                                modifier = Modifier.align(Alignment.CenterEnd).padding(end = 4.dp)
+                            )
                         }
-                        ScrollIndicator(listState = listState, itemCount = alerts.size, modifier = Modifier.align(Alignment.CenterEnd).padding(end = 4.dp))
                     }
                 }
-                is Resource.Error -> ErrorView(message = resource.message) { viewModel.loadAlerts() }
+
+                is Resource.Error -> {
+                    ErrorView(message = resource.message) { viewModel.loadAlerts() }
+                }
             }
-            PullRefreshIndicator(refreshing = isRefreshing, state = pullRefreshState, modifier = Modifier.align(Alignment.TopCenter), backgroundColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.secondary)
+
+            PullRefreshIndicator(
+                refreshing = isRefreshing, 
+                state = pullRefreshState, 
+                modifier = Modifier.align(Alignment.TopCenter), 
+                backgroundColor = MaterialTheme.colorScheme.surface, 
+                contentColor = MaterialTheme.colorScheme.primary
+            )
         }
-    }
-}
-
-/**
- * Shared utility functions
- */
-private fun getAlertTypeFromAlert(alert: Alert): String {
-    val categoryId = try { alert.category?.toIntOrNull() ?: 0 } catch (_: Exception) { 0 }
-    val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
-    val catStr = alert.category?.lowercase(Locale.getDefault()) ?: ""
-    return when {
-        categoryId == 2 || "earthquake" in catStr || "earthquake" in title -> "earthquake"
-        categoryId == 4 || "fire" in catStr || "fire" in title -> "fire"
-        categoryId == 1 || "weather" in catStr || "flood" in title || "typhoon" in title -> "flood"
-        else -> "general"
-    }
-}
-
-private fun getCompactInstructions(type: String, @Suppress("UNUSED_PARAMETER") time: String): Pair<String, List<String>> {
-    return when (type) {
-        "earthquake" -> Pair("Duck, Cover, Hold", listOf("Drop to hands and knees", "Cover head and neck", "Stay away from windows"))
-        "fire" -> Pair("Do not use elevators", listOf("Use stairs only", "Stay low to avoid smoke", "Evacuate immediately"))
-        "flood" -> Pair("Move to higher ground", listOf("Avoid floodwaters", "Go to highest floor", "Turn off electricity if safe"))
-        else -> Pair("Stay Calm", listOf("Follow authorities", "Keep contacts ready", "Stay informed"))
     }
 }
 
@@ -341,27 +375,75 @@ fun getCategoryName(alert: Alert, localeContext: android.content.Context): Strin
 fun ScrollIndicator(listState: LazyListState, itemCount: Int, modifier: Modifier = Modifier) {
     val layoutInfo by remember { derivedStateOf { listState.layoutInfo } }
     if (layoutInfo.visibleItemsInfo.isEmpty() || itemCount == 0 || itemCount <= layoutInfo.visibleItemsInfo.size) return
+    
     val progress = (layoutInfo.visibleItemsInfo.first().index.toFloat() / (itemCount - 1).toFloat()).coerceIn(0f, 1f)
-    Box(modifier = modifier.width(4.dp).fillMaxHeight(0.6f).padding(vertical = 40.dp).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.05f), RoundedCornerShape(2.dp))) {
-        Box(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.2f).offset(y = (progress * 100).dp).background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f), RoundedCornerShape(2.dp)))
+    
+    Box(
+        modifier = modifier
+            .width(4.dp)
+            .fillMaxHeight(0.6f)
+            .padding(vertical = 40.dp)
+            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.05f), RoundedCornerShape(2.dp))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.2f)
+                .offset(y = (progress * 100).dp)
+                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f), RoundedCornerShape(2.dp))
+        )
     }
 }
 
 @Composable
 fun EmptyAlertsView() {
-    Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Icon(imageVector = AppIcons.NotificationsOff, contentDescription = null, modifier = Modifier.size(72.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+    val localeContext = getLocaleContext()
+    Column(
+        modifier = Modifier.fillMaxSize(), 
+        horizontalAlignment = Alignment.CenterHorizontally, 
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = AppIcons.NotificationsOff, 
+            contentDescription = null, 
+            modifier = Modifier.size(72.dp), 
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+        )
         Spacer(modifier = Modifier.height(20.dp))
-        Text(text = "No new alerts", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(
+            text = localeContext.getString(R.string.no_new_alerts), 
+            style = MaterialTheme.typography.headlineSmall, 
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
     }
 }
 
 @Composable
 fun ErrorView(message: String, onRetry: () -> Unit) {
-    Column(modifier = Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Text(text = "Failed to load alerts", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
-        Text(text = message, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+    val localeContext = getLocaleContext()
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp), 
+        horizontalAlignment = Alignment.CenterHorizontally, 
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = localeContext.getString(R.string.failed_to_load_alerts), 
+            style = MaterialTheme.typography.titleLarge, 
+            fontWeight = FontWeight.Bold, 
+            color = MaterialTheme.colorScheme.error
+        )
+        Text(
+            text = message, 
+            color = MaterialTheme.colorScheme.onSurfaceVariant, 
+            textAlign = TextAlign.Center
+        )
         Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = onRetry) { Text("Retry") }
+        Button(
+            onClick = onRetry,
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+        ) { 
+            Text(localeContext.getString(R.string.retry)) 
+        }
     }
 }
