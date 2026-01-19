@@ -7,13 +7,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
@@ -23,9 +27,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -79,7 +82,7 @@ fun EmergencyGuidesScreen(
     
     // Translated UI strings
     var translatedTitle by remember { mutableStateOf("Emergency Guides") }
-    var translatedPlaceholder by remember { mutableStateOf("Search emergency guides...") }
+    var translatedPlaceholder by remember { mutableStateOf("Search guides...") }
     var translatedAll by remember { mutableStateOf("All") }
     var translatedNoGuides by remember { mutableStateOf("No guides found") }
     
@@ -88,13 +91,13 @@ fun EmergencyGuidesScreen(
         if (currentLanguage != "en") {
             coroutineScope.launch {
                 translatedTitle = TranslationService.translate("Emergency Guides", currentLanguage)
-                translatedPlaceholder = TranslationService.translate("Search emergency guides...", currentLanguage)
+                translatedPlaceholder = TranslationService.translate("Search guides...", currentLanguage)
                 translatedAll = TranslationService.translate("All", currentLanguage)
                 translatedNoGuides = TranslationService.translate("No guides found", currentLanguage)
             }
         } else {
             translatedTitle = "Emergency Guides"
-            translatedPlaceholder = "Search emergency guides..."
+            translatedPlaceholder = "Search guides..."
             translatedAll = "All"
             translatedNoGuides = "No guides found"
         }
@@ -117,108 +120,137 @@ fun EmergencyGuidesScreen(
         }
     }
     
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(translatedTitle) },
-                navigationIcon = {
-                    IconButton(onClick = onBackPressed) {
-                        Icon(
-                            imageVector = AppIcons.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                }
+    // The main container background should be dark (background from theme)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background) // Dark background
+            .windowInsetsPadding(WindowInsets.statusBars)
+    ) {
+        // Top Bar Area
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = onBackPressed,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = AppIcons.ArrowBack,
+                    contentDescription = "Back",
+                    modifier = Modifier.size(24.dp),
+                    tint = Color.White // Back arrow should be white to be visible
+                )
+            }
+            Text(
+                text = translatedTitle,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White, // Text "Emergency Guides" set to White
+                modifier = Modifier.padding(start = 12.dp)
             )
         }
-    ) { paddingValues ->
-        Column(
+
+        // Search Bar (White background for input area)
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
             modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            placeholder = { 
+                Text(
+                    text = translatedPlaceholder,
+                    fontSize = 14.sp
+                ) 
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = AppIcons.Info,
+                    contentDescription = "Search",
+                    modifier = Modifier.size(20.dp)
+                )
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
+                unfocusedPlaceholderColor = Color.Gray,
+                focusedPlaceholderColor = Color.Gray,
+                unfocusedTextColor = Color.Black,
+                focusedTextColor = Color.Black
+            ),
+            textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp)
+        )
+        
+        // Category Filter Chips
+        LazyRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Search Bar
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                placeholder = { Text(translatedPlaceholder) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = AppIcons.Info,
-                        contentDescription = "Search"
-                    )
-                },
-                singleLine = true
-            )
-            
-            // Category Filter Chips
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp)
-                    .padding(horizontal = 16.dp)
-            ) {
-                item {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        // All category chip
-                        CategoryChip(
-                            label = translatedAll,
-                            isSelected = selectedCategory == null,
-                            onClick = { selectedCategory = null }
-                        )
-                        
-                        // Category chips - only show categories that have guides
-                        EmergencyCategory.values()
-                            .filter { category ->
-                                EmergencyGuidesData.getGuidesByCategory(category).isNotEmpty()
-                            }
-                            .forEach { category ->
-                                TranslatedCategoryChip(
-                                    category = category,
-                                    isSelected = selectedCategory == category,
-                                    onClick = { selectedCategory = category },
-                                    currentLanguage = currentLanguage
-                                )
-                            }
-                    }
-                }
+            item {
+                CategoryChip(
+                    label = translatedAll,
+                    isSelected = selectedCategory == null,
+                    onClick = { selectedCategory = null }
+                )
             }
             
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Guides List
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                if (guides.isEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = translatedNoGuides,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                } else {
-                    items(guides) { guide ->
-                        EmergencyGuideItem(
-                            guide = guide,
-                            onClick = { onGuideClick(guide.id) },
-                            currentLanguage = currentLanguage
+            items(EmergencyCategory.values().filter { category ->
+                EmergencyGuidesData.getGuidesByCategory(category).isNotEmpty()
+            }) { category ->
+                TranslatedCategoryChip(
+                    category = category,
+                    isSelected = selectedCategory == category,
+                    onClick = { selectedCategory = category },
+                    currentLanguage = currentLanguage
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // Guides List
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                start = 16.dp, 
+                top = 4.dp, 
+                end = 16.dp, 
+                bottom = 16.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            if (guides.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = translatedNoGuides,
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 14.sp
                         )
                     }
+                }
+            } else {
+                items(guides) { guide ->
+                    EmergencyGuideItem(
+                        guide = guide,
+                        onClick = { onGuideClick(guide.id) },
+                        currentLanguage = currentLanguage
+                    )
                 }
             }
         }
@@ -235,24 +267,20 @@ fun CategoryChip(
         modifier = Modifier
             .background(
                 color = if (isSelected) {
-                    MaterialTheme.colorScheme.primary
+                    MaterialTheme.colorScheme.secondary // Use secondary for active chips
                 } else {
-                    MaterialTheme.colorScheme.surfaceVariant
+                    Color.White.copy(alpha = 0.15f) // Subtle white for inactive on dark bg
                 },
                 shape = RoundedCornerShape(20.dp)
             )
             .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 14.dp, vertical = 8.dp)
     ) {
         Text(
             text = label,
             fontSize = 12.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            color = if (isSelected) {
-                MaterialTheme.colorScheme.onPrimary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            }
+            color = Color.White // Text on dark background should be white
         )
     }
 }
@@ -296,7 +324,6 @@ fun EmergencyGuideItem(
     // Translated guide content
     var translatedTitle by remember { mutableStateOf(guide.title) }
     var translatedDescription by remember { mutableStateOf(guide.description) }
-    var translatedTipsText by remember { mutableStateOf("${guide.tips.size} tips available") }
     
     // Translate guide content
     LaunchedEffect(guide.id, currentLanguage) {
@@ -304,13 +331,10 @@ fun EmergencyGuideItem(
             coroutineScope.launch {
                 translatedTitle = TranslationService.translate(guide.title, currentLanguage)
                 translatedDescription = TranslationService.translate(guide.description, currentLanguage)
-                val tipsText = "${guide.tips.size} tips available"
-                translatedTipsText = TranslationService.translate(tipsText, currentLanguage)
             }
         } else {
             translatedTitle = guide.title
             translatedDescription = guide.description
-            translatedTipsText = "${guide.tips.size} tips available"
         }
     }
     
@@ -319,29 +343,30 @@ fun EmergencyGuideItem(
             .fillMaxWidth()
             .clickable { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = Color.White // Guide cards should be white as per theme
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icon/Emoji
+            // Icon/Emoji Box
             Box(
                 modifier = Modifier
-                    .size(56.dp)
+                    .size(48.dp)
                     .background(
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                        shape = RoundedCornerShape(12.dp)
+                        color = Color(0xFFE0F2F1), // Light teal background for icon
+                        shape = RoundedCornerShape(10.dp)
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = guide.icon,
-                    fontSize = 28.sp
+                    fontSize = 24.sp
                 )
             }
             
@@ -353,22 +378,17 @@ fun EmergencyGuideItem(
             ) {
                 Text(
                     text = translatedTitle,
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = Color.Black, // Dark text on white card
+                    maxLines = 1
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = translatedDescription,
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 13.sp,
+                    color = Color.DarkGray, // Dark gray text on white card
                     maxLines = 2
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = translatedTipsText,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.primary
                 )
             }
             
@@ -377,8 +397,8 @@ fun EmergencyGuideItem(
             // Chevron
             Icon(
                 imageVector = AppIcons.ChevronRight,
-                contentDescription = "View Details",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                contentDescription = null,
+                tint = Color.Gray,
                 modifier = Modifier.size(20.dp)
             )
         }
