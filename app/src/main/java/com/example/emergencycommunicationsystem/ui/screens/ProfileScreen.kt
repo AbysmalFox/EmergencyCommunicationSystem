@@ -2,11 +2,13 @@ package com.example.emergencycommunicationsystem.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.emergencycommunicationsystem.R
@@ -48,15 +51,30 @@ fun ProfileScreen(
     profileViewModel: ProfileViewModel
 ) {
     var showNotificationSettings by remember { mutableStateOf(false) }
+    var showEditProfile by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
     
     val sheetState = rememberModalBottomSheetState()
+    val editSheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val localeContext = getLocaleContext()
 
     val isMagnifierEnabled by UserPrefs.isMagnifierEnabled(context).collectAsState(initial = false)
+
+    // Update Profile result observer
+    val updateResult by profileViewModel.updateProfileResult.collectAsState()
+    LaunchedEffect(updateResult) {
+        updateResult?.onSuccess {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            showEditProfile = false
+            profileViewModel.clearUpdateProfileResult()
+        }?.onFailure {
+            Toast.makeText(context, it.message ?: "Update failed", Toast.LENGTH_SHORT).show()
+            profileViewModel.clearUpdateProfileResult()
+        }
+    }
 
     // Logout Dialog
     if (showLogoutDialog) {
@@ -132,7 +150,7 @@ fun ProfileScreen(
                     username = username ?: "User",
                     email = email ?: "",
                     onEditClick = {
-                        Toast.makeText(context, "Edit Profile clicked", Toast.LENGTH_SHORT).show()
+                        showEditProfile = true
                     }
                 )
             } else {
@@ -273,6 +291,108 @@ fun ProfileScreen(
                 ) {
                     CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
                 }
+            }
+        }
+    }
+
+    if (showEditProfile) {
+        ModalBottomSheet(
+            onDismissRequest = { showEditProfile = false },
+            sheetState = editSheetState,
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            EditProfileSheet(
+                currentName = username ?: "",
+                currentEmail = email ?: "",
+                currentPhone = phone ?: "",
+                onSave = { name, email, phone ->
+                    profileViewModel.updateProfile(name, email, phone)
+                },
+                onCancel = {
+                    scope.launch { editSheetState.hide() }.invokeOnCompletion {
+                        if (!editSheetState.isVisible) showEditProfile = false
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun EditProfileSheet(
+    currentName: String,
+    currentEmail: String,
+    currentPhone: String,
+    onSave: (String, String, String) -> Unit,
+    onCancel: () -> Unit
+) {
+    var name by remember { mutableStateOf(currentName) }
+    var email by remember { mutableStateOf(currentEmail) }
+    var phone by remember { mutableStateOf(currentPhone) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .padding(bottom = 32.dp)
+    ) {
+        Text(
+            text = "Edit Profile",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
+
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text("Full Name") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("Email Address") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = phone,
+            onValueChange = { phone = it },
+            label = { Text("Phone Number") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedButton(
+                onClick = onCancel,
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Cancel")
+            }
+            Button(
+                onClick = { onSave(name, email, phone) },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+            ) {
+                Text("Save Changes")
             }
         }
     }
@@ -454,94 +574,118 @@ fun SettingsItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 24.dp, vertical = 16.dp),
+            .padding(vertical = 12.dp, horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyLarge,
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.weight(1f)
-        )
+        Surface(
+            modifier = Modifier.size(40.dp),
+            shape = RoundedCornerShape(10.dp),
+            color = Color.White.copy(alpha = 0.1f)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = when(text) {
+                        "Language", "언어" -> AppIcons.Info
+                        "Appearance" -> AppIcons.ArrowBack
+                        "Push Notifications" -> AppIcons.ChevronRight
+                        else -> AppIcons.Info
+                    },
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = Color.White
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.White,
+                fontWeight = FontWeight.Medium
+            )
+            if (valueText != null) {
+                Text(
+                    text = valueText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.5f)
+                )
+            }
+        }
         
         if (trailingContent != null) {
             trailingContent()
         } else {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (valueText != null) {
-                    Text(
-                        text = valueText,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.6f),
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
-                }
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = null,
-                    tint = Color.White.copy(alpha = 0.3f)
-                )
-            }
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.3f),
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }
 
 @Composable
-private fun NotificationSettingsSheet(
+fun NotificationSettingsSheet(
     categories: List<SubscriptionCategory>,
     onSubscriptionChange: (Int, Boolean) -> Unit,
     onDoneClick: () -> Unit
 ) {
     Column(
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .padding(bottom = 32.dp)
     ) {
-        Text(
-            "Notification Settings",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.ExtraBold,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
-
-        androidx.compose.foundation.lazy.LazyColumn {
-            items(categories.size) { index ->
-                val category = categories[index]
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
-                   Text(
-                       text = category.name,
-                       style = MaterialTheme.typography.bodyLarge,
-                       color = MaterialTheme.colorScheme.onSurface,
-                       fontWeight = FontWeight.Bold,
-                       modifier = Modifier.weight(1f)
-                   )
-                   Switch(
-                       checked = category.isSubscribed == 1,
-                       onCheckedChange = { isEnabled ->
-                           onSubscriptionChange(category.categoryId, isEnabled)
-                       },
-                       colors = SwitchDefaults.colors(
-                           checkedThumbColor = Color.White,
-                           checkedTrackColor = MaterialTheme.colorScheme.secondary
-                       )
-                   )
-                }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Push Notifications",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+            TextButton(onClick = onDoneClick) {
+                Text("Done", color = MaterialTheme.colorScheme.secondary)
             }
         }
-
-        Spacer(Modifier.height(32.dp))
-
-        Button(
-            onClick = onDoneClick,
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-        ) {
-            Text("Done", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        categories.forEach { category ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = category.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "Receive alerts for ${category.name.lowercase()} events",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = category.isSubscribed == 1,
+                    onCheckedChange = { onSubscriptionChange(category.categoryId, it) },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = MaterialTheme.colorScheme.secondary
+                    )
+                )
+            }
         }
     }
 }

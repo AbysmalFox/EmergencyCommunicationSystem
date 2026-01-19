@@ -1,9 +1,6 @@
 package com.example.emergencycommunicationsystem.network
 
-import com.example.emergencycommunicationsystem.data.AuthResponse
-import com.example.emergencycommunicationsystem.data.LogoutRequest
-import com.example.emergencycommunicationsystem.data.ProfileDataRequest
-import com.example.emergencycommunicationsystem.data.ProfileDataResponse
+import com.example.emergencycommunicationsystem.data.*
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.POST
@@ -20,4 +17,7 @@ interface AuthApiService {
 
     @POST("logout.php")
     suspend fun logout(@Body request: LogoutRequest): Response<AuthResponse>
+
+    @POST("update_profile.php")
+    suspend fun updateProfile(@Body request: UpdateProfileRequest): UpdateProfileResponse
 }
