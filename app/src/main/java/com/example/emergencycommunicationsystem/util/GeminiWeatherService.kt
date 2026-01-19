@@ -1,5 +1,6 @@
 package com.example.emergencycommunicationsystem.util
 
+import android.util.Log
 import com.example.emergencycommunicationsystem.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -7,21 +8,26 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 /**
  * Service for generating AI-powered weather advice using Google Gemini
- * Falls back to template-based advice if AI is unavailable
+ * Dynamically discovers supported models and falls back to template-based advice.
  */
 object GeminiWeatherService {
     private const val TAG = "GeminiWeatherService"
     
-    // Cache AI responses to avoid excessive API calls
     private val responseCache = mutableMapOf<String, String>()
     private const val CACHE_EXPIRY_MS = 30 * 60 * 1000L // 30 minutes
     private val cacheTimestamps = mutableMapOf<String, Long>()
+    
+    private var lastUsedModel: String? = null
+    
+    // DEBUG MODE: Set to false to bypass cache and add [AI] prefix
+    private const val DEBUG_MODE = false // Turning off for production feel, can turn back on if needed
     
     /**
      * Generate weather advice using Gemini AI with template fallback
@@ -36,25 +42,24 @@ object GeminiWeatherService {
         location: String = "Quezon City, Philippines",
         templateFallback: () -> String
     ): String = withContext(Dispatchers.IO) {
-        // Check if API key is configured
+        Log.d(TAG, "Requesting detailed weather advice for $location")
+        
         if (BuildConfig.GEMINI_API_KEY.isBlank()) {
-            LogFilter.d(TAG, "Gemini API key not configured, using template fallback")
+            Log.e(TAG, "GEMINI_API_KEY is BLANK")
             return@withContext templateFallback()
         }
         
-        // Create cache key
         val cacheKey = "${condition}_${temp.toInt()}_${humidity}_${windSpeed.toInt()}_${visibility / 1000}"
         
-        // Check cache first
-        val cachedResponse = responseCache[cacheKey]
-        val cacheTime = cacheTimestamps[cacheKey] ?: 0L
-        if (cachedResponse != null && (System.currentTimeMillis() - cacheTime) < CACHE_EXPIRY_MS) {
-            LogFilter.d(TAG, "Using cached AI response")
-            return@withContext cachedResponse
+        if (!DEBUG_MODE) {
+            val cachedResponse = responseCache[cacheKey]
+            val cacheTime = cacheTimestamps[cacheKey] ?: 0L
+            if (cachedResponse != null && (System.currentTimeMillis() - cacheTime) < CACHE_EXPIRY_MS) {
+                return@withContext cachedResponse
+            }
         }
         
         try {
-            // Generate AI response
             val aiResponse = generateAIAdvice(
                 condition = condition,
                 temp = temp,
@@ -65,49 +70,88 @@ object GeminiWeatherService {
                 location = location
             )
             
-            // Cache the response
-            responseCache[cacheKey] = aiResponse
+            val finalResponse = if (DEBUG_MODE) "[AI Bot] $aiResponse" else aiResponse
+            
+            responseCache[cacheKey] = finalResponse
             cacheTimestamps[cacheKey] = System.currentTimeMillis()
             
-            // Limit cache size
-            if (responseCache.size > 50) {
-                val oldestKey = cacheTimestamps.minByOrNull { it.value }?.key
-                oldestKey?.let {
-                    responseCache.remove(it)
-                    cacheTimestamps.remove(it)
+            finalResponse
+        } catch (e: Exception) {
+            Log.e(TAG, "AI advice unavailable", e)
+            val errorDisplay = if (DEBUG_MODE) "[AI ERR: ${e.message}] " else ""
+            errorDisplay + templateFallback()
+        }
+    }
+
+    /**
+     * Fetches the list of models available for the current API key and finds one
+     * that supports 'generateContent'.
+     */
+    private suspend fun discoverSupportedModel(): String = withContext(Dispatchers.IO) {
+        lastUsedModel?.let { return@withContext it }
+
+        Log.d(TAG, "Discovering supported models...")
+        val client = OkHttpClient()
+        val url = "https://generativelanguage.googleapis.com/v1beta/models?key=${BuildConfig.GEMINI_API_KEY.trim()}"
+        val request = Request.Builder().url(url).build()
+        
+        val response = client.newCall(request).execute()
+        val responseBody = response.body?.string() ?: throw Exception("Could not list models")
+        
+        if (!response.isSuccessful) throw Exception("List models failed: ${response.code}")
+
+        val json = JSONObject(responseBody)
+        val models = json.getJSONArray("models")
+        
+        val priorityModels = listOf("gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro")
+        
+        val supportedModels = mutableListOf<String>()
+        for (i in 0 until models.length()) {
+            val model = models.getJSONObject(i)
+            val name = model.getString("name").substringAfter("models/")
+            val methods = model.getJSONArray("supportedGenerationMethods")
+            
+            var supportsGenerate = false
+            for (j in 0 until methods.length()) {
+                if (methods.getString(j) == "generateContent") {
+                    supportsGenerate = true
+                    break
                 }
             }
             
-            LogFilter.d(TAG, "AI response generated successfully")
-            aiResponse
-        } catch (e: Exception) {
-            LogFilter.w(TAG, "AI generation failed: ${e.message}, using template fallback", e)
-            templateFallback()
+            if (supportsGenerate) {
+                supportedModels.add(name)
+            }
         }
+
+        val selectedModel = priorityModels.firstOrNull { it in supportedModels } 
+            ?: supportedModels.firstOrNull() 
+            ?: throw Exception("No models support generateContent")
+
+        lastUsedModel = selectedModel
+        selectedModel
     }
     
-    /**
-     * Call Gemini API via HTTP
-     */
     private suspend fun callGeminiAPI(prompt: String): String = withContext(Dispatchers.IO) {
+        val model = discoverSupportedModel()
         val client = OkHttpClient.Builder()
-            .connectTimeout(10, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(10, TimeUnit.SECONDS)
+            .connectTimeout(15, TimeUnit.SECONDS)
             .build()
         
         val requestBody = JSONObject().apply {
-            put("contents", JSONObject().apply {
-                put("parts", org.json.JSONArray().apply {
-                    put(JSONObject().apply {
-                        put("text", prompt)
+            put("contents", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("parts", JSONArray().apply {
+                        put(JSONObject().apply { put("text", prompt) })
                     })
                 })
             })
         }.toString()
+
+        val url = "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=${BuildConfig.GEMINI_API_KEY.trim()}"
         
         val request = Request.Builder()
-            .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${BuildConfig.GEMINI_API_KEY}")
+            .url(url)
             .post(requestBody.toRequestBody("application/json".toMediaType()))
             .build()
         
@@ -115,26 +159,22 @@ object GeminiWeatherService {
         val responseBody = response.body?.string() ?: throw Exception("Empty response")
         
         if (!response.isSuccessful) {
-            throw Exception("API error: ${response.code} - $responseBody")
+            val msg = JSONObject(responseBody).optJSONObject("error")?.optString("message") ?: "HTTP ${response.code}"
+            if (response.code == 404) lastUsedModel = null
+            throw Exception(msg)
         }
         
-        val jsonResponse = JSONObject(responseBody)
-        val candidates = jsonResponse.getJSONArray("candidates")
-        if (candidates.length() == 0) {
-            throw Exception("No candidates in response")
-        }
+        val json = JSONObject(responseBody)
+        val text = json.getJSONArray("candidates")
+            .getJSONObject(0)
+            .getJSONObject("content")
+            .getJSONArray("parts")
+            .getJSONObject(0)
+            .getString("text")
         
-        val candidate = candidates.getJSONObject(0)
-        val content = candidate.getJSONObject("content")
-        val parts = content.getJSONArray("parts")
-        val textPart = parts.getJSONObject(0)
-        
-        textPart.getString("text").trim()
+        text.trim()
     }
     
-    /**
-     * Generate weather advice using Gemini AI
-     */
     private suspend fun generateAIAdvice(
         condition: String,
         temp: Double,
@@ -143,7 +183,7 @@ object GeminiWeatherService {
         windSpeed: Double,
         visibility: Int,
         location: String
-    ): String = withContext(Dispatchers.IO) {
+    ): String {
         val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         val timeOfDay = when (currentHour) {
             in 5..11 -> "morning"
@@ -152,55 +192,33 @@ object GeminiWeatherService {
             else -> "night"
         }
         
-        val month = Calendar.getInstance().get(Calendar.MONTH) + 1 // 1-12
-        val isTyphoonSeason = month in 6..11 // June to November in Philippines
-        
         val prompt = """
-            You are a friendly, helpful weather assistant for $location.
+            You are a helpful, professional weather assistant for $location.
             
-            Provide a brief, conversational weather advice (1-2 sentences, max 150 characters) based on:
-            - Weather condition: $condition
-            - Temperature: ${String.format("%.1f", temp)}°C (feels like ${String.format("%.1f", feelsLike)}°C)
+            Based on these specific conditions, provide conversational advice including a tip and any necessary warnings:
+            - Condition: $condition
+            - Temp: ${temp.toInt()}°C (Feels like ${feelsLike.toInt()}°C)
             - Humidity: $humidity%
-            - Wind speed: ${String.format("%.1f", windSpeed)} km/h
+            - Wind: $windSpeed km/h
             - Visibility: ${visibility / 1000} km
-            - Time of day: $timeOfDay
-            - Month: $month (${if (isTyphoonSeason) "typhoon season" else "not typhoon season"})
+            - Time: $timeOfDay
             
             Guidelines:
-            - Be conversational and friendly (like a helpful friend)
-            - Keep it practical and actionable
-            - Use emojis sparingly (1-2 max) if appropriate
-            - Consider local context (Philippines weather patterns, typhoon season, etc.)
-            - If severe weather, add appropriate warnings
-            - Don't be too technical, keep it simple
-            - Make it feel natural, not robotic
+            - Provide 2-3 sentences.
+            - Be practical and actionable (what to wear, what to bring, safety precautions).
+            - Mention specific details from the data if they are notable (e.g., high humidity or wind).
+            - Use a friendly but informative tone.
+            - Max 250 characters.
             
-            Respond ONLY with the weather advice, nothing else.
+            Respond only with the advice.
         """.trimIndent()
         
-        try {
-            val advice = callGeminiAPI(prompt)
-            
-            // Validate response length
-            if (advice.length > 200) {
-                // Truncate if too long
-                advice.substring(0, 197) + "..."
-            } else {
-                advice
-            }
-        } catch (e: Exception) {
-            LogFilter.e(TAG, "Gemini API error: ${e.message}", e)
-            throw e
-        }
+        return callGeminiAPI(prompt)
     }
-    
-    /**
-     * Clear the response cache
-     */
+
     fun clearCache() {
         responseCache.clear()
         cacheTimestamps.clear()
-        LogFilter.d(TAG, "AI response cache cleared")
+        lastUsedModel = null
     }
 }

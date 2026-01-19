@@ -5,62 +5,20 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.MutableTransitionState
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Air
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.WaterDrop
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -70,15 +28,16 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
-import kotlin.math.max
-import kotlin.math.min
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import coil.compose.AsyncImage
 import com.example.emergencycommunicationsystem.R
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.emergencycommunicationsystem.data.models.Alert
@@ -87,10 +46,8 @@ import com.example.emergencycommunicationsystem.ui.components.SafeOverlay
 import com.example.emergencycommunicationsystem.ui.components.CompactAlertCard
 import com.example.emergencycommunicationsystem.ui.components.EmergencyCallButton
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
-import com.example.emergencycommunicationsystem.ui.theme.SoftShadow
 import com.example.emergencycommunicationsystem.ui.theme.StatusDanger
 import com.example.emergencycommunicationsystem.ui.theme.StatusSafe
-import com.example.emergencycommunicationsystem.ui.theme.StatusWarning
 import com.example.emergencycommunicationsystem.util.Resource
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 import com.example.emergencycommunicationsystem.util.LocationUtils
@@ -99,9 +56,6 @@ import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
 import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
 import com.example.emergencycommunicationsystem.ui.theme.ThemeManager
 import com.example.emergencycommunicationsystem.ui.theme.themeShadow
-import com.example.emergencycommunicationsystem.ui.theme.AlertaraBackground
-import com.example.emergencycommunicationsystem.ui.theme.BrandMintBG
-import com.example.emergencycommunicationsystem.ui.theme.BrandTealAccent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -109,6 +63,8 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import kotlin.math.max
+import kotlin.math.min
 
 // The primary teal color from Alertaraqc widget
 val AlertaraTeal = Color(0xFF508684)
@@ -247,7 +203,7 @@ fun HomeScreen(
                         }
                     }
                     
-                    // Active Alerts Section
+                    // Active Alerts Section - ULTRA COMPACT
                     item {
                         AnimatedVisibility(
                             visibleState = animationState,
@@ -687,7 +643,7 @@ fun QuickActionCard(
 }
 
 /**
- * Modern Alerts Section
+ * Modern Alerts Section - Updated to be even more compact
  */
 @Composable
 fun ModernAlertsSection(
@@ -697,83 +653,77 @@ fun ModernAlertsSection(
     onAlertClick: (Int) -> Unit,
     isDarkMode: Boolean
 ) {
+    val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF34635D)
+
     when (alertsState) {
         is Resource.Loading -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                androidx.compose.material3.CircularProgressIndicator(strokeWidth = 3.dp)
+            Box(modifier = Modifier.fillMaxWidth().height(80.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
             }
         }
         is Resource.Success -> {
-            val alerts = alertsState.data.take(3)
+            val alerts = alertsState.data
             if (alerts.isNotEmpty()) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(
-                            color = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White.copy(alpha = 0.1f),
-                            shape = RoundedCornerShape(20.dp)
-                        )
-                        .padding(16.dp)
+                        .padding(vertical = 2.dp)
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Active Alerts",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Box(
-                            modifier = Modifier
-                                .background(
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                .padding(horizontal = 10.dp, vertical = 4.dp)
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = AppIcons.Alerts,
+                                contentDescription = null,
+                                tint = primaryColor,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "${alertsState.data.size}",
+                                text = "Active Alerts",
                                 fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onBackground
                             )
                         }
+                        
+                        Text(
+                            text = "VIEW ALL",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Black,
+                            color = primaryColor.copy(alpha = 0.7f),
+                            modifier = Modifier.clickable { /* Navigate */ }
+                        )
                     }
                     
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        alerts.forEach { alert ->
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(alerts.take(5)) { alert ->
                             val distanceKm = if (userLat != null && userLon != null &&
                                 alert.latitude != null && alert.longitude != null) {
-                                LocationUtils.calculateDistance(
-                                    userLat, userLon,
-                                    alert.latitude, alert.longitude
-                                )
+                                LocationUtils.calculateDistance(userLat, userLon, alert.latitude, alert.longitude)
                             } else null
                             
-                            val severity = getAlertSeverity(alert)
-                            
-                            CompactAlertCard(
-                                alert = alert,
-                                distanceKm = distanceKm,
-                                severity = severity,
-                                onClick = { onAlertClick(alert.id) }
-                            )
+                            Box(modifier = Modifier.width(220.dp)) {
+                                CompactAlertCard(
+                                    alert = alert,
+                                    distanceKm = distanceKm,
+                                    severity = getAlertSeverity(alert),
+                                    onClick = { onAlertClick(alert.id) }
+                                )
+                            }
                         }
                     }
                 }
             }
         }
-        is Resource.Error -> {}
+        else -> {}
     }
 }
 
@@ -813,13 +763,15 @@ fun TypewriterText(
 }
 
 /**
- * Enhanced Weather Card with Hourly Forecast and More Details
+ * Enhanced Weather Card with Hourly Forecast
  */
 @Composable
 fun CompactWeatherCard(
     weatherState: WeatherState.Success,
     isDarkMode: Boolean
 ) {
+    val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF34635D)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -834,7 +786,7 @@ fun CompactWeatherCard(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Top Section: Temperature and Main Condition
+            // Top Section: Info on left, Temperature + Icon on right
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -842,7 +794,7 @@ fun CompactWeatherCard(
             ) {
                 Column {
                     Text(
-                        text = "Weather",
+                        text = "Weather Forecast",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -853,37 +805,49 @@ fun CompactWeatherCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Text(
-                    text = "${weatherState.temperature.substringBefore(".")}°C",
-                    fontSize = 36.sp,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "${weatherState.temperature.substringBefore(".")}°C",
+                        fontSize = 36.sp,
+                        fontWeight = FontWeight.Black,
+                        color = primaryColor
+                    )
+                    
+                    Spacer(modifier = Modifier.width(12.dp))
+                    
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(AlertaraTeal.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AsyncImage(
+                            model = weatherState.iconUrl,
+                            contentDescription = weatherState.condition,
+                            modifier = Modifier.size(54.dp)
+                        )
+                    }
+                }
             }
             
             Spacer(modifier = Modifier.height(12.dp))
             
-            // Middle Section: Weather Details (Feels Like, Humidity, Wind)
+            // Middle Section: Weather Details
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                WeatherDetailItem(Icons.Default.LightMode, "Feels", "${weatherState.feelsLike.substringBefore(".")}°", false)
-                WeatherDetailItem(Icons.Default.WaterDrop, "Humidity", weatherState.humidity, false)
-                WeatherDetailItem(Icons.Default.Air, "Wind", weatherState.windSpeed, false)
+                WeatherDetailItem(Icons.Default.LightMode, "Feels", "${weatherState.feelsLike.substringBefore(".")}°", false, isDarkMode)
+                WeatherDetailItem(Icons.Default.WaterDrop, "Humidity", weatherState.humidity, false, isDarkMode)
+                WeatherDetailItem(Icons.Default.Air, "Wind", weatherState.windSpeed, false, isDarkMode)
             }
             
             Spacer(modifier = Modifier.height(16.dp))
             
             // Bottom Section: Hourly Forecast
             if (weatherState.forecastData.isNotEmpty()) {
-                Text(
-                    text = "Forecast",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     contentPadding = PaddingValues(end = 8.dp)
@@ -906,23 +870,43 @@ fun CompactWeatherCard(
                 }
             }
             
-            // Advice Bar with Typewriter Effect
+            // Advice Bar with Reporter Image and AI Text
             if (weatherState.advice.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
-                        .padding(10.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(primaryColor.copy(alpha = 0.06f))
+                        .border(1.dp, primaryColor.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
+                        .padding(12.dp)
                 ) {
-                    TypewriterText(
-                        text = weatherState.advice,
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Medium,
-                        lineHeight = 14.sp
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.reporter),
+                            contentDescription = "AI Assistant",
+                            modifier = Modifier
+                                .size(50.dp)
+                                .clip(CircleShape)
+                                .background(primaryColor.copy(alpha = 0.1f)),
+                            contentScale = ContentScale.Crop
+                        )
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            TypewriterText(
+                                text = weatherState.advice,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.Medium,
+                                lineHeight = 16.sp
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -930,13 +914,15 @@ fun CompactWeatherCard(
 }
 
 @Composable
-fun WeatherDetailItem(icon: ImageVector, label: String, value: String, onTeal: Boolean = false) {
+fun WeatherDetailItem(icon: ImageVector, label: String, value: String, onTeal: Boolean = false, isDarkMode: Boolean = false) {
+    val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF34635D)
+    
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             modifier = Modifier.size(14.dp),
-            tint = if (onTeal) Color.White else MaterialTheme.colorScheme.primary
+            tint = if (onTeal) Color.White else primaryColor
         )
         Spacer(modifier = Modifier.width(4.dp))
         Column {
@@ -1000,7 +986,7 @@ fun CompactInstructionsCard(
                     Icon(
                         imageVector = AppIcons.Info,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF34635D),
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -1023,7 +1009,7 @@ fun CompactInstructionsCard(
                     text = "TAP FOR FULL GUIDES",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                    color = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF34635D).copy(alpha = 0.7f)
                 )
             }
             
