@@ -58,7 +58,8 @@ import java.net.URLEncoder
 @Composable
 fun AppNavigation(
     currentTheme: String,
-    onThemeChange: (String) -> Unit
+    onThemeChange: (String) -> Unit,
+    onMagnifierToggle: (Boolean) -> Unit
 ) {
     val navController = rememberNavController()
     val weatherViewModel: WeatherViewModel = viewModel()
@@ -210,6 +211,7 @@ fun AppNavigation(
                         onLanguageSettingsClick = { navController.navigate(Screen.LanguageSettings.route) },
                         onPrivacyPolicyClick = { navController.navigate(Screen.PrivacyPolicy.route) },
                         onAboutAppClick = { navController.navigate(Screen.AboutApp.route) },
+                        onMagnifierToggle = onMagnifierToggle,
                         profileViewModel = profileViewModel
                     )
                 }

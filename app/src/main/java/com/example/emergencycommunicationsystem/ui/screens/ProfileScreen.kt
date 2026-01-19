@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.data.SubscriptionCategory
+import com.example.emergencycommunicationsystem.data.UserPrefs
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModel
@@ -43,6 +44,7 @@ fun ProfileScreen(
     onLanguageSettingsClick: () -> Unit,
     onPrivacyPolicyClick: () -> Unit,
     onAboutAppClick: () -> Unit,
+    onMagnifierToggle: (Boolean) -> Unit,
     profileViewModel: ProfileViewModel
 ) {
     var showNotificationSettings by remember { mutableStateOf(false) }
@@ -53,6 +55,8 @@ fun ProfileScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val localeContext = getLocaleContext()
+
+    val isMagnifierEnabled by UserPrefs.isMagnifierEnabled(context).collectAsState(initial = false)
 
     // Logout Dialog
     if (showLogoutDialog) {
@@ -175,6 +179,31 @@ fun ProfileScreen(
                 text = "Appearance",
                 valueText = currentTheme.replaceFirstChar { it.uppercase() },
                 onClick = { showThemeDialog = true }
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            SettingsGroupHeader(text = "ACCESSIBILITY")
+
+            SettingsItem(
+                text = "Floating Magnifier",
+                trailingContent = {
+                    Switch(
+                        checked = isMagnifierEnabled,
+                        onCheckedChange = { enabled ->
+                            scope.launch {
+                                UserPrefs.saveMagnifierEnabled(context, enabled)
+                                onMagnifierToggle(enabled)
+                            }
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = MaterialTheme.colorScheme.secondary,
+                            uncheckedTrackColor = Color.White.copy(alpha = 0.2f)
+                        )
+                    )
+                },
+                onClick = { /* Toggle via switch */ }
             )
 
             Spacer(modifier = Modifier.height(24.dp))

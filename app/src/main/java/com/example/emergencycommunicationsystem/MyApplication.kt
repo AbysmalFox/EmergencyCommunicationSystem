@@ -1,11 +1,11 @@
 package com.example.emergencycommunicationsystem
 
 import android.app.Application
-import android.content.Context
 import android.util.Log
 import org.osmdroid.config.Configuration
 
 class MyApplication : Application() {
+
     override fun onCreate() {
         super.onCreate()
 
@@ -54,16 +54,6 @@ class MyApplication : Application() {
     
     /**
      * Attempts to suppress noisy system logs using all available methods.
-     * 
-     * IMPORTANT: HWUI "Image decoding logging dropped!" logs are written by Android's
-     * native C++ renderer and CANNOT be suppressed from Java/Kotlin code. They bypass
-     * the Log class entirely and write directly to the kernel log buffer.
-     * 
-     * The only way to hide these logs is to use a logcat filter in Android Studio:
-     * Filter: `tag:EmergencyComm`
-     * 
-     * This method optimizes tile loading to REDUCE the frequency of these logs,
-     * but cannot eliminate them completely.
      */
     private fun suppressNoisySystemLogs() {
         val tagsToSuppress = listOf(

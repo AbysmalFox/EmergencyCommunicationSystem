@@ -3,10 +3,8 @@ package com.example.emergencycommunicationsystem
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -20,7 +18,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
@@ -38,6 +35,7 @@ import com.example.emergencycommunicationsystem.data.repository.MessagingReposit
 import com.example.emergencycommunicationsystem.data.repository.SettingsRepository
 import com.example.emergencycommunicationsystem.navigation.BottomNavigationBar
 import com.example.emergencycommunicationsystem.navigation.Screen
+import com.example.emergencycommunicationsystem.ui.BaseActivity
 import com.example.emergencycommunicationsystem.ui.screens.*
 import com.example.emergencycommunicationsystem.ui.theme.EmergencyCommunicationSystemTheme
 import com.example.emergencycommunicationsystem.util.LocationUpdater
@@ -46,20 +44,17 @@ import com.example.emergencycommunicationsystem.util.LocaleProvider
 import com.example.emergencycommunicationsystem.util.LocaleManager
 import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModel
 import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModelFactory
-import com.example.emergencycommunicationsystem.ui.screens.SignUpViewModel
-import com.example.emergencycommunicationsystem.ui.screens.SignUpState
 import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.osmdroid.config.Configuration
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.util.Locale
 
-class MainActivity : ComponentActivity() {
+class MainActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -87,13 +82,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val context = LocalContext.current
-            // Changed initial value to "light"
             val currentTheme by UserPrefs.getTheme(context).collectAsState(initial = "light")
-            val isDarkTheme = when (currentTheme) {
-                "light" -> false
-                "dark" -> true
-                else -> false // Changed default fallback to false (Light Mode)
-            }
+            val isDarkTheme = currentTheme == "dark"
 
             EmergencyCommunicationSystemTheme(darkTheme = isDarkTheme) {
                 LocaleProvider {
@@ -103,6 +93,9 @@ class MainActivity : ComponentActivity() {
                             lifecycleScope.launch(Dispatchers.IO) {
                                 UserPrefs.saveTheme(context, newTheme)
                             }
+                        },
+                        onMagnifierToggle = { enabled ->
+                            if (enabled) setupMagnifier() else removeMagnifier()
                         }
                     )
                 }
@@ -114,7 +107,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun EmergencyApp(
     currentTheme: String,
-    onThemeChange: (String) -> Unit
+    onThemeChange: (String) -> Unit,
+    onMagnifierToggle: (Boolean) -> Unit
 ) {
     val navController = rememberNavController()
     val weatherViewModel: WeatherViewModel = viewModel()
@@ -206,24 +200,17 @@ fun EmergencyApp(
                     AlertsScreen(
                         onMessageClick = { alertId, alertTitle ->
                             try {
-                                Log.d("Navigation", "Attempting to navigate for alertId: '''$alertId'''")
                                 val userId = AuthManager.getUserId()
                                 if (userId > 0) {
                                     val alertIdInt = alertId.toInt()
                                     val encodedTitle = URLEncoder.encode(alertTitle, "UTF-8")
                                     val userName = AuthManager.getUsername() ?: "User"
                                     navController.navigate("${Screen.Messaging.route}?alertId=$alertIdInt&alertTitle=$encodedTitle&userId=$userId&userName=$userName")
-                                    Log.i("Navigation", "Successfully navigated to MessagingScreen for alertId: $alertIdInt.")
                                 } else {
-                                    Log.w("Navigation", "Navigation blocked: User is not logged in (userId: $userId).")
                                     Toast.makeText(context, "Please log in to send a message", Toast.LENGTH_SHORT).show()
                                 }
-                            } catch (e: NumberFormatException) {
-                                Log.e("NavigationError", "Failed to navigate. The alert ID '''$alertId''' is not a valid integer.", e)
-                                Toast.makeText(context, "Error: Invalid alert data. Cannot open message.", Toast.LENGTH_LONG).show()
                             } catch (e: Exception) {
-                                Log.e("NavigationError", "An unexpected error occurred during navigation for alert: $alertTitle", e)
-                                Toast.makeText(context, "An unexpected error occurred.", Toast.LENGTH_LONG).show()
+                                Log.e("NavigationError", "Error navigating to messaging", e)
                             }
                         }
                     )
@@ -259,13 +246,12 @@ fun EmergencyApp(
                         onLanguageSettingsClick = { navController.navigate(Screen.LanguageSettings.route) },
                         onPrivacyPolicyClick = { navController.navigate(Screen.PrivacyPolicy.route) },
                         onAboutAppClick = { navController.navigate(Screen.AboutApp.route) },
+                        onMagnifierToggle = onMagnifierToggle,
                         profileViewModel = profileViewModel
                     )
                 }
                 composable(Screen.EmergencyContacts.route) {
-                    EmergencyContactsScreen(
-                        onBackPressed = { navController.popBackStack() }
-                    )
+                    EmergencyContactsScreen(onBackPressed = { navController.popBackStack() })
                 }
                 composable(Screen.ReportIncident.route) {
                     ReportIncidentScreen(weatherState = weatherState, onBackPressed = { navController.popBackStack() })
@@ -280,17 +266,10 @@ fun EmergencyApp(
                 }
                 composable(
                     route = Screen.EmergencyGuideDetail.route,
-                    arguments = listOf(
-                        navArgument("guideId") {
-                            type = NavType.StringType
-                        }
-                    )
+                    arguments = listOf(navArgument("guideId") { type = NavType.StringType })
                 ) { backStackEntry ->
                     val guideId = backStackEntry.arguments?.getString("guideId") ?: ""
-                    EmergencyGuideDetailScreen(
-                        guideId = guideId,
-                        onBackPressed = { navController.popBackStack() }
-                    )
+                    EmergencyGuideDetailScreen(guideId = guideId, onBackPressed = { navController.popBackStack() })
                 }
                 composable(Screen.Login.route) {
                     LoginScreen(
