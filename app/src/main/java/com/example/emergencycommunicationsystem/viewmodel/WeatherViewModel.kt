@@ -7,6 +7,7 @@ import android.location.Location
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.emergencycommunicationsystem.R
+import com.example.emergencycommunicationsystem.data.UserPrefs
 import com.example.emergencycommunicationsystem.data.local.AppDatabase
 import com.example.emergencycommunicationsystem.data.local.WeatherEntity
 import com.google.android.gms.location.LocationServices
@@ -19,6 +20,7 @@ import com.example.emergencycommunicationsystem.util.NetworkUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -61,7 +63,8 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
         _weatherState.value = WeatherState.Loading 
         try {
             val location = getLocation()
-            fetchWeatherByLocation(location.latitude, location.longitude)
+            val language = UserPrefs.getLanguage(context).first()
+            fetchWeatherByLocation(location.latitude, location.longitude, language)
         } catch (_: Exception) {
             // If location fails but we have cached data, show cache instead of error
             if (!loadWeatherFromCache()) {
@@ -120,7 +123,7 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
     }
 
     @Suppress("DEPRECATION")
-    suspend fun fetchWeatherByLocation(lat: Double, lon: Double) {
+    suspend fun fetchWeatherByLocation(lat: Double, lon: Double, language: String = "en") {
         try {
             val weatherResponse = WeatherApiClient.weatherService.getCurrentWeatherByLocation(lat, lon, apiKey)
             val forecastResponse = try {
@@ -148,6 +151,7 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
                     windSpeed = weatherResponse.wind.speed,
                     visibility = weatherResponse.visibility,
                     location = locationName,
+                    language = language,
                     templateFallback = {
                         getTemplateWeatherAdvice(condition, weatherResponse.main.temp, weatherResponse.main.feelsLike, 
                             weatherResponse.main.humidity, weatherResponse.wind.speed, weatherResponse.visibility)

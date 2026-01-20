@@ -70,5 +70,20 @@
     <string name="weather_advice_low_visibility_1">La visibilidad es baja debido a las condiciones actuales. Conduce despacio y mantente alerta.</string>
     <string name="weather_advice_low_visibility_2">Se detecta clima de baja visibilidad. Viajar puede ser riesgoso, así que por favor ten cuidado.</string>
     <string name="weather_advice_unusual_1">El clima parece inusual hoy. Mantente atento a las actualizaciones y preparado.</string>
-    <string name="weather_advice_unusual_2">Las condiciones son algo impredecibles. Es mejor mantenerse alerta y listo para cualquier cosa.</string>
+    <string name="weather_advice_unusual_2">Las condiciones son algo impredecibles. Es mejor mantenerse alerta y preparado para cualquier cosa.</string>
+    <!-- Dashboard -->
+    <string name="live_qc">QC EN VIVO</string>
+    <string name="active_alerts_title">Alertas Activas</string>
+    <string name="view_all">VER TODO</string>
+    <string name="weather_forecast">Pronóstico del Tiempo</string>
+    <string name="preparedness_guide">Guía de Preparación</string>
+    <string name="tap_for_full_guides">TOQUE PARA GUÍAS COMPLETAS</string>
+    <string name="high_priority">Prioridad Alta</string>
+    <string name="temp">Temp</string>
+    <string name="label_offline">DESCONECTADO</string>
+    <string name="tip_flood">Muévase a terrenos más altos. No camine ni conduzca por aguas de inundación.</string>
+    <string name="tip_fire">Manténgase cerca del suelo. Evacúe inmediatamente si se le indica.</string>
+    <string name="tip_earthquake">Agáchese, Cúbrase y Sujétese. Aléjese de las ventanas.</string>
+    <string name="tip_storm">Asegure los objetos al aire libre. Quédese adentro lejos de las ventanas.</string>
+    <string name="tip_default">Mantenga siempre un kit de emergencia listo con agua, comida y medicinas.</string>
 </resources>

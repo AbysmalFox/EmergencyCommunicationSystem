@@ -40,16 +40,18 @@ object GeminiWeatherService {
         windSpeed: Double,
         visibility: Int,
         location: String = "Quezon City, Philippines",
+        language: String = "en",
         templateFallback: () -> String
     ): String = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Requesting detailed weather advice for $location")
+        Log.d(TAG, "Requesting detailed weather advice for $location in $language")
         
         if (BuildConfig.GEMINI_API_KEY.isBlank()) {
             Log.e(TAG, "GEMINI_API_KEY is BLANK")
             return@withContext templateFallback()
         }
         
-        val cacheKey = "${condition}_${temp.toInt()}_${humidity}_${windSpeed.toInt()}_${visibility / 1000}"
+        // Cache key should include language
+        val cacheKey = "${condition}_${temp.toInt()}_${humidity}_${windSpeed.toInt()}_${visibility / 1000}_$language"
         
         if (!DEBUG_MODE) {
             val cachedResponse = responseCache[cacheKey]
@@ -67,7 +69,8 @@ object GeminiWeatherService {
                 humidity = humidity,
                 windSpeed = windSpeed,
                 visibility = visibility,
-                location = location
+                location = location,
+                language = language
             )
             
             val finalResponse = if (DEBUG_MODE) "[AI Bot] $aiResponse" else aiResponse
@@ -174,7 +177,7 @@ object GeminiWeatherService {
         
         text.trim()
     }
-    
+
     private suspend fun generateAIAdvice(
         condition: String,
         temp: Double,
@@ -182,7 +185,8 @@ object GeminiWeatherService {
         humidity: Int,
         windSpeed: Double,
         visibility: Int,
-        location: String
+        location: String,
+        language: String
     ): String {
         val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         val timeOfDay = when (currentHour) {
@@ -190,6 +194,16 @@ object GeminiWeatherService {
             in 12..17 -> "afternoon"
             in 18..22 -> "evening"
             else -> "night"
+        }
+        
+        // Map language code to full name for clearer prompt
+        val languageName = when(language) {
+            "fil", "tl" -> "Tagalog/Filipino"
+            "es" -> "Spanish"
+            "ceb" -> "Cebuano"
+            "war" -> "Waray"
+            "bcl" -> "Bicolano"
+            else -> "English"
         }
         
         val prompt = """
@@ -209,6 +223,7 @@ object GeminiWeatherService {
             - Mention specific details from the data if they are notable (e.g., high humidity or wind).
             - Use a friendly but informative tone.
             - Max 250 characters.
+            - IMPORTANT: Respond strictly in $languageName.
             
             Respond only with the advice.
         """.trimIndent()

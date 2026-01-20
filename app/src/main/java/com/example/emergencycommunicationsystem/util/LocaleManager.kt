@@ -87,3 +87,13 @@ fun LocaleProvider(
  */
 @Composable
 fun getLocaleContext(): Context = LocalLocaleContext.current
+
+@Composable
+fun localizedStringResource(id: Int): String {
+    return LocalLocaleContext.current.getString(id)
+}
+
+@Composable
+fun localizedStringResource(id: Int, vararg args: Any): String {
+    return LocalLocaleContext.current.getString(id, *args)
+}

@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import com.example.emergencycommunicationsystem.util.localizedStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -329,7 +330,7 @@ fun QCRealTimeClock(useLightColor: Boolean = false) {
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
-                text = "LIVE QC",
+                text = localizedStringResource(R.string.live_qc),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Black,
                 color = if (useLightColor) Color.White else StatusDanger,
@@ -472,7 +473,7 @@ fun DashboardHeroSection(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 StatCard(
-                    label = "Active Alerts",
+                    label = localizedStringResource(R.string.active_alerts_title),
                     value = alertCount.toString(),
                     icon = AppIcons.Alerts,
                     color = Color.White,
@@ -481,7 +482,7 @@ fun DashboardHeroSection(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 StatCard(
-                    label = "High Priority",
+                    label = localizedStringResource(R.string.high_priority),
                     value = highPriorityCount.toString(),
                     icon = AppIcons.Warning,
                     color = Color(0xFFFFD54F), // Amber for high priority
@@ -490,7 +491,7 @@ fun DashboardHeroSection(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 StatCard(
-                    label = "Temp",
+                    label = localizedStringResource(R.string.temp),
                     value = "$temperature°",
                     icon = AppIcons.Thermostat,
                     color = Color(0xFF81D4FA), // Light blue for temp
@@ -563,7 +564,7 @@ fun QuickActionsGrid(
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         QuickActionCard(
-            title = "Report Incident",
+            title = localizedStringResource(R.string.report_incident),
             icon = R.drawable.ic_tabler_file_alert,
             color = StatusDanger,
             onClick = onReportClick,
@@ -571,7 +572,7 @@ fun QuickActionsGrid(
             isDarkMode = isDarkMode
         )
         QuickActionCard(
-            title = "I Am Safe",
+            title = localizedStringResource(R.string.i_am_safe),
             icon = R.drawable.ic_tabler_shield_check,
             color = StatusSafe,
             onClick = onSafeClick,
@@ -579,7 +580,7 @@ fun QuickActionsGrid(
             isDarkMode = isDarkMode
         )
         QuickActionCard(
-            title = "Message",
+            title = localizedStringResource(R.string.message),
             icon = R.drawable.ic_tabler_message_plus,
             color = AlertaraTeal,
             onClick = onMessageClick,
@@ -697,7 +698,7 @@ fun ModernAlertsSection(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Active Alerts",
+                                text = localizedStringResource(R.string.active_alerts_title),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = MaterialTheme.colorScheme.onBackground
@@ -705,7 +706,7 @@ fun ModernAlertsSection(
                         }
                         
                         Text(
-                            text = "VIEW ALL",
+                            text = localizedStringResource(R.string.view_all),
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Black,
                             color = primaryColor.copy(alpha = 0.7f),
@@ -809,7 +810,7 @@ fun CompactWeatherCard(
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "Weather Forecast",
+                            text = localizedStringResource(R.string.weather_forecast),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -823,7 +824,7 @@ fun CompactWeatherCard(
                                 border = BorderStroke(0.5.dp, Color.Red.copy(alpha = 0.5f))
                             ) {
                                 Text(
-                                    text = "OFFLINE",
+                                    text = localizedStringResource(R.string.label_offline),
                                     color = Color.Red,
                                     fontSize = 8.sp,
                                     fontWeight = FontWeight.Black,
@@ -872,9 +873,9 @@ fun CompactWeatherCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                WeatherDetailItem(Icons.Default.LightMode, "Feels", "${weatherState.feelsLike.substringBefore(".")}°", false, isDarkMode)
-                WeatherDetailItem(Icons.Default.WaterDrop, "Humidity", weatherState.humidity, false, isDarkMode)
-                WeatherDetailItem(Icons.Default.Air, "Wind", weatherState.windSpeed, false, isDarkMode)
+                WeatherDetailItem(Icons.Default.LightMode, localizedStringResource(R.string.feels_like), "${weatherState.feelsLike.substringBefore(".")}°", false, isDarkMode)
+                WeatherDetailItem(Icons.Default.WaterDrop, localizedStringResource(R.string.humidity), weatherState.humidity, false, isDarkMode)
+                WeatherDetailItem(Icons.Default.Air, localizedStringResource(R.string.wind), weatherState.windSpeed, false, isDarkMode)
             }
             
             Spacer(modifier = Modifier.height(16.dp))
@@ -998,15 +999,13 @@ fun CompactInstructionsCard(
     onClick: () -> Unit,
     isDarkMode: Boolean
 ) {
-    val contextualTip = remember(alerts) {
-        val mostRecentAlert = alerts.firstOrNull()?.category?.lowercase() ?: ""
-        when {
-            mostRecentAlert.contains("flood") -> "Move to higher ground. Do not walk or drive through flood waters."
-            mostRecentAlert.contains("fire") -> "Stay low to the ground. Evacuate immediately if instructed."
-            mostRecentAlert.contains("earthquake") -> "Drop, Cover, and Hold On. Stay away from windows."
-            mostRecentAlert.contains("storm") -> "Secure outdoor items. Stay indoors away from windows."
-            else -> "Always keep an emergency\nkit ready with water, food, and medicine."
-        }
+    val mostRecentAlert = alerts.firstOrNull()?.category?.lowercase() ?: ""
+    val contextualTip = when {
+        mostRecentAlert.contains("flood") -> localizedStringResource(R.string.tip_flood)
+        mostRecentAlert.contains("fire") -> localizedStringResource(R.string.tip_fire)
+        mostRecentAlert.contains("earthquake") -> localizedStringResource(R.string.tip_earthquake)
+        mostRecentAlert.contains("storm") -> localizedStringResource(R.string.tip_storm)
+        else -> localizedStringResource(R.string.tip_default)
     }
 
     Card(
@@ -1050,7 +1049,7 @@ fun CompactInstructionsCard(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Preparedness Guide",
+                            text = localizedStringResource(R.string.preparedness_guide),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -1065,7 +1064,7 @@ fun CompactInstructionsCard(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "TAP FOR FULL GUIDES",
+                        text = localizedStringResource(R.string.tap_for_full_guides),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Black,
                         color = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF34635D).copy(alpha = 0.7f)

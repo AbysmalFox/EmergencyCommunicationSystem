@@ -71,5 +71,20 @@
     <string name="weather_advice_low_visibility_1">Visibility is low due to current conditions. Drive slowly and stay alert.</string>
     <string name="weather_advice_low_visibility_2">Low-visibility weather detected. Travel can be risky, so please be careful.</string>
     <string name="weather_advice_unusual_1">The weather seems unusual today. Keep an eye on updates and stay prepared.</string>
-    <string name="weather_advice_unusual_2">Conditions are a bit unpredictable. It’s best to stay alert and ready for anything.</string>
+    <string name="weather_advice_unusual_2">An mga kondisyon medyo diri matig-aman. Mayada maupay nga magpabilin nga alerto ngan andam ha bisan ano nga hitabo.</string>
+    <!-- Dashboard -->
+    <string name="live_qc">LIVE QC</string>
+    <string name="active_alerts_title">Aktibo nga mga Alerto</string>
+    <string name="view_all">KITA-A NGATANAN</string>
+    <string name="weather_forecast">Panagna han Panahon</string>
+    <string name="preparedness_guide">Giya ha Pag-andam</string>
+    <string name="tap_for_full_guides">PINDUTA PARA HA BUG-OS NGA GIYA</string>
+    <string name="high_priority">Hitaas nga Prayoridad</string>
+    <string name="temp">Temp</string>
+    <string name="label_offline">OFFLINE</string>
+    <string name="tip_flood">Kadto ha mas hitaas nga lugar. Ayaw paglakat o pagmaneho ha tubig baha.</string>
+    <string name="tip_fire">Pabilin nga hamubo ha tuna. Bakwit dayon kun ginsugo.</string>
+    <string name="tip_earthquake">Drop, Cover, and Hold On. Hirayo ha mga bintana.</string>
+    <string name="tip_storm">I-secure an mga gamit ha gawas. Pabilin ha sakob hirayo ha mga bintana.</string>
+    <string name="tip_default">Pirme pag-andam hin emergency kit nga may tubig, pagkaon, ngan tambal.</string>
 </resources>

@@ -70,4 +70,19 @@
     <string name="weather_advice_low_visibility_2">Low-visibility weather detected. Travel can be risky, so please be careful.</string>
     <string name="weather_advice_unusual_1">The weather seems unusual today. Keep an eye on updates and stay prepared.</string>
     <string name="weather_advice_unusual_2">Conditions are a bit unpredictable. It’s best to stay alert and ready for anything.</string>
+    <!-- Dashboard -->
+    <string name="live_qc">LIVE QC</string>
+    <string name="active_alerts_title">Active Alerts</string>
+    <string name="view_all">VIEW ALL</string>
+    <string name="weather_forecast">Weather Forecast</string>
+    <string name="preparedness_guide">Preparedness Guide</string>
+    <string name="tap_for_full_guides">TAP FOR FULL GUIDES</string>
+    <string name="high_priority">High Priority</string>
+    <string name="temp">Temp</string>
+    <string name="label_offline">OFFLINE</string>
+    <string name="tip_flood">Move to higher ground. Do not walk or drive through flood waters.</string>
+    <string name="tip_fire">Stay low to the ground. Evacuate immediately if instructed.</string>
+    <string name="tip_earthquake">Drop, Cover, and Hold On. Stay away from windows.</string>
+    <string name="tip_storm">Secure outdoor items. Stay indoors away from windows.</string>
+    <string name="tip_default">Always keep an emergency\nkit ready with water, food, and medicine.</string>
 </resources>

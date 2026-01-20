@@ -71,4 +71,19 @@
     <string name="weather_advice_low_visibility_2">May mababang visibility sa panahon ngayon. Panganib ang pagbiyahe, kaya mag-ingat nang husto.</string>
     <string name="weather_advice_unusual_1">Mukhang kakaiba ang lagay ng panahon ngayon. Manatiling nakatutok sa mga update at maging handa.</string>
     <string name="weather_advice_unusual_2">Medyo hindi tiyak ang mga kondisyon. Mas mabuti nang manatiling alerto at handa sa anumang mangyari.</string>
+    <!-- Dashboard -->
+    <string name="live_qc">LIVE QC</string>
+    <string name="active_alerts_title">Aktibong Alerto</string>
+    <string name="view_all">TINGNAN LAHAT</string>
+    <string name="weather_forecast">Ulat Panahon</string>
+    <string name="preparedness_guide">Gabay sa Paghahanda</string>
+    <string name="tap_for_full_guides">PINDUTIN PARA SA BUONG GABAY</string>
+    <string name="high_priority">Mataas na Prayoridad</string>
+    <string name="temp">Temp</string>
+    <string name="label_offline">OFFLINE</string>
+    <string name="tip_flood">Pumunta sa mas mataas na lugar. Huwag lumakad o dumaan sa tubig baha.</string>
+    <string name="tip_fire">Manatiling mababa sa lupa. Lumikas agad kung ipinag-uutos.</string>
+    <string name="tip_earthquake">Drop, Cover, at Hold On. Lumayo sa mga bintana.</string>
+    <string name="tip_storm">I-secure ang mga gamit sa labas. Manatili sa loob at malayo sa mga bintana.</string>
+    <string name="tip_default">Laging maghanda ng emergency\nkit na may tubig, pagkain, at gamot.</string>
 </resources>

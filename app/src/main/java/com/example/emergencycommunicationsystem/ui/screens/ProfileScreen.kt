@@ -2,7 +2,6 @@ package com.example.emergencycommunicationsystem.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -62,6 +61,7 @@ fun ProfileScreen(
     val localeContext = getLocaleContext()
 
     val isMagnifierEnabled by UserPrefs.isMagnifierEnabled(context).collectAsState(initial = false)
+    val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
 
     // Update Profile result observer
     val updateResult by profileViewModel.updateProfileResult.collectAsState()
@@ -80,7 +80,7 @@ fun ProfileScreen(
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            title = { Text(localeContext.getString(R.string.logout) ?: "Logout") },
+            title = { Text(localeContext.getString(R.string.logout)) },
             text = { Text("Are you sure you want to log out?") },
             confirmButton = {
                 TextButton(
@@ -90,7 +90,7 @@ fun ProfileScreen(
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text(localeContext.getString(R.string.logout) ?: "Logout")
+                    Text(localeContext.getString(R.string.logout))
                 }
             },
             dismissButton = {
@@ -163,7 +163,7 @@ fun ProfileScreen(
             SettingsGroupHeader(text = "PREFERENCES")
             
             SettingsItem(
-                text = localeContext.getString(R.string.receive_notifications) ?: "Push Notifications",
+                text = localeContext.getString(R.string.receive_notifications),
                 trailingContent = {
                     Switch(
                         checked = true, 
@@ -188,8 +188,15 @@ fun ProfileScreen(
             )
 
             SettingsItem(
-                text = localeContext.getString(R.string.language_preference) ?: "Language",
-                valueText = "English", 
+                text = localeContext.getString(R.string.language_preference),
+                valueText = when(currentLanguage) {
+                    "fil", "tl" -> "Tagalog"
+                    "es" -> "Español" 
+                    "ceb" -> "Cebuano"
+                    "war" -> "Waray"
+                    "bcl" -> "Bicolano"
+                    else -> "English"
+                }, 
                 onClick = onLanguageSettingsClick
             )
 
@@ -234,7 +241,7 @@ fun ProfileScreen(
             )
 
             SettingsItem(
-                text = localeContext.getString(R.string.privacy_policy) ?: "Privacy Policy",
+                text = localeContext.getString(R.string.privacy_policy),
                 onClick = onPrivacyPolicyClick
             )
 
@@ -254,7 +261,7 @@ fun ProfileScreen(
                     colors = ButtonDefaults.textButtonColors(contentColor = Color.Red.copy(alpha = 0.8f))
                 ) {
                     Text(
-                        text = localeContext.getString(R.string.logout) ?: "Logout",
+                        text = localeContext.getString(R.string.logout),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
