@@ -137,6 +137,7 @@ class MessagingViewModel(
 
     private fun getTemporaryBotResponse(userMessage: String): String {
         return when {
+            "what to do" in userMessage.lowercase() -> getActionableAdvice(alertTitle)
             "disaster" in userMessage.lowercase() -> "This is a Level 3 disaster alert regarding '$alertTitle'."
             "issued" in userMessage.lowercase() -> "This alert was issued recently. Please check official channels for precise timing."
             "source" in userMessage.lowercase() -> "The source for this type of alert is usually the local government or a national agency."
@@ -145,7 +146,23 @@ class MessagingViewModel(
         }
     }
 
+    private fun getActionableAdvice(title: String): String {
+        val t = title.lowercase()
+        return when {
+            "flood" in t -> "Move to higher ground immediately. Do not walk or drive through flood waters. Disconnect electrical appliances."
+            "fire" in t -> "Evacuate immediately. Stay low to avoid smoke. Do not use elevators. Call the fire department."
+            "earthquake" in t -> "Drop, Cover, and Hold On. Stay away from windows. If outside, find a clear spot away from buildings."
+            "typhoon" in t || "storm" in t -> "Stay indoors. Secure windows and doors. Prepare an emergency kit with food and water."
+            "volcanic" in t -> "Protect your eyes and skin from ash. Stay indoors with windows closed. Wear a mask."
+            "tsunami" in t -> "Move to high ground or inland immediately. Do not return to the coast until authorities say it is safe."
+            "heat" in t -> "Stay hydrated. Avoid direct sunlight. Wear loose clothing. Check on vulnerable individuals."
+            "health" in t -> "Follow medical advice. Isolate if necessary. Wash hands frequently. Seek medical help if symptoms worsen."
+            else -> "Stay calm. Follow instructions from local authorities. Keep your emergency kit ready and monitor official news."
+        }
+    }
+
     private fun getTemporaryInitialOptions() = listOf(
+        QuickReply("What to do?", "what_to_do", "📋"),
         QuickReply("What is this disaster?", "disaster", "🔎"),
         QuickReply("When was this issued?", "issued", "🕒"),
         QuickReply("What is the source?", "source", "📰"),

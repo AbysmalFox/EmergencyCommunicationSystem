@@ -1,8 +1,19 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
 import android.widget.Toast
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +34,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
@@ -272,7 +286,53 @@ fun AlertItem(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
+@Composable
+fun AlertItemLine(
+    alert: Alert,
+    onMessageClick: (id: String, title: String) -> Unit
+) {
+    val categoryColor = getColorForCategory(alert)
+    val localeContext = getLocaleContext()
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onMessageClick(alert.id.toString(), alert.title ?: "Chat") }
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(categoryColor.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            CategoryIcon(alert = alert, modifier = Modifier.size(14.dp), tint = categoryColor)
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = alert.title ?: localeContext.getString(R.string.no_title),
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = alert.timestamp?.substringAfter(" ")?.substringBeforeLast(":") ?: alert.timestamp ?: "",
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class, ExperimentalFoundationApi::class, ExperimentalAnimationApi::class)
 @Composable
 fun AlertsScreen(
     viewModel: AlertsViewModel = viewModel(), 
@@ -281,6 +341,8 @@ fun AlertsScreen(
     val localeContext = getLocaleContext()
     val state by viewModel.uiState.collectAsState()
     val isRefreshing = state is Resource.Loading
+    var isCompactMode by remember { mutableStateOf(false) }
+
     val pullRefreshState = rememberPullRefreshState(
         refreshing = isRefreshing, 
         onRefresh = { viewModel.loadAlerts() }
@@ -302,6 +364,17 @@ fun AlertsScreen(
                     color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.align(Alignment.Center)
                 )
+                
+                androidx.compose.material3.IconButton(
+                    onClick = { isCompactMode = !isCompactMode },
+                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isCompactMode) Icons.Default.ViewAgenda else Icons.Default.List,
+                        contentDescription = "Switch View",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
     ) { padding ->
@@ -324,12 +397,28 @@ fun AlertsScreen(
                             LazyColumn(
                                 state = listState,
                                 contentPadding = PaddingValues(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(if (isCompactMode) 8.dp else 16.dp),
                                 modifier = Modifier.fillMaxSize()
                             ) {
                                 items(alerts, key = { it.id }) { alert ->
-                                    AlertItem(alert = alert) { id, title ->
-                                        onMessageClick?.invoke(id, title)
+                                    Box(modifier = Modifier.animateItemPlacement(tween(500))) {
+                                        AnimatedContent(
+                                            targetState = isCompactMode,
+                                            transitionSpec = {
+                                                fadeIn(tween(500)) + expandVertically(tween(500)) togetherWith fadeOut(tween(500)) + shrinkVertically(tween(500))
+                                            },
+                                            label = "size_transition"
+                                        ) { compact ->
+                                            if (compact) {
+                                                AlertItemLine(alert = alert) { id, title ->
+                                                    onMessageClick?.invoke(id, title)
+                                                }
+                                            } else {
+                                                AlertItem(alert = alert) { id, title ->
+                                                    onMessageClick?.invoke(id, title)
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                                 item { Spacer(modifier = Modifier.height(100.dp)) }
