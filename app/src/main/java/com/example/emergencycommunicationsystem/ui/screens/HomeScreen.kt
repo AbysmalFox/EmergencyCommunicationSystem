@@ -593,15 +593,23 @@ fun QuickActionCard(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean
 ) {
+    // Unique leaf-like shape
+    val uniqueShape = RoundedCornerShape(
+        topStart = 4.dp, 
+        topEnd = 24.dp, 
+        bottomStart = 24.dp, 
+        bottomEnd = 4.dp
+    )
+    
     Card(
         onClick = onClick,
         modifier = modifier
             .height(100.dp)
             .themeShadow(
                 elevation = if (isDarkMode) 8.dp else 4.dp,
-                shape = RoundedCornerShape(20.dp)
+                shape = uniqueShape
             ),
-        shape = RoundedCornerShape(20.dp),
+        shape = uniqueShape,
         colors = CardDefaults.cardColors(
             containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
         ),
@@ -992,7 +1000,7 @@ fun CompactInstructionsCard(
             mostRecentAlert.contains("fire") -> "Stay low to the ground. Evacuate immediately if instructed."
             mostRecentAlert.contains("earthquake") -> "Drop, Cover, and Hold On. Stay away from windows."
             mostRecentAlert.contains("storm") -> "Secure outdoor items. Stay indoors away from windows."
-            else -> "Always keep an emergency kit ready with water, food, and medicine."
+            else -> "Always keep an emergency\nkit ready with water, food, and medicine."
         }
     }
 
@@ -1010,49 +1018,55 @@ fun CompactInstructionsCard(
         ),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = AppIcons.Info,
-                        contentDescription = null,
-                        tint = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF34635D),
-                        modifier = Modifier.size(20.dp)
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Image(
+                painter = painterResource(id = R.drawable.guide_img),
+                contentDescription = null,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .size(120.dp)
+                    .offset(x = 10.dp, y = 1.dp),
+                contentScale = ContentScale.Fit
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = AppIcons.Info,
+                            contentDescription = null,
+                            tint = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF34635D),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Preparedness Guide",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TypewriterText(
+                        text = contextualTip,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+                        lineHeight = 18.sp
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Preparedness Guide",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        text = "TAP FOR FULL GUIDES",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black,
+                        color = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF34635D).copy(alpha = 0.7f)
                     )
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-                TypewriterText(
-                    text = contextualTip,
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
-                    lineHeight = 18.sp
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "TAP FOR FULL GUIDES",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Black,
-                    color = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF34635D).copy(alpha = 0.7f)
-                )
             }
-            
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-            )
         }
     }
 }

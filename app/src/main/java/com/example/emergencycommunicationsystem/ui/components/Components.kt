@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
@@ -217,7 +218,13 @@ private fun DrawScope.drawWavePattern(
 @Composable
 fun EmergencyCallButton(onClick: () -> Unit) {
     val localeContext = getLocaleContext()
-    val shape = RoundedCornerShape(24.dp)
+    // Unique shape: Cut corners for a more urgent, technical look
+    val shape = CutCornerShape(
+        topStart = 8.dp, 
+        topEnd = 24.dp, 
+        bottomStart = 24.dp, 
+        bottomEnd = 8.dp
+    )
     // Use MaterialTheme to detect dark mode (respects user's theme preference)
     // Check if background is dark by comparing luminance
     val bgColor = MaterialTheme.colorScheme.background
