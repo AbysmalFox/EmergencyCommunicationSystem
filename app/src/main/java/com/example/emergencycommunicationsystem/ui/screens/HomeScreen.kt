@@ -794,12 +794,31 @@ fun CompactWeatherCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text(
-                        text = "Weather Forecast",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Weather Forecast",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        
+                        if (weatherState.isOffline) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Surface(
+                                color = Color.Red.copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(4.dp),
+                                border = BorderStroke(0.5.dp, Color.Red.copy(alpha = 0.5f))
+                            ) {
+                                Text(
+                                    text = "OFFLINE",
+                                    color = Color.Red,
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Black,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
                     Text(
                         text = weatherState.location,
                         fontSize = 11.sp,
@@ -886,15 +905,30 @@ fun CompactWeatherCard(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.Top
                     ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.reporter),
-                            contentDescription = "AI Assistant",
-                            modifier = Modifier
-                                .size(50.dp)
-                                .clip(CircleShape)
-                                .background(primaryColor.copy(alpha = 0.1f)),
-                            contentScale = ContentScale.Crop
-                        )
+                        Box {
+                            Image(
+                                painter = painterResource(id = R.drawable.reporter),
+                                contentDescription = "AI Assistant",
+                                modifier = Modifier
+                                    .size(50.dp)
+                                    .clip(CircleShape)
+                                    .background(primaryColor.copy(alpha = 0.1f)),
+                                contentScale = ContentScale.Crop
+                            )
+                            
+                            if (weatherState.isOffline) {
+                                Icon(
+                                    imageVector = Icons.Default.CloudOff,
+                                    contentDescription = "Offline",
+                                    tint = Color.Red,
+                                    modifier = Modifier
+                                        .size(14.dp)
+                                        .align(Alignment.BottomEnd)
+                                        .background(Color.White, CircleShape)
+                                        .padding(2.dp)
+                                )
+                            }
+                        }
 
                         Spacer(modifier = Modifier.width(12.dp))
 

@@ -9,6 +9,7 @@ import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.data.network.ApiClient
 import com.example.emergencycommunicationsystem.util.Resource
 import com.example.emergencycommunicationsystem.util.TranslationService
+import com.example.emergencycommunicationsystem.util.NetworkUtils
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
@@ -34,34 +35,36 @@ class AlertsRepository(
         // This allows the user to see data IMMEDIATELY.
         val cache = alertDao.getAllAlerts().map { list -> list.map { it.toDomain() } }.first()
         if (cache.isNotEmpty()) {
-            // Translate cached alerts if needed
             val translatedCache = translateAlertsIfNeeded(cache, currentLanguage)
             emit(Resource.Success(translatedCache))
         }
 
-        try {
-            // 3. Try to get fresh data from the network
-            val response = ApiClient.alertsApiService().getAlerts(userId)
-            
-            if (response.isSuccessful && response.body()?.success == true) {
-                val networkAlerts = response.body()?.alerts ?: emptyList()
+        // 3. Check for network availability before trying to fetch fresh data
+        if (NetworkUtils.isNetworkAvailable(context)) {
+            try {
+                // 4. Try to get fresh data from the network
+                val response = ApiClient.alertsApiService().getAlerts(userId)
                 
-                // Translate network alerts if needed
-                val translatedAlerts = translateAlertsIfNeeded(networkAlerts, currentLanguage)
-                
-                // 4. Update the local database (store original English text)
-                alertDao.clearAlerts()
-                alertDao.insertAlerts(networkAlerts.map { it.toEntity() })
+                if (response.isSuccessful && response.body()?.success == true) {
+                    val networkAlerts = response.body()?.alerts ?: emptyList()
+                    
+                    // 5. Update the local database (store original English text)
+                    // We only clear if we have new successful data
+                    alertDao.clearAlerts()
+                    alertDao.insertAlerts(networkAlerts.map { it.toEntity() })
+                }
+            } catch (e: Exception) {
+                // Network error handled silently if we have cache
+                if (cache.isEmpty()) {
+                    emit(Resource.Error("Could not connect to server and no cached data found."))
+                }
             }
-        } catch (e: Exception) {
-            // If network fails, we don't emit an Error if we already have cache.
-            // This prevents the screen from showing an error page when it has data.
-            if (cache.isEmpty()) {
-                emit(Resource.Error("Could not connect to server and no cached data found."))
-            }
+        } else if (cache.isEmpty()) {
+            emit(Resource.Error("No internet connection and no cached alerts found."))
         }
 
-        // 5. Finally, observe the database flow for any future changes with translation
+        // 6. Finally, observe the database flow for any future changes with translation
+        // This ensures the UI stays updated if the database changes later
         emitAll(alertDao.getAllAlerts().map { list ->
             val alerts = list.map { it.toDomain() }
             val translatedAlerts = translateAlertsIfNeeded(alerts, currentLanguage)
@@ -106,7 +109,6 @@ class AlertsRepository(
                     location = translatedLocation
                 )
             } catch (e: Exception) {
-                // If translation fails, return original alert
                 alert
             }
         }
