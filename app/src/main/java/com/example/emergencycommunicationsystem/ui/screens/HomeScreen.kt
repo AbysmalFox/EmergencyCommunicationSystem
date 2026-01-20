@@ -515,7 +515,12 @@ fun StatCard(
         modifier = modifier
             .background(
                 color = if (onTeal) Color.White.copy(alpha = 0.15f) else color.copy(alpha = 0.08f),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(
+                    topStart = 16.dp, 
+                    topEnd = 4.dp, 
+                    bottomEnd = 16.dp, 
+                    bottomStart = 4.dp
+                )
             )
             .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
