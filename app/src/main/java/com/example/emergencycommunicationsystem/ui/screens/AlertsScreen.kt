@@ -180,84 +180,92 @@ fun AlertItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .themeShadow(elevation = 4.dp, shape = RoundedCornerShape(24.dp)),
-        shape = RoundedCornerShape(24.dp),
+            .themeShadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+        border = BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(categoryColor.copy(alpha = 0.12f)),
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(categoryColor.copy(alpha = 0.1f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    CategoryIcon(alert = alert, modifier = Modifier.size(24.dp), tint = categoryColor)
+                    CategoryIcon(alert = alert, modifier = Modifier.size(18.dp), tint = categoryColor)
                 }
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    val categoryName = getCategoryName(alert, localeContext)
-                    Text(
-                        text = categoryName.uppercase(),
-                        color = categoryColor,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 11.sp,
-                        letterSpacing = 1.sp
-                    )
-                    Text(
-                        text = alert.title ?: localeContext.getString(R.string.no_title),
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 19.sp,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        lineHeight = 24.sp
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            val categoryName = getCategoryName(alert, localeContext)
+                            Text(
+                                text = categoryName.uppercase(),
+                                color = categoryColor,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 10.sp,
+                                letterSpacing = 0.5.sp
+                            )
+                            Text(
+                                text = alert.title ?: localeContext.getString(R.string.no_title),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                lineHeight = 20.sp
+                            )
+                        }
+                        Text(
+                            text = alert.timestamp ?: "",
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            textAlign = TextAlign.End,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = alert.content ?: "",
-                        fontSize = 14.sp,
+                        fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-                        lineHeight = 20.sp
+                        lineHeight = 18.sp,
+                        maxLines = 3,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                 }
             }
             
-            Spacer(modifier = Modifier.height(16.dp))
-            CompactEmergencyInstructions(alert = alert)
-            
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(
-                        text = alert.source ?: localeContext.getString(R.string.unknown_source),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                    )
-                    Text(
-                        text = alert.timestamp ?: "",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                    )
-                }
+                Text(
+                    text = alert.source ?: localeContext.getString(R.string.unknown_source),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
                 Button(
                     onClick = { onMessageClick(alert.id.toString(), alert.title ?: "Chat") },
-                    modifier = Modifier.height(44.dp),
-                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.height(32.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp),
+                    shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary,
-                        contentColor = Color.White
+                        containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
+                        contentColor = MaterialTheme.colorScheme.secondary
                     ),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
                 ) {
-                    Icon(imageVector = AppIcons.Message, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = localeContext.getString(R.string.message), fontWeight = FontWeight.Bold)
+                    Icon(imageVector = AppIcons.Message, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = localeContext.getString(R.string.message), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
