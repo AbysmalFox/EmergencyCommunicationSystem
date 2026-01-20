@@ -44,8 +44,8 @@ import com.example.emergencycommunicationsystem.ui.theme.BrandDeepTeal
 import androidx.compose.ui.graphics.Color
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 
-const val navOverlayHeight = 84 
-const val navOverlayLift = 20 
+const val navOverlayHeight = 72 
+const val navOverlayLift = 28
 
 @Composable
 fun BottomNavigationBar(
@@ -103,7 +103,7 @@ fun BottomNavigationBar(
                 .offset(x = indicatorOffset)
                 .width(itemWidth)
                 .fillMaxHeight()
-                .padding(vertical = 10.dp, horizontal = 8.dp)
+                .padding(vertical = 8.dp, horizontal = 8.dp)
                 .clip(RoundedCornerShape(20.dp))
                 .background(
                     if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
@@ -191,7 +191,7 @@ private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, isDarkMode: Bo
                     painter = painterResource(id = tablerIconRes),
                     contentDescription = localizedTitle,
                     tint = iconColor,
-                    modifier = Modifier.size(if (isSelected) 28.dp else 24.dp)
+                    modifier = Modifier.size(if (isSelected) 26.dp else 22.dp)
                 )
 
                 AnimatedVisibility(
@@ -202,9 +202,9 @@ private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, isDarkMode: Bo
                     Text(
                         text = localizedTitle,
                         color = accentColor,
-                        fontSize = 10.sp,
+                        fontSize = 9.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        modifier = Modifier.padding(top = 2.dp)
+                        modifier = Modifier.padding(top = 1.dp)
                     )
                 }
             }

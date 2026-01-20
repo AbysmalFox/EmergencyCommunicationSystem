@@ -553,14 +553,12 @@ fun QuickActionsGrid(
     onMessageClick: () -> Unit,
     isDarkMode: Boolean
 ) {
-    val localeContext = getLocaleContext()
-    
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         QuickActionCard(
-            title = localeContext.getString(R.string.report_incident),
+            title = "Report Incident",
             icon = R.drawable.ic_tabler_file_alert,
             color = StatusDanger,
             onClick = onReportClick,
@@ -568,7 +566,7 @@ fun QuickActionsGrid(
             isDarkMode = isDarkMode
         )
         QuickActionCard(
-            title = localeContext.getString(R.string.i_am_safe),
+            title = "I Am Safe",
             icon = R.drawable.ic_tabler_shield_check,
             color = StatusSafe,
             onClick = onSafeClick,
@@ -612,7 +610,7 @@ fun QuickActionCard(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(vertical = 12.dp, horizontal = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -636,7 +634,10 @@ fun QuickActionCard(
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1
+                maxLines = 2,
+                lineHeight = 12.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }
