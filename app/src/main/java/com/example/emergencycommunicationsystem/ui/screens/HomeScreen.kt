@@ -67,6 +67,8 @@ import java.util.TimeZone
 import kotlin.math.max
 import kotlin.math.min
 
+import com.example.emergencycommunicationsystem.util.TextToSpeechHelper
+
 // The primary teal color from Alertaraqc widget
 val AlertaraTeal = Color(0xFF508684)
 val AlertaraTealLight = Color(0xFF669997)
@@ -88,6 +90,15 @@ fun HomeScreen(
     val animationState = remember { MutableTransitionState(false).apply { targetState = true } }
 
     val pullToRefreshState = rememberPullToRefreshState()
+    
+    // TTS Helper
+    val ttsHelper = remember { TextToSpeechHelper(context) }
+    // Clean up TTS on dispose
+    DisposableEffect(Unit) {
+        onDispose {
+            ttsHelper.shutdown()
+        }
+    }
     
     // Alerts ViewModel
     val alertsViewModel: AlertsViewModel = viewModel()
@@ -240,7 +251,7 @@ fun HomeScreen(
                                 // Weather Widget - Enhanced
                                 when (val state = weatherState) {
                                     is WeatherState.Success -> {
-                                        CompactWeatherCard(state, isDarkMode)
+                                        CompactWeatherCard(state, isDarkMode, ttsHelper, currentLanguage)
                                     }
                                     else -> {}
                                 }
@@ -788,9 +799,12 @@ fun TypewriterText(
 @Composable
 fun CompactWeatherCard(
     weatherState: WeatherState.Success,
-    isDarkMode: Boolean
+    isDarkMode: Boolean,
+    ttsHelper: TextToSpeechHelper? = null,
+    languageCode: String = "en"
 ) {
     val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF34635D)
+    val isSpeaking by ttsHelper?.isSpeaking?.collectAsState(initial = false) ?: remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier
@@ -834,6 +848,22 @@ fun CompactWeatherCard(
                                     fontSize = 8.sp,
                                     fontWeight = FontWeight.Black,
                                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                        
+                        // TTS Button
+                        Spacer(modifier = Modifier.width(8.dp))
+                        if (weatherState.advice.isNotEmpty()) {
+                            IconButton(
+                                onClick = { ttsHelper?.speak(weatherState.advice, languageCode) },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isSpeaking) AppIcons.MicOff else AppIcons.VolumeUp, // Using VolumeUp/MicOff as placeholder
+                                    contentDescription = "Read Aloud",
+                                    tint = primaryColor,
+                                    modifier = Modifier.size(16.dp)
                                 )
                             }
                         }

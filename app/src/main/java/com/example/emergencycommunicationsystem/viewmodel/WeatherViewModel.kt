@@ -35,7 +35,7 @@ import com.example.emergencycommunicationsystem.util.LocaleManager
 class WeatherViewModel(application: Application) : AndroidViewModel(application) {
     private val _weatherState = MutableStateFlow<WeatherState>(WeatherState.Loading)
     val weatherState: StateFlow<WeatherState> = _weatherState
-    private val apiKey = "de9f8eb51584955d6d6fe607c9d81c84" 
+    private val apiKey = com.example.emergencycommunicationsystem.BuildConfig.OPENWEATHER_API_KEY
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(application)
     private val weatherDao = AppDatabase.getDatabase(application).weatherDao()
     

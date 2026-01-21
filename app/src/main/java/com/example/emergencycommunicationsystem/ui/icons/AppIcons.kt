@@ -67,6 +67,7 @@ object AppIcons {
     val LocalPolice: ImageVector = Icons.Filled.LocalPolice
     val Send: ImageVector = Icons.AutoMirrored.Filled.Send
     val MicOff: ImageVector = Icons.Filled.MicOff
+    val VolumeUp: ImageVector = Icons.Filled.VolumeUp
     val Dialpad: ImageVector = Icons.Filled.Dialpad
     val CallEnd: ImageVector = Icons.Filled.CallEnd
     val Traffic: ImageVector = Icons.Filled.Traffic
