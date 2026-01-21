@@ -169,114 +169,102 @@ fun HomeScreen(
             modifier = Modifier.fillMaxSize()
         ) {
             val bottomNavReserved = 140.dp
-            val listState = rememberLazyListState()
             
-            Box(modifier = Modifier.fillMaxSize()) {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = bottomNavReserved, top = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // Hero Section with Stats
-                    item {
-                        AnimatedVisibility(
-                            visibleState = animationState,
-                            enter = fadeIn(animationSpec = tween(durationMillis = 500)) +
-                                    slideInVertically(initialOffsetY = { -40 }, animationSpec = tween(durationMillis = 500))
-                        ) {
-                            DashboardHeroSection(
-                                alertsState = alertsState,
-                                weatherState = weatherState,
-                                isDarkMode = isDarkMode
-                            )
-                        }
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = bottomNavReserved, top = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Hero Section with Stats
+                item {
+                    AnimatedVisibility(
+                        visibleState = animationState,
+                        enter = fadeIn(animationSpec = tween(durationMillis = 500)) +
+                                slideInVertically(initialOffsetY = { -40 }, animationSpec = tween(durationMillis = 500))
+                    ) {
+                        DashboardHeroSection(
+                            alertsState = alertsState,
+                            weatherState = weatherState,
+                            isDarkMode = isDarkMode
+                        )
                     }
-                    
-                    // Emergency Call Button - Prominent
-                    item {
-                        AnimatedVisibility(
-                            visibleState = animationState,
-                            enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = 100)) +
-                                    slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(durationMillis = 500, delayMillis = 100))
-                        ) {
-                            EmergencyCallButton(onClick = onEmergencyCallClick)
-                        }
-                    }
-                    
-                    // Quick Actions Grid
-                    item {
-                        AnimatedVisibility(
-                            visibleState = animationState,
-                            enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = 200)) +
-                                    slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(durationMillis = 500, delayMillis = 200))
-                        ) {
-                            QuickActionsGrid(
-                                onReportClick = onReportIncidentClick,
-                                onSafeClick = { if (!showSafeOverlay) showSafeOverlay = true },
-                                onMessageClick = onMessageClick,
-                                isDarkMode = isDarkMode
-                            )
-                        }
-                    }
-                    
-                    // Active Alerts Section - ULTRA COMPACT
-                    item {
-                        AnimatedVisibility(
-                            visibleState = animationState,
-                            enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = 300)) +
-                                    slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(durationMillis = 500, delayMillis = 300))
-                        ) {
-                            ModernAlertsSection(
-                                alertsState = alertsState,
-                                userLat = userLat,
-                                userLon = userLon,
-                                onAlertClick = onAlertClick,
-                                isDarkMode = isDarkMode
-                            )
-                        }
-                    }
-                    
-                    // Weather & Instructions Row
-                    item {
-                        AnimatedVisibility(
-                            visibleState = animationState,
-                            enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = 400)) +
-                                    slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(durationMillis = 500, delayMillis = 400))
-                        ) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                // Weather Widget - Enhanced
-                                when (val state = weatherState) {
-                                    is WeatherState.Success -> {
-                                        CompactWeatherCard(state, isDarkMode, ttsHelper, currentLanguage)
-                                    }
-                                    else -> {}
-                                }
-                                
-                                // Emergency Instructions - Enhanced
-                                val alerts = (alertsState as? Resource.Success)?.data ?: emptyList()
-                                CompactInstructionsCard(
-                                    alerts = alerts,
-                                    onClick = onEmergencyGuidesClick,
-                                    isDarkMode = isDarkMode
-                                )
-                            }
-                        }
-                    }
-                    
-                    item { Spacer(modifier = Modifier.height(8.dp)) }
                 }
                 
-                // Scroll Indicator
-                ScrollIndicator(
-                    listState = listState,
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .padding(end = 4.dp)
-                )
+                // Emergency Call Button - Prominent
+                item {
+                    AnimatedVisibility(
+                        visibleState = animationState,
+                        enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = 100)) +
+                                slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(durationMillis = 500, delayMillis = 100))
+                    ) {
+                        EmergencyCallButton(onClick = onEmergencyCallClick)
+                    }
+                }
+                
+                // Quick Actions Grid
+                item {
+                    AnimatedVisibility(
+                        visibleState = animationState,
+                        enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = 200)) +
+                                slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(durationMillis = 500, delayMillis = 200))
+                    ) {
+                        QuickActionsGrid(
+                            onReportClick = onReportIncidentClick,
+                            onSafeClick = { if (!showSafeOverlay) showSafeOverlay = true },
+                            onMessageClick = onMessageClick,
+                            isDarkMode = isDarkMode
+                        )
+                    }
+                }
+                
+                // Active Alerts Section - ULTRA COMPACT
+                item {
+                    AnimatedVisibility(
+                        visibleState = animationState,
+                        enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = 300)) +
+                                slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(durationMillis = 500, delayMillis = 300))
+                    ) {
+                        ModernAlertsSection(
+                            alertsState = alertsState,
+                            userLat = userLat,
+                            userLon = userLon,
+                            onAlertClick = onAlertClick,
+                            isDarkMode = isDarkMode
+                        )
+                    }
+                }
+                
+                // Weather & Instructions Row
+                item {
+                    AnimatedVisibility(
+                        visibleState = animationState,
+                        enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = 400)) +
+                                slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(durationMillis = 500, delayMillis = 400))
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            // Weather Widget - Enhanced
+                            when (val state = weatherState) {
+                                is WeatherState.Success -> {
+                                    CompactWeatherCard(state, isDarkMode, ttsHelper, currentLanguage)
+                                }
+                                else -> {}
+                            }
+                            
+                            // Emergency Instructions - Enhanced
+                            val alerts = (alertsState as? Resource.Success)?.data ?: emptyList()
+                            CompactInstructionsCard(
+                                alerts = alerts,
+                                onClick = onEmergencyGuidesClick,
+                                isDarkMode = isDarkMode
+                            )
+                        }
+                    }
+                }
+                
+                item { Spacer(modifier = Modifier.height(8.dp)) }
             }
         }
 
@@ -1107,91 +1095,5 @@ fun CompactInstructionsCard(
                 }
             }
         }
-    }
-}
-
-/**
- * Custom Scroll Indicator Component
- */
-@Composable
-private fun ScrollIndicator(
-    listState: LazyListState,
-    modifier: Modifier = Modifier
-) {
-    val layoutInfo by remember { derivedStateOf { listState.layoutInfo } }
-    val visibleItemsInfo = layoutInfo.visibleItemsInfo
-    val totalItemsCount = layoutInfo.totalItemsCount
-    
-    if (visibleItemsInfo.isEmpty() || totalItemsCount == 0 || totalItemsCount <= visibleItemsInfo.size) {
-        return
-    }
-    
-    val firstVisibleItem = visibleItemsInfo.firstOrNull()
-    val lastVisibleItem = visibleItemsInfo.lastOrNull()
-    val viewportEndOffset = layoutInfo.viewportEndOffset
-    val lastItemEndPosition = (lastVisibleItem?.offset ?: 0) + (lastVisibleItem?.size ?: 0)
-    val distanceFromBottom = viewportEndOffset - lastItemEndPosition
-    
-    val isAtBottom = (lastVisibleItem?.index ?: 0) >= totalItemsCount - 2 ||
-                     ((lastVisibleItem?.index ?: 0) >= totalItemsCount - 1 && distanceFromBottom <= 150)
-    
-    val scrollProgress = if (isAtBottom) {
-        1.0f
-    } else {
-        val firstItem = firstVisibleItem ?: return
-        val firstItemProgress = if (firstItem.size > 0) {
-            (-firstItem.offset).toFloat() / firstItem.size.toFloat()
-        } else {
-            0f
-        }
-        val itemBasedProgress = (firstItem.index + firstItemProgress) / (totalItemsCount - 1).toFloat()
-        val boostedProgress = if (itemBasedProgress > 0.8f) {
-            itemBasedProgress + (1.0f - itemBasedProgress) * 0.3f
-        } else {
-            itemBasedProgress
-        }
-        boostedProgress.coerceIn(0f, 1f)
-    }
-    
-    val visibleItemCount = ((lastVisibleItem?.index ?: 0) - (firstVisibleItem?.index ?: 0) + 1).toFloat()
-    val visibleRange = visibleItemCount / totalItemsCount.toFloat()
-    val thumbHeightFraction = max(0.2f, min(0.5f, visibleRange))
-    
-    val maxThumbPosition = 1f - thumbHeightFraction
-    val thumbPositionFraction = if (isAtBottom) {
-        maxThumbPosition
-    } else {
-        (scrollProgress * maxThumbPosition).coerceIn(0f, maxThumbPosition)
-    }
-    
-    BoxWithConstraints(
-        modifier = modifier
-            .width(4.dp)
-            .fillMaxHeight()
-    ) {
-        val trackHeight = this.maxHeight
-        val thumbHeight = trackHeight * thumbHeightFraction
-        val thumbOffset = trackHeight * thumbPositionFraction
-        
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight()
-                .background(
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(2.dp)
-                )
-        )
-        
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(thumbHeight)
-                .offset(y = thumbOffset)
-                .background(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                    shape = RoundedCornerShape(2.dp)
-                )
-        )
     }
 }

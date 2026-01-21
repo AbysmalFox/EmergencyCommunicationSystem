@@ -59,6 +59,7 @@ import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.data.models.SafeZone
 import com.example.emergencycommunicationsystem.data.models.SafeZoneType
 import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
+import com.example.emergencycommunicationsystem.ui.theme.ThemeManager
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
@@ -126,6 +127,8 @@ fun MapScreen() {
         }
     }
 
+    val isDarkMode = ThemeManager.isDarkMode()
+
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),
@@ -134,6 +137,22 @@ fun MapScreen() {
                     mapView = this
                     setTileSource(TileSourceFactory.MAPNIK)
                     setMultiTouchControls(true)
+                    
+                    // Apply Dark Mode Tiles Filter
+                    if (isDarkMode) {
+                        this.overlayManager.tilesOverlay.setColorFilter(
+                            android.graphics.ColorMatrixColorFilter(
+                                floatArrayOf(
+                                    -1f, 0f, 0f, 0f, 255f, // Red inversion
+                                    0f, -1f, 0f, 0f, 255f, // Green inversion
+                                    0f, 0f, -1f, 0f, 255f, // Blue inversion
+                                    0f, 0f, 0f, 1f, 0f     // Alpha unchanged
+                                )
+                            )
+                        )
+                    } else {
+                        this.overlayManager.tilesOverlay.setColorFilter(null)
+                    }
                     
                     // AGGRESSIVE tile loading optimization to minimize HWUI logs
                     try {
@@ -647,10 +666,14 @@ fun MapScreen() {
  */
 @Composable
 fun MapLegend(modifier: Modifier = Modifier) {
+    val isDarkMode = ThemeManager.isDarkMode()
+    val backgroundColor = if (isDarkMode) Color(0xFF1E1E1E).copy(alpha = 0.95f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
+    val contentColor = if (isDarkMode) Color.White else MaterialTheme.colorScheme.onSurface
+    
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(4.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+        color = backgroundColor,
         shadowElevation = 4.dp
     ) {
         Column(
@@ -661,32 +684,35 @@ fun MapLegend(modifier: Modifier = Modifier) {
                 text = "Legend",
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = contentColor,
                 modifier = Modifier.padding(bottom = 2.dp)
             )
             
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 2.dp),
                 thickness = 1.dp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                color = contentColor.copy(alpha = 0.3f)
             )
             
             // Alert Marker
             LegendItem(
                 color = Color.Red,
-                label = "Alert"
+                label = "Alert",
+                textColor = contentColor
             )
             
             // Hospital Marker
             LegendItem(
                 color = Color(0xFF4CAF50),
-                label = "Hospital"
+                label = "Hospital",
+                textColor = contentColor
             )
             
             // Evacuation Center Marker
             LegendItem(
                 color = Color(0xFF2196F3),
-                label = "Evacuation"
+                label = "Evacuation",
+                textColor = contentColor
             )
         }
     }
@@ -695,7 +721,8 @@ fun MapLegend(modifier: Modifier = Modifier) {
 @Composable
 fun LegendItem(
     color: Color,
-    label: String
+    label: String,
+    textColor: Color
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -706,13 +733,13 @@ fun LegendItem(
             modifier = Modifier
                 .size(14.dp)
                 .background(color, RoundedCornerShape(50))
-                .border(1.5.dp, Color.White, RoundedCornerShape(50))
+                .border(1.5.dp, textColor.copy(alpha = 0.8f), RoundedCornerShape(50))
         )
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onSurface
+            color = textColor
         )
     }
 }

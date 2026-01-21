@@ -392,43 +392,33 @@ fun AlertsScreen(
                     if (alerts.isEmpty()) {
                         EmptyAlertsView()
                     } else {
-                        val listState = rememberLazyListState()
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            LazyColumn(
-                                state = listState,
-                                contentPadding = PaddingValues(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(if (isCompactMode) 8.dp else 16.dp),
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                items(alerts, key = { it.id }) { alert ->
-                                    Box(modifier = Modifier.animateItemPlacement(tween(500))) {
-                                        AnimatedContent(
-                                            targetState = isCompactMode,
-                                            transitionSpec = {
-                                                fadeIn(tween(500)) + expandVertically(tween(500)) togetherWith fadeOut(tween(500)) + shrinkVertically(tween(500))
-                                            },
-                                            label = "size_transition"
-                                        ) { compact ->
-                                            if (compact) {
-                                                AlertItemLine(alert = alert) { id, title ->
-                                                    onMessageClick?.invoke(id, title)
-                                                }
-                                            } else {
-                                                AlertItem(alert = alert) { id, title ->
-                                                    onMessageClick?.invoke(id, title)
-                                                }
+                        LazyColumn(
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(if (isCompactMode) 8.dp else 16.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(alerts, key = { it.id }) { alert ->
+                                Box(modifier = Modifier.animateItemPlacement(tween(500))) {
+                                    AnimatedContent(
+                                        targetState = isCompactMode,
+                                        transitionSpec = {
+                                            fadeIn(tween(500)) + expandVertically(tween(500)) togetherWith fadeOut(tween(500)) + shrinkVertically(tween(500))
+                                        },
+                                        label = "size_transition"
+                                    ) { compact ->
+                                        if (compact) {
+                                            AlertItemLine(alert = alert) { id, title ->
+                                                onMessageClick?.invoke(id, title)
+                                            }
+                                        } else {
+                                            AlertItem(alert = alert) { id, title ->
+                                                onMessageClick?.invoke(id, title)
                                             }
                                         }
                                     }
                                 }
-                                item { Spacer(modifier = Modifier.height(100.dp)) }
                             }
-                            
-                            ScrollIndicator(
-                                listState = listState, 
-                                itemCount = alerts.size, 
-                                modifier = Modifier.align(Alignment.CenterEnd).padding(end = 4.dp)
-                            )
+                            item { Spacer(modifier = Modifier.height(100.dp)) }
                         }
                     }
                 }
@@ -466,30 +456,6 @@ fun getCategoryName(alert: Alert, localeContext: android.content.Context): Strin
         translated = if (currentLang != "en") TranslationService.translate(nameEn, currentLang) else nameEn
     }
     return translated
-}
-
-@Composable
-fun ScrollIndicator(listState: LazyListState, itemCount: Int, modifier: Modifier = Modifier) {
-    val layoutInfo by remember { derivedStateOf { listState.layoutInfo } }
-    if (layoutInfo.visibleItemsInfo.isEmpty() || itemCount == 0 || itemCount <= layoutInfo.visibleItemsInfo.size) return
-    
-    val progress = (layoutInfo.visibleItemsInfo.first().index.toFloat() / (itemCount - 1).toFloat()).coerceIn(0f, 1f)
-    
-    Box(
-        modifier = modifier
-            .width(4.dp)
-            .fillMaxHeight(0.6f)
-            .padding(vertical = 40.dp)
-            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.05f), RoundedCornerShape(2.dp))
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.2f)
-                .offset(y = (progress * 100).dp)
-                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f), RoundedCornerShape(2.dp))
-        )
-    }
 }
 
 @Composable
