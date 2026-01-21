@@ -138,8 +138,8 @@ object TranslationService {
                     TranslateLanguage.ENGLISH
                 }
             }
-            "bcl", "war" -> {
-                // Bicolano and Waray are not supported by ML Kit, fallback to Filipino (Tagalog)
+            "bcl", "war", "ilo" -> {
+                // Bicolano, Waray and Ilocano are not supported by ML Kit, fallback to Filipino (Tagalog)
                 try {
                     TranslateLanguage.fromLanguageTag("tl") ?: TranslateLanguage.ENGLISH
                 } catch (e: Exception) {

@@ -30,6 +30,8 @@ import java.util.Locale
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
+import com.example.emergencycommunicationsystem.util.LocaleManager
+
 class WeatherViewModel(application: Application) : AndroidViewModel(application) {
     private val _weatherState = MutableStateFlow<WeatherState>(WeatherState.Loading)
     val weatherState: StateFlow<WeatherState> = _weatherState
@@ -38,6 +40,9 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
     private val weatherDao = AppDatabase.getDatabase(application).weatherDao()
     
     var hasLoadedData: Boolean = false
+        private set
+    
+    var lastUsedLanguage: String? = null
         private set
 
     init {
@@ -124,6 +129,7 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
 
     @Suppress("DEPRECATION")
     suspend fun fetchWeatherByLocation(lat: Double, lon: Double, language: String = "en") {
+        lastUsedLanguage = language
         try {
             val weatherResponse = WeatherApiClient.weatherService.getCurrentWeatherByLocation(lat, lon, apiKey)
             val forecastResponse = try {
@@ -153,7 +159,13 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
                     location = locationName,
                     language = language,
                     templateFallback = {
-                        getTemplateWeatherAdvice(condition, weatherResponse.main.temp, weatherResponse.main.feelsLike, 
+                        // Create a locale-specific context for fallback strings
+                        val locale = LocaleManager.getLocaleFromCode(language)
+                        val config = android.content.res.Configuration(getApplication<Application>().resources.configuration)
+                        config.setLocale(locale)
+                        val localeContext = getApplication<Application>().createConfigurationContext(config)
+                        
+                        getTemplateWeatherAdvice(localeContext, condition, weatherResponse.main.temp, weatherResponse.main.feelsLike, 
                             weatherResponse.main.humidity, weatherResponse.wind.speed, weatherResponse.visibility)
                     }
                 )
@@ -203,35 +215,55 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun setLocationPermissionDenied() {
+    suspend fun reloadWeather(language: String) {
+        val context = getApplication<Application>().applicationContext
+        if (lastUsedLanguage != language) {
+            hasLoadedData = false // Reset to force refresh logic if needed elsewhere
+            _weatherState.value = WeatherState.Loading
+            
+            try {
+                // Determine location again
+                val location = getLocation()
+                fetchWeatherByLocation(location.latitude, location.longitude, language)
+            } catch (e: Exception) {
+                // If location fails, try cache but we know language changed so cache might be mismatched.
+                // Best effort: load cache anyway if network failed
+                if (!loadWeatherFromCache()) {
+                     setLocationNotFound()
+                }
+            }
+        }
+    }
+
+    private fun setLocationPermissionDenied() {
          _weatherState.value = WeatherState.Error("Permission denied. Enable location in settings.")
          hasLoadedData = true
     }
-    fun setLocationNotFound() {
+    
+    private fun setLocationNotFound() {
         _weatherState.value = WeatherState.Error("GPS signal lost. Ensure location is on.")
         hasLoadedData = true
     }
 
-    private fun getTemplateWeatherAdvice(condition: String, temp: Double, feelsLike: Double, humidity: Int, windSpeed: Double, visibility: Int): String {
-        val app = getApplication<Application>()
+    private fun getTemplateWeatherAdvice(context: android.content.Context, condition: String, temp: Double, feelsLike: Double, humidity: Int, windSpeed: Double, visibility: Int): String {
         val feelsLikeDescription = when {
-            feelsLike > temp + 2 -> app.getString(R.string.weather_advice_feels_much_hotter)
-            feelsLike < temp - 2 -> app.getString(R.string.weather_advice_feels_much_cooler)
+            feelsLike > temp + 2 -> context.getString(R.string.weather_advice_feels_much_hotter)
+            feelsLike < temp - 2 -> context.getString(R.string.weather_advice_feels_much_cooler)
             else -> ""
         }
-        val humidityDescription = if (humidity > 75) app.getString(R.string.weather_advice_humidity_high) else ""
+        val humidityDescription = if (humidity > 75) context.getString(R.string.weather_advice_humidity_high) else ""
         val windDescription = when {
-            windSpeed > 15 -> app.getString(R.string.weather_advice_wind_strong)
-            windSpeed > 5 -> app.getString(R.string.weather_advice_wind_breezy)
+            windSpeed > 15 -> context.getString(R.string.weather_advice_wind_strong)
+            windSpeed > 5 -> context.getString(R.string.weather_advice_wind_breezy)
             else -> ""
         }
-        val visibilityDescription = if (visibility < 1000) app.getString(R.string.weather_advice_visibility_low) else ""
+        val visibilityDescription = if (visibility < 1000) context.getString(R.string.weather_advice_visibility_low) else ""
         
         val baseReplies = when (condition.lowercase()) {
-            "clear" -> listOf(app.getString(R.string.weather_advice_clear_1), app.getString(R.string.weather_advice_clear_2))
-            "clouds" -> listOf(app.getString(R.string.weather_advice_clouds_1), app.getString(R.string.weather_advice_clouds_2))
-            "rain" -> listOf(app.getString(R.string.weather_advice_rain_1), app.getString(R.string.weather_advice_rain_2))
-            else -> listOf(app.getString(R.string.weather_advice_unusual_1), app.getString(R.string.weather_advice_unusual_2))
+            "clear" -> listOf(context.getString(R.string.weather_advice_clear_1), context.getString(R.string.weather_advice_clear_2))
+            "clouds" -> listOf(context.getString(R.string.weather_advice_clouds_1), context.getString(R.string.weather_advice_clouds_2))
+            "rain" -> listOf(context.getString(R.string.weather_advice_rain_1), context.getString(R.string.weather_advice_rain_2))
+            else -> listOf(context.getString(R.string.weather_advice_unusual_1), context.getString(R.string.weather_advice_unusual_2))
         }
 
         return (listOf(baseReplies.random()) + listOfNotNull(feelsLikeDescription.takeIf { it.isNotEmpty() }, 

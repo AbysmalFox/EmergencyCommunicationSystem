@@ -202,30 +202,33 @@ object GeminiWeatherService {
             "es" -> "Spanish"
             "ceb" -> "Cebuano"
             "war" -> "Waray"
+            "ilo" -> "Ilocano"
             "bcl" -> "Bicolano"
             else -> "English"
         }
         
         val prompt = """
-            You are a helpful, professional weather assistant for $location.
+            You are a helpful, friendly, and knowledgeable weather assistant for $location.
             
-            Based on these specific conditions, provide conversational advice including a tip and any necessary warnings:
+            Based on the following real-time weather data, provide a comprehensive and practical update:
             - Condition: $condition
-            - Temp: ${temp.toInt()}°C (Feels like ${feelsLike.toInt()}°C)
+            - Temperature: ${temp.toInt()}°C (Feels like ${feelsLike.toInt()}°C)
             - Humidity: $humidity%
-            - Wind: $windSpeed km/h
+            - Wind Speed: $windSpeed km/h
             - Visibility: ${visibility / 1000} km
-            - Time: $timeOfDay
+            - Time of Day: $timeOfDay
             
-            Guidelines:
-            - Provide 2-3 sentences.
-            - Be practical and actionable (what to wear, what to bring, safety precautions).
-            - Mention specific details from the data if they are notable (e.g., high humidity or wind).
-            - Use a friendly but informative tone.
-            - Max 250 characters.
-            - IMPORTANT: Respond strictly in $languageName.
+            Instructions:
+            1. **Summarize the Feel:** Briefly describe how the weather actually feels (e.g., "It's a hot and humid afternoon").
+            2. **Practical Advice:** Give specific recommendations on clothing (e.g., "Light cotton clothes are best"), hydration, or travel (e.g., "Roads might be slippery").
+            3. **Safety Warning:** If there are potential risks like high heat index, strong winds, or low visibility, explicitly mention them.
+            4. **Tone:** Be conversational, caring, and local-friendly.
             
-            Respond only with the advice.
+            Length Constraint: Keep it under 400 characters to fit in the widget, but ensure it is detailed enough to be truly useful.
+            
+            CRITICAL INSTRUCTION: You MUST translate your entire response to $languageName. Do NOT use English if the requested language is not English.
+            
+            Respond only with the translated advice in $languageName.
         """.trimIndent()
         
         return callGeminiAPI(prompt)

@@ -56,7 +56,8 @@ fun LanguageSettingsScreen(
         "es" to context.getString(R.string.language_spanish),
         "bcl" to context.getString(R.string.language_bicolano),
         "ceb" to context.getString(R.string.language_bisaya),
-        "war" to context.getString(R.string.language_waray)
+        "war" to context.getString(R.string.language_waray),
+        "ilo" to context.getString(R.string.language_ilocano)
     )
 
     Scaffold(

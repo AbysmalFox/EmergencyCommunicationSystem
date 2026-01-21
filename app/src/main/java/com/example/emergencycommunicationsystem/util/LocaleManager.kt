@@ -38,6 +38,7 @@ object LocaleManager {
             "bcl" -> Locale("bcl")
             "ceb" -> Locale("ceb")
             "war" -> Locale("war")
+            "ilo" -> Locale("ilo")
             "en" -> Locale("en")
             else -> Locale(langCode)
         }

@@ -42,6 +42,7 @@ import com.example.emergencycommunicationsystem.util.LocationUpdater
 import com.example.emergencycommunicationsystem.util.LocationUtils
 import com.example.emergencycommunicationsystem.util.LocaleProvider
 import com.example.emergencycommunicationsystem.util.LocaleManager
+import com.example.emergencycommunicationsystem.util.GeminiWeatherService
 import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModel
 import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModelFactory
 import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
@@ -96,6 +97,10 @@ class MainActivity : BaseActivity() {
                         },
                         onMagnifierToggle = { enabled ->
                             if (enabled) setupMagnifier() else removeMagnifier()
+                        },
+                        onLanguageChange = {
+                            GeminiWeatherService.clearCache()
+                            recreate()
                         }
                     )
                 }
@@ -108,7 +113,8 @@ class MainActivity : BaseActivity() {
 fun EmergencyApp(
     currentTheme: String,
     onThemeChange: (String) -> Unit,
-    onMagnifierToggle: (Boolean) -> Unit
+    onMagnifierToggle: (Boolean) -> Unit,
+    onLanguageChange: () -> Unit
 ) {
     val navController = rememberNavController()
     val weatherViewModel: WeatherViewModel = viewModel()
@@ -307,7 +313,7 @@ fun EmergencyApp(
                             coroutineScope.launch(Dispatchers.IO) {
                                 UserPrefs.saveLanguage(context, lang)
                                 withContext(Dispatchers.Main) {
-                                    navController.popBackStack()
+                                    onLanguageChange()
                                 }
                             }
                         },

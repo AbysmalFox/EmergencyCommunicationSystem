@@ -72,4 +72,9 @@ object AppIcons {
     val Traffic: ImageVector = Icons.Filled.Traffic
     val Shield: ImageVector = Icons.Filled.Shield
     val LocalHospital: ImageVector = Icons.Filled.LocalHospital
+    
+    // Theme Icons
+    val Settings: ImageVector = Icons.Filled.Settings
+    val LightMode: ImageVector = Icons.Filled.LightMode
+    val DarkMode: ImageVector = Icons.Filled.DarkMode
 }

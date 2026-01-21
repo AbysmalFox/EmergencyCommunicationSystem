@@ -52,7 +52,6 @@ fun ProfileScreen(
     var showNotificationSettings by remember { mutableStateOf(false) }
     var showEditProfile by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
-    var showThemeDialog by remember { mutableStateOf(false) }
     
     val sheetState = rememberModalBottomSheetState()
     val editSheetState = rememberModalBottomSheetState()
@@ -95,38 +94,6 @@ fun ProfileScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    // Theme Selection Dialog
-    if (showThemeDialog) {
-        AlertDialog(
-            onDismissRequest = { showThemeDialog = false },
-            title = { Text("Choose Appearance") },
-            text = {
-                Column {
-                    ThemeOption(
-                        text = "System Default",
-                        selected = currentTheme == "system",
-                        onClick = { onThemeChange("system"); showThemeDialog = false }
-                    )
-                    ThemeOption(
-                        text = "Light",
-                        selected = currentTheme == "light",
-                        onClick = { onThemeChange("light"); showThemeDialog = false }
-                    )
-                    ThemeOption(
-                        text = "Dark",
-                        selected = currentTheme == "dark",
-                        onClick = { onThemeChange("dark"); showThemeDialog = false }
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showThemeDialog = false }) {
                     Text("Cancel")
                 }
             }
@@ -194,17 +161,51 @@ fun ProfileScreen(
                     "es" -> "Español" 
                     "ceb" -> "Cebuano"
                     "war" -> "Waray"
+                    "ilo" -> "Ilocano"
                     "bcl" -> "Bicolano"
                     else -> "English"
                 }, 
                 onClick = onLanguageSettingsClick
             )
 
-            SettingsItem(
+            // Embedded Theme Selector
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
                 text = "Appearance",
-                valueText = currentTheme.replaceFirstChar { it.uppercase() },
-                onClick = { showThemeDialog = true }
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
             )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ThemeSelectionCard(
+                    text = "System",
+                    selected = currentTheme == "system",
+                    icon = AppIcons.Settings,
+                    onClick = { onThemeChange("system") },
+                    modifier = Modifier.weight(1f)
+                )
+                ThemeSelectionCard(
+                    text = "Light",
+                    selected = currentTheme == "light",
+                    icon = AppIcons.LightMode, 
+                    onClick = { onThemeChange("light") },
+                    modifier = Modifier.weight(1f)
+                )
+                ThemeSelectionCard(
+                    text = "Dark",
+                    selected = currentTheme == "dark",
+                    icon = AppIcons.DarkMode,
+                    onClick = { onThemeChange("dark") },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -401,6 +402,50 @@ fun EditProfileSheet(
             ) {
                 Text("Save Changes")
             }
+        }
+    }
+}
+
+@Composable
+fun ThemeSelectionCard(
+    text: String,
+    selected: Boolean,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val borderColor = if (selected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.2f)
+    val backgroundColor = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent
+    
+    // For inline display on the dark profile screen, unselected content must be White
+    val contentColor = if (selected) MaterialTheme.colorScheme.primary else Color.White
+
+    Card(
+        onClick = onClick,
+        modifier = modifier
+            .height(100.dp),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(if (selected) 2.dp else 1.dp, borderColor),
+        colors = CardDefaults.cardColors(containerColor = backgroundColor)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = text,
+                tint = contentColor,
+                modifier = Modifier.size(28.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                color = contentColor
+            )
         }
     }
 }

@@ -94,6 +94,8 @@ fun HomeScreen(
     val alertsState by alertsViewModel.uiState.collectAsState(initial = Resource.Loading)
     val weatherState by weatherViewModel.weatherState.collectAsState(initial = WeatherState.Loading)
     
+    val currentLanguage by com.example.emergencycommunicationsystem.data.UserPrefs.getLanguage(context).collectAsState(initial = "en")
+
     // Get user location for distance calculation
     val userLocation = when (val state = weatherState) {
         is WeatherState.Success -> Pair(state.lat, state.lon)
@@ -115,7 +117,7 @@ fun HomeScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(Unit, currentLanguage) {
         if (!weatherViewModel.hasLoadedData) {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 weatherViewModel.requestLocationAndFetchWeather()
@@ -124,6 +126,9 @@ fun HomeScreen(
                     arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
                 )
             }
+        } else if (weatherViewModel.lastUsedLanguage != currentLanguage) {
+             // Language changed, force reload
+             weatherViewModel.reloadWeather(currentLanguage)
         }
         alertsViewModel.loadAlerts()
     }
