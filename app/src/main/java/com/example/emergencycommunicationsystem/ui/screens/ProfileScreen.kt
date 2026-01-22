@@ -259,8 +259,14 @@ fun ProfileScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
-                    colors = ButtonDefaults.textButtonColors(contentColor = Color.Red.copy(alpha = 0.8f))
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onBackground)
                 ) {
+                    Icon(
+                        painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_tabler_logout),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = localeContext.getString(R.string.logout),
                         fontSize = 16.sp,
