@@ -54,6 +54,7 @@ import com.example.emergencycommunicationsystem.util.getLocaleContext
 import com.example.emergencycommunicationsystem.util.LocationUtils
 import com.example.emergencycommunicationsystem.util.getAlertSeverity
 import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
+import com.example.emergencycommunicationsystem.viewmodel.AlertWithDistance
 import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
 import com.example.emergencycommunicationsystem.ui.theme.ThemeManager
 import com.example.emergencycommunicationsystem.ui.theme.themeShadow
@@ -112,8 +113,12 @@ fun HomeScreen(
         is WeatherState.Success -> Pair(state.lat, state.lon)
         else -> null
     }
-    val userLat = userLocation?.first
-    val userLon = userLocation?.second
+
+    LaunchedEffect(userLocation) {
+        userLocation?.let { (lat, lon) ->
+            alertsViewModel.updateUserLocation(lat, lon)
+        }
+    }
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -226,8 +231,6 @@ fun HomeScreen(
                     ) {
                         ModernAlertsSection(
                             alertsState = alertsState,
-                            userLat = userLat,
-                            userLon = userLon,
                             onAlertClick = onAlertClick,
                             isDarkMode = isDarkMode
                         )
@@ -254,7 +257,7 @@ fun HomeScreen(
                             }
                             
                             // Emergency Instructions - Enhanced
-                            val alerts = (alertsState as? Resource.Success)?.data ?: emptyList()
+                            val alerts = (alertsState as? Resource.Success)?.data?.map { it.alert } ?: emptyList()
                             CompactInstructionsCard(
                                 alerts = alerts,
                                 onClick = onEmergencyGuidesClick,
@@ -278,10 +281,8 @@ fun HomeScreen(
  */
 @Composable
 fun QCRealTimeClock(useLightColor: Boolean = false) {
-    var currentTime by remember { 
-        mutableStateOf(Calendar.getInstance(TimeZone.getTimeZone("Asia/Manila"))) 
-    }
-    
+    var currentTime by remember { mutableStateOf(System.currentTimeMillis()) }
+
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val dotAlpha by infiniteTransition.animateFloat(
         initialValue = 0.2f,
@@ -292,31 +293,41 @@ fun QCRealTimeClock(useLightColor: Boolean = false) {
         ),
         label = "dotAlpha"
     )
-    
+
     LaunchedEffect(Unit) {
-        while(true) {
-            currentTime = Calendar.getInstance(TimeZone.getTimeZone("Asia/Manila"))
+        while (true) {
             delay(1000)
+            currentTime = System.currentTimeMillis()
         }
     }
-    
-    val timeFormatter = SimpleDateFormat("hh:mm", Locale.getDefault()).apply { 
-        timeZone = TimeZone.getTimeZone("Asia/Manila")
+
+    val timeFormatter = remember {
+        SimpleDateFormat("hh:mm", Locale.getDefault()).apply {
+            timeZone = TimeZone.getTimeZone("Asia/Manila")
+        }
     }
-    val secondsFormatter = SimpleDateFormat(":ss", Locale.getDefault()).apply {
-        timeZone = TimeZone.getTimeZone("Asia/Manila")
+    val secondsFormatter = remember {
+        SimpleDateFormat(":ss", Locale.getDefault()).apply {
+            timeZone = TimeZone.getTimeZone("Asia/Manila")
+        }
     }
-    val amPmFormatter = SimpleDateFormat(" a", Locale.getDefault()).apply {
-        timeZone = TimeZone.getTimeZone("Asia/Manila")
+    val amPmFormatter = remember {
+        SimpleDateFormat(" a", Locale.getDefault()).apply {
+            timeZone = TimeZone.getTimeZone("Asia/Manila")
+        }
     }
-    val dateFormatter = SimpleDateFormat("EEE, MMM d", Locale.getDefault()).apply {
-        timeZone = TimeZone.getTimeZone("Asia/Manila")
+    val dateFormatter = remember {
+        SimpleDateFormat("EEE, MMM d", Locale.getDefault()).apply {
+            timeZone = TimeZone.getTimeZone("Asia/Manila")
+        }
     }
-    
+
+    val date = remember(currentTime) { Date(currentTime) }
+
     val baseTextColor = if (useLightColor) Color.White else MaterialTheme.colorScheme.onBackground
     val secondaryTextColor = if (useLightColor) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
     val accentColor = if (useLightColor) AlertaraTealAccent else MaterialTheme.colorScheme.primary
-    
+
     Column(
         horizontalAlignment = Alignment.End,
         verticalArrangement = Arrangement.Center
@@ -343,21 +354,21 @@ fun QCRealTimeClock(useLightColor: Boolean = false) {
         }
         Row(verticalAlignment = Alignment.Bottom) {
             Text(
-                text = timeFormatter.format(currentTime.time),
+                text = timeFormatter.format(date),
                 fontSize = 22.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = baseTextColor,
                 letterSpacing = (-0.5).sp
             )
             Text(
-                text = secondsFormatter.format(currentTime.time),
+                text = secondsFormatter.format(date),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = accentColor,
                 modifier = Modifier.padding(bottom = 2.dp)
             )
             Text(
-                text = amPmFormatter.format(currentTime.time),
+                text = amPmFormatter.format(date),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 color = secondaryTextColor,
@@ -365,7 +376,7 @@ fun QCRealTimeClock(useLightColor: Boolean = false) {
             )
         }
         Text(
-            text = dateFormatter.format(currentTime.time),
+            text = dateFormatter.format(date),
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
             color = secondaryTextColor.copy(alpha = 0.5f)
@@ -378,7 +389,7 @@ fun QCRealTimeClock(useLightColor: Boolean = false) {
  */
 @Composable
 fun DashboardHeroSection(
-    alertsState: Resource<List<Alert>>,
+    alertsState: Resource<List<AlertWithDistance>>,
     weatherState: WeatherState,
     isDarkMode: Boolean
 ) {
@@ -412,7 +423,7 @@ fun DashboardHeroSection(
     }
     
     val highPriorityCount = when (alertsState) {
-        is Resource.Success -> alertsState.data.count { getAlertSeverity(it) == "High" }
+        is Resource.Success -> alertsState.data.map { it.alert }.count { getAlertSeverity(it) == "High" }
         else -> 0
     }
     
@@ -666,9 +677,7 @@ fun QuickActionCard(
  */
 @Composable
 fun ModernAlertsSection(
-    alertsState: Resource<List<Alert>>,
-    userLat: Double?,
-    userLon: Double?,
+    alertsState: Resource<List<AlertWithDistance>>,
     onAlertClick: (Int) -> Unit,
     isDarkMode: Boolean
 ) {
@@ -681,8 +690,8 @@ fun ModernAlertsSection(
             }
         }
         is Resource.Success -> {
-            val alerts = alertsState.data
-            if (alerts.isNotEmpty()) {
+            val alertsWithDistance = alertsState.data
+            if (alertsWithDistance.isNotEmpty()) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -723,18 +732,13 @@ fun ModernAlertsSection(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        items(alerts.take(5)) { alert ->
-                            val distanceKm = if (userLat != null && userLon != null &&
-                                alert.latitude != null && alert.longitude != null) {
-                                LocationUtils.calculateDistance(userLat, userLon, alert.latitude, alert.longitude)
-                            } else null
-                            
+                        items(alertsWithDistance.take(5)) { alertWithDistance ->
                             Box(modifier = Modifier.width(220.dp)) {
                                 CompactAlertCard(
-                                    alert = alert,
-                                    distanceKm = distanceKm,
-                                    severity = getAlertSeverity(alert),
-                                    onClick = { onAlertClick(alert.id) }
+                                    alert = alertWithDistance.alert,
+                                    distanceKm = alertWithDistance.distanceKm,
+                                    severity = getAlertSeverity(alertWithDistance.alert),
+                                    onClick = { onAlertClick(alertWithDistance.alert.id) }
                                 )
                             }
                         }

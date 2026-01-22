@@ -7,14 +7,17 @@ import java.io.IOException
 import java.util.Locale
 import kotlin.math.*
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
 object LocationUtils {
 
-    fun getAddressFromCoordinates(context: Context, latitude: Double, longitude: Double): String? {
+    suspend fun getAddressFromCoordinates(context: Context, latitude: Double, longitude: Double): String? = withContext(Dispatchers.IO) {
         if (!Geocoder.isPresent()) {
-            return null
+            return@withContext null
         }
         val geocoder = Geocoder(context, Locale.getDefault())
-        return try {
+        try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 var address: String? = null
                 geocoder.getFromLocation(latitude, longitude, 1) { addresses ->

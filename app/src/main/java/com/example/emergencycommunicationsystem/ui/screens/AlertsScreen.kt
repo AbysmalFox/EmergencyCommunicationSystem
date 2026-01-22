@@ -83,6 +83,7 @@ import com.example.emergencycommunicationsystem.util.getLocaleContext
 import com.example.emergencycommunicationsystem.util.getIconForCategory
 import com.example.emergencycommunicationsystem.util.getColorForCategory
 import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
+import com.example.emergencycommunicationsystem.viewmodel.AlertWithDistance
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -388,7 +389,7 @@ fun AlertsScreen(
                 }
 
                 is Resource.Success -> {
-                    val alerts = resource.data.filter { it.title != "General Inquiry" }
+                    val alerts = resource.data.map { it.alert }.filter { it.title != "General Inquiry" }
                     if (alerts.isEmpty()) {
                         EmptyAlertsView()
                     } else {

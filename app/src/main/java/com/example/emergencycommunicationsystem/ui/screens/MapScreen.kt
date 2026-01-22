@@ -58,7 +58,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.data.models.SafeZone
 import com.example.emergencycommunicationsystem.data.models.SafeZoneType
-import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
 import com.example.emergencycommunicationsystem.ui.theme.ThemeManager
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
@@ -69,6 +68,9 @@ import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
+
+import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
+import com.example.emergencycommunicationsystem.viewmodel.AlertWithDistance
 
 private const val TAG = "MapScreen"
 
@@ -229,15 +231,15 @@ fun MapScreen() {
         }
         
         // Track previous alerts to avoid unnecessary marker updates
-        var previousAlertIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+        var previousAlertIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
         
         // Update alert markers when alerts state changes - optimized to only update when data actually changes
         LaunchedEffect(alertsState) {
             mapView?.let { mapView ->
                 when (val state = alertsState) {
                     is com.example.emergencycommunicationsystem.util.Resource.Success -> {
-                        val currentAlerts = state.data.filter { it.latitude != null && it.longitude != null }
-                        val currentAlertIds = currentAlerts.map { it.id.toString() }.toSet()
+                        val currentAlerts = state.data.map { it.alert }.filter { it.latitude != null && it.longitude != null }
+                        val currentAlertIds = currentAlerts.map { it.id }.toSet()
                         
                         // Only update markers if alerts have actually changed
                         if (currentAlertIds != previousAlertIds) {
