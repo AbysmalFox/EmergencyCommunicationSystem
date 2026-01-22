@@ -28,8 +28,7 @@
     
     <!-- Alerts Screen -->
     <string name="alerts_and_notifications">Mga Alerto ug Pahibalo</string>
-    <string name="message">Mensahe</string>
-    <string name="please_login_to_send_message">Palihug pag-login aron makapadala og mensahe</string>
+    <string name="please_login_to_send_message">Palihug pag-login aron makapadala ug mensahe</string>
     <string name="no_new_alerts">Walay bag-ong alerto</string>
     <string name="community_alerts_will_appear_here">Ang mga alerto sa imong komunidad makita dinhi.</string>
     <string name="failed_to_load_alerts">Napakyas sa pag-load sa mga alerto</string>

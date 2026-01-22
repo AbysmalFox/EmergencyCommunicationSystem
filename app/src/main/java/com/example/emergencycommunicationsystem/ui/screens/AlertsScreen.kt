@@ -1,8 +1,6 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
-import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -10,7 +8,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,22 +17,18 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
@@ -54,11 +47,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,7 +62,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.emergencycommunicationsystem.AuthManager
 import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.data.UserPrefs
 import com.example.emergencycommunicationsystem.data.models.Alert
@@ -83,8 +73,6 @@ import com.example.emergencycommunicationsystem.util.getLocaleContext
 import com.example.emergencycommunicationsystem.util.getIconForCategory
 import com.example.emergencycommunicationsystem.util.getColorForCategory
 import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
-import com.example.emergencycommunicationsystem.viewmodel.AlertWithDistance
-import kotlinx.coroutines.launch
 import java.util.Locale
 
 @Composable
@@ -112,81 +100,6 @@ fun CategoryIcon(
 }
 
 @Composable
-fun CompactEmergencyInstructions(alert: Alert, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    
-    // Instructions logic
-    val alertType = when {
-        alert.category?.contains("weather", true) == true || alert.title?.contains("typhoon", true) == true -> "flood"
-        alert.category?.contains("fire", true) == true -> "fire"
-        alert.category?.contains("earthquake", true) == true -> "earthquake"
-        else -> "general"
-    }
-    
-    val stepsEn = remember(alertType) {
-        when (alertType) {
-            "flood" -> listOf("Avoid floodwaters", "Go to highest floor", "Turn off electricity if safe")
-            "fire" -> listOf("Use stairs only", "Stay low to avoid smoke", "Feel doors before opening")
-            "earthquake" -> listOf("Drop to hands and knees", "Cover head and neck", "Hold on to sturdy furniture")
-            else -> listOf("Follow local guidance", "Stay tuned for updates")
-        }
-    }
-
-    val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
-    var translatedSteps by remember { mutableStateOf(stepsEn) }
-    var translatedLabel by remember { mutableStateOf("What To Do:") }
-    
-    LaunchedEffect(alertType, currentLanguage) {
-        if (currentLanguage != "en") {
-            coroutineScope.launch {
-                translatedLabel = TranslationService.translate("What To Do:", currentLanguage)
-                translatedSteps = TranslationService.translateBatch(stepsEn, currentLanguage)
-            }
-        } else {
-            translatedLabel = "What To Do:"; translatedSteps = stepsEn
-        }
-    }
-    
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surfaceVariant, // The "Satisfying Green" tint from Theme.kt
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-    ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = AppIcons.Info,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "🧠 $translatedLabel",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-            Spacer(modifier = Modifier.height(10.dp))
-            translatedSteps.take(3).forEach { step ->
-                Row(modifier = Modifier.padding(vertical = 2.dp), verticalAlignment = Alignment.Top) {
-                    Text(
-                        text = "• ", 
-                        fontSize = 13.sp, 
-                        fontWeight = FontWeight.Black, 
-                        color = MaterialTheme.colorScheme.onSurfaceVariant 
-                    )
-                    Text(text = step, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
-                }
-            }
-        }
-    }
-}
-
-@Composable
 fun AlertItem(
     alert: Alert,
     currentLanguage: String = "en",
@@ -194,6 +107,21 @@ fun AlertItem(
 ) {
     val localeContext = getLocaleContext()
     val categoryColor = getColorForCategory(alert)
+
+    // Dynamic translation for "Ask our Chatbot" button
+    val defaultMessage = "Ask our Chatbot"
+    val resourceMessage = localeContext.getString(R.string.message)
+    var buttonText by remember { mutableStateOf(resourceMessage) }
+
+    LaunchedEffect(currentLanguage, resourceMessage) {
+        // If current language is not English, but the resource string is still the English default,
+        // it means we don't have a static translation for this language. Use TranslationService.
+        if (currentLanguage != "en" && resourceMessage == defaultMessage) {
+            buttonText = TranslationService.translate(defaultMessage, currentLanguage)
+        } else {
+            buttonText = resourceMessage
+        }
+    }
 
     Card(
         modifier = Modifier
@@ -283,7 +211,7 @@ fun AlertItem(
                 ) {
                     Icon(imageVector = AppIcons.Message, contentDescription = null, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = localeContext.getString(R.string.message), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(text = buttonText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -293,7 +221,6 @@ fun AlertItem(
 @Composable
 fun AlertItemLine(
     alert: Alert,
-    currentLanguage: String = "en",
     onMessageClick: (id: String, title: String) -> Unit
 ) {
     val categoryColor = getColorForCategory(alert)
@@ -337,7 +264,7 @@ fun AlertItemLine(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class, ExperimentalFoundationApi::class, ExperimentalAnimationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun AlertsScreen(
     viewModel: AlertsViewModel = viewModel(), 
@@ -376,7 +303,7 @@ fun AlertsScreen(
                     modifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp)
                 ) {
                     Icon(
-                        imageVector = if (isCompactMode) Icons.Default.ViewAgenda else Icons.Default.List,
+                        imageVector = if (isCompactMode) Icons.Default.ViewAgenda else Icons.AutoMirrored.Filled.List,
                         contentDescription = "Switch View",
                         tint = MaterialTheme.colorScheme.primary
                     )
@@ -404,7 +331,7 @@ fun AlertsScreen(
                             modifier = Modifier.fillMaxSize()
                         ) {
                             items(alerts, key = { it.id }) { alert ->
-                                Box(modifier = Modifier.animateItemPlacement(tween(500))) {
+                                Box(modifier = Modifier.animateItem()) {
                                     AnimatedContent(
                                         targetState = isCompactMode,
                                         transitionSpec = {
@@ -413,7 +340,7 @@ fun AlertsScreen(
                                         label = "size_transition"
                                     ) { compact ->
                                         if (compact) {
-                                            AlertItemLine(alert = alert, currentLanguage = currentLanguage) { id, title ->
+                                            AlertItemLine(alert = alert) { id, title ->
                                                 onMessageClick?.invoke(id, title)
                                             }
                                         } else {

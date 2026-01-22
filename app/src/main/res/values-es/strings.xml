@@ -28,7 +28,6 @@
     <string name="logout">Cerrar Sesión</string>
     <!-- Alerts Screen -->
     <string name="alerts_and_notifications">Alertas y Notificaciones</string>
-    <string name="message">Mensaje</string>
     <string name="please_login_to_send_message">Por favor, inicia sesión para enviar un mensaje</string>
     <string name="no_new_alerts">No hay nuevas alertas</string>
     <string name="community_alerts_will_appear_here">Las alertas de tu comunidad aparecerán aquí.</string>

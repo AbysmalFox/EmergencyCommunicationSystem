@@ -339,10 +339,12 @@ fun EmergencyApp(
                     val userId = backStackEntry.arguments?.getInt("userId") ?: -1
                     val alertTitle = URLDecoder.decode(backStackEntry.arguments?.getString("alertTitle") ?: "Chat", "UTF-8")
                     val userName = backStackEntry.arguments?.getString("userName") ?: ""
+                    
+                    val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
 
                     if (alertId > 0 && userId > 0) {
-                        val factory = MessagingViewModelFactory(alertId, userId, alertTitle, messagingRepository)
-                        val messagingViewModel: MessagingViewModel = viewModel(key = "messaging_$alertId", factory = factory)
+                        val factory = MessagingViewModelFactory(alertId, userId, alertTitle, messagingRepository, currentLanguage)
+                        val messagingViewModel: MessagingViewModel = viewModel(key = "messaging_${alertId}_$currentLanguage", factory = factory)
 
                         MessagingScreen(
                             viewModel = messagingViewModel,

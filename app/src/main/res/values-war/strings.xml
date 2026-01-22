@@ -27,9 +27,8 @@
     <string name="logout">Log out</string>
     
     <!-- Alerts Screen -->
-    <string name="alerts_and_notifications">Mga Alerto ug Pahibaro</string>
-    <string name="message">Mensahe</string>
-    <string name="please_login_to_send_message">Palihug pag-login para makapadara hin mensahe</string>
+    <string name="alerts_and_notifications">Mga Alerto at Abiso</string>
+    <string name="please_login_to_send_message">Palihug pag-login para magpadara hin mensahe</string>
     <string name="no_new_alerts">Waray bag-o nga alerto</string>
     <string name="community_alerts_will_appear_here">An mga alerto ha imo komunidad makikita dinhi.</string>
     <string name="failed_to_load_alerts">Napakyas pag-load han mga alerto</string>

@@ -26,9 +26,8 @@
     <string name="profile">Profile</string>
     <string name="logout">Ag-logout</string>
     <!-- Alerts Screen -->
-    <string name="alerts_and_notifications">Dagiti Alerto ken Notipikasyon</string>
-    <string name="message">Mensahe</string>
-    <string name="please_login_to_send_message">Pangaasi nga ag-login tapno makapatawag ti mensahe</string>
+    <string name="alerts_and_notifications">Dagiti Alerto ken Pakaammo</string>
+    <string name="please_login_to_send_message">Pangaasim a mag-login tapno makaipatulod ka ti mensahe</string>
     <string name="no_new_alerts">Awan ti baro nga alerto</string>
     <string name="community_alerts_will_appear_here">Agparang ditoy dagiti alerto ti komunidadyo.</string>
     <string name="failed_to_load_alerts">Napaay a mangikarga kadagiti alerto</string>
