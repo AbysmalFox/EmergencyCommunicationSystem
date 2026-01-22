@@ -1044,6 +1044,33 @@ fun CompactAlertCard(
     modifier: Modifier = Modifier
 ) {
     val localeContext = getLocaleContext()
+    val context = LocalContext.current
+    val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
+    
+    // Dynamic translation
+    var translatedTitle by remember(alert.title) { mutableStateOf(alert.title ?: "") }
+    var translatedCategory by remember(alert.category) { mutableStateOf(alert.category ?: "") }
+    
+    LaunchedEffect(alert.title, alert.category, currentLanguage) {
+        val title = alert.title ?: "No Title"
+        val category = alert.category ?: "General"
+        
+        if (currentLanguage != "en") {
+            launch {
+                translatedTitle = TranslationService.translate(title, currentLanguage)
+            }
+            launch {
+                translatedCategory = TranslationService.translate(category, currentLanguage)
+            }
+        } else {
+            translatedTitle = title
+            translatedCategory = category
+        }
+    }
+    
+    val displayTitle = if (translatedTitle.isEmpty()) localeContext.getString(R.string.no_title) else translatedTitle
+    val displayCategory = if (translatedCategory.isEmpty()) localeContext.getString(R.string.general) else translatedCategory
+
     val severityColor = getSeverityColor(severity)
     val bgColor = MaterialTheme.colorScheme.background
     val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
@@ -1115,7 +1142,7 @@ fun CompactAlertCard(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = (alert.category ?: localeContext.getString(R.string.general)).uppercase(),
+                        text = displayCategory.uppercase(),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = severityColor
@@ -1139,7 +1166,7 @@ fun CompactAlertCard(
                 
                 // Title
                 Text(
-                    text = alert.title ?: localeContext.getString(R.string.no_title),
+                    text = displayTitle,
                     fontSize = 15.sp, // Increased size
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
