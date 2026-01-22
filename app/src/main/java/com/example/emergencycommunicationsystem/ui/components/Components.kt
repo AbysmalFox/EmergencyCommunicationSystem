@@ -918,7 +918,10 @@ fun RowScope.BottomNavItem(screen: Screen, isSelected: Boolean, onSelected: () -
 }
 
 @Composable
-fun HorizontalForecastWidget(forecastItems: List<com.example.emergencycommunicationsystem.data.models.ForecastItem>) {
+fun HorizontalForecastWidget(
+    forecastItems: List<com.example.emergencycommunicationsystem.data.models.ForecastItem>,
+    useWhiteText: Boolean = false
+) {
     if (forecastItems.isEmpty()) return
 
     // Use legacy date APIs (Calendar/SimpleDateFormat) to support older Android API levels
@@ -969,12 +972,14 @@ fun HorizontalForecastWidget(forecastItems: List<com.example.emergencycommunicat
     }
     
     val dayNameFormat = java.text.SimpleDateFormat("EEE", Locale.getDefault())
+    val labelColor = if (useWhiteText) Color.White else MaterialTheme.colorScheme.onSurface
+    
     Column {
         Text(
             text = translatedForecastLabel,
             fontWeight = FontWeight.SemiBold,
             fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = labelColor,
             modifier = Modifier.padding(bottom = 12.dp)
         )
 
@@ -992,18 +997,22 @@ fun HorizontalForecastWidget(forecastItems: List<com.example.emergencycommunicat
                 val iconUrl = "https://openweathermap.org/img/wn/$iconCode@2x.png"
                 val tempStr = "${String.format(Locale.US, "%.0f", item.main.temp)}°"
 
-                ForecastDay(dayName = dayName, iconUrl = iconUrl, temp = tempStr)
+                ForecastDay(dayName = dayName, iconUrl = iconUrl, temp = tempStr, useWhiteText = useWhiteText)
             }
         }
     }
 }
 
 @Composable
-fun ForecastDay(dayName: String, iconUrl: String, temp: String) {
+fun ForecastDay(dayName: String, iconUrl: String, temp: String, useWhiteText: Boolean = false) {
+    val textColor = if (useWhiteText) Color.White else MaterialTheme.colorScheme.onSurface
+    val subTextColor = if (useWhiteText) Color.White.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
+    val bgAlpha = if (useWhiteText) 0.2f else 0.5f
+    
     Column(
         modifier = Modifier
             .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                color = if (useWhiteText) Color.White.copy(alpha = bgAlpha) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = bgAlpha),
                 shape = RoundedCornerShape(12.dp)
             )
             .padding(12.dp),
@@ -1013,7 +1022,7 @@ fun ForecastDay(dayName: String, iconUrl: String, temp: String) {
         Text(
             text = dayName,
             fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = subTextColor,
             fontWeight = FontWeight.Medium
         )
 
@@ -1027,7 +1036,7 @@ fun ForecastDay(dayName: String, iconUrl: String, temp: String) {
             text = temp,
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
+            color = textColor
         )
     }
 }
