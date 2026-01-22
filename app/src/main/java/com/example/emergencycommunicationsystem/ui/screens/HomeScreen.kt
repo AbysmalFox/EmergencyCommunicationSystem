@@ -68,6 +68,7 @@ import java.util.TimeZone
 import kotlin.math.max
 import kotlin.math.min
 
+import com.example.emergencycommunicationsystem.util.WeatherIconUtils
 import com.example.emergencycommunicationsystem.util.TextToSpeechHelper
 
 // The primary teal color from Alertaraqc widget
@@ -881,13 +882,14 @@ fun CompactWeatherCard(
                         modifier = Modifier
                             .size(64.dp)
                             .clip(RoundedCornerShape(16.dp))
-                            .background(AlertaraTeal.copy(alpha = 0.12f)),
+                            .background(Color.Black),
                         contentAlignment = Alignment.Center
                     ) {
                         AsyncImage(
-                            model = weatherState.iconUrl,
+                            model = WeatherIconUtils.getWeatherAnimation(weatherState.condition),
                             contentDescription = weatherState.condition,
-                            modifier = Modifier.size(54.dp)
+                            modifier = Modifier.size(54.dp),
+                            contentScale = ContentScale.Fit
                         )
                     }
                 }

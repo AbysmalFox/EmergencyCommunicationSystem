@@ -99,10 +99,12 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.emergencycommunicationsystem.util.WeatherIconUtils
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 import com.example.emergencycommunicationsystem.util.TranslationService
 import com.example.emergencycommunicationsystem.data.UserPrefs
@@ -584,11 +586,20 @@ fun WeatherWidget(state: WeatherState) {
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    AsyncImage(
-                        model = state.iconUrl,
-                        contentDescription = state.condition,
-                        modifier = Modifier.size(90.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(90.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color.Black),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AsyncImage(
+                            model = WeatherIconUtils.getWeatherAnimation(state.condition),
+                            contentDescription = state.condition,
+                            modifier = Modifier.size(80.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
                     Spacer(modifier = Modifier.width(20.dp))
                     Column(
                         modifier = Modifier.weight(1f)
@@ -993,22 +1004,31 @@ fun HorizontalForecastWidget(
                 val repDate = java.util.Date(item.dt * 1000)
                 val dayName = dayNameFormat.format(repDate) // e.g. "Tue"
 
-                val iconCode = item.weather.firstOrNull()?.icon ?: "01d"
-                val iconUrl = "https://openweathermap.org/img/wn/$iconCode@2x.png"
                 val tempStr = "${String.format(Locale.US, "%.0f", item.main.temp)}°"
+                val conditionMain = item.weather.firstOrNull()?.main ?: "Clear"
 
-                ForecastDay(dayName = dayName, iconUrl = iconUrl, temp = tempStr, useWhiteText = useWhiteText)
+                ForecastDay(
+                    dayName = dayName,
+                    conditionMain = conditionMain,
+                    temp = tempStr,
+                    useWhiteText = useWhiteText
+                )
             }
         }
     }
 }
 
 @Composable
-fun ForecastDay(dayName: String, iconUrl: String, temp: String, useWhiteText: Boolean = false) {
+fun ForecastDay(
+    dayName: String,
+    conditionMain: String,
+    temp: String,
+    useWhiteText: Boolean = false
+) {
     val textColor = if (useWhiteText) Color.White else MaterialTheme.colorScheme.onSurface
     val subTextColor = if (useWhiteText) Color.White.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
     val bgAlpha = if (useWhiteText) 0.2f else 0.5f
-    
+
     Column(
         modifier = Modifier
             .background(
@@ -1026,11 +1046,20 @@ fun ForecastDay(dayName: String, iconUrl: String, temp: String, useWhiteText: Bo
             fontWeight = FontWeight.Medium
         )
 
-        AsyncImage(
-            model = iconUrl,
-            contentDescription = null,
-            modifier = Modifier.size(40.dp)
-        )
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.Black),
+            contentAlignment = Alignment.Center
+        ) {
+            AsyncImage(
+                model = WeatherIconUtils.getWeatherAnimation(conditionMain),
+                contentDescription = null,
+                modifier = Modifier.size(36.dp),
+                contentScale = ContentScale.Fit
+            )
+        }
 
         Text(
             text = temp,
@@ -1040,7 +1069,6 @@ fun ForecastDay(dayName: String, iconUrl: String, temp: String, useWhiteText: Bo
         )
     }
 }
-
 /**
  * Compact Alert Card for Dashboard
  */
