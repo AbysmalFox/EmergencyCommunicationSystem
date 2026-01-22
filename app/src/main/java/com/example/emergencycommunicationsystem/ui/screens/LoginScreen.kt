@@ -28,6 +28,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -114,7 +115,7 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center
         ) {
             IconButton(onClick = onBackPressed, modifier = Modifier.align(Alignment.Start)) {
-                Icon(AppIcons.ArrowBack, contentDescription = "Back")
+                Icon(AppIcons.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
             }
             Text(
                 text = "Login to Account",
@@ -131,7 +132,18 @@ fun LoginScreen(
                 label = { Text("Email/Phone Number:") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 modifier = Modifier.fillMaxWidth(),
-                enabled = loginState !is LoginState.Loading
+                enabled = loginState !is LoginState.Loading,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    cursorColor = MaterialTheme.colorScheme.onBackground,
+                    focusedLabelColor = MaterialTheme.colorScheme.onBackground,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                    focusedBorderColor = MaterialTheme.colorScheme.onBackground,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                )
             )
             Spacer(modifier = Modifier.height(16.dp))
             OutlinedTextField(
@@ -144,7 +156,18 @@ fun LoginScreen(
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 modifier = Modifier.fillMaxWidth(),
-                enabled = loginState !is LoginState.Loading
+                enabled = loginState !is LoginState.Loading,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    cursorColor = MaterialTheme.colorScheme.onBackground,
+                    focusedLabelColor = MaterialTheme.colorScheme.onBackground,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                    focusedBorderColor = MaterialTheme.colorScheme.onBackground,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                )
             )
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -168,12 +191,16 @@ fun LoginScreen(
                     viewModel.login(emailOrPhone, password)
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = loginState !is LoginState.Loading
+                enabled = loginState !is LoginState.Loading,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onSecondary
+                )
             ) {
                 if (loginState is LoginState.Loading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
-                        color = MaterialTheme.colorScheme.onPrimary
+                        color = MaterialTheme.colorScheme.onSecondary
                     )
                 } else {
                     Text("Login")
@@ -192,12 +219,12 @@ fun LoginScreen(
                         .weight(1f)
                         .height(1.dp)
                         .padding(horizontal = 8.dp)
-                        .background(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
+                        .background(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f))
                 )
                 Text(
                     text = "OR",
                     modifier = Modifier.padding(horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                     fontSize = 14.sp
                 )
                 Box(
@@ -205,7 +232,7 @@ fun LoginScreen(
                         .weight(1f)
                         .height(1.dp)
                         .padding(horizontal = 8.dp)
-                        .background(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
+                        .background(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f))
                 )
             }
             
@@ -220,8 +247,9 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = loginState !is LoginState.Loading,
                 colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.onSurface
-                )
+                    contentColor = MaterialTheme.colorScheme.onBackground
+                ),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
