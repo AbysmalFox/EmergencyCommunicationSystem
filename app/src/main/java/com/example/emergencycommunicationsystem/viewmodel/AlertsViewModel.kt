@@ -9,8 +9,10 @@ import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.data.repository.AlertsRepository
 import com.example.emergencycommunicationsystem.util.LocationUtils
 import com.example.emergencycommunicationsystem.util.Resource
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class AlertWithDistance(
     val alert: Alert,
@@ -41,13 +43,15 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
                 when (resource) {
                     is Resource.Success -> {
                         val location = _userLocation.value
-                        val alertsWithDistance = resource.data.map { alert ->
-                            val distance = if (location != null && alert.latitude != null && alert.longitude != null) {
-                                LocationUtils.calculateDistance(location.first, location.second, alert.latitude, alert.longitude)
-                            } else {
-                                null
+                        val alertsWithDistance = withContext(Dispatchers.Default) {
+                            resource.data.map { alert ->
+                                val distance = if (location != null && alert.latitude != null && alert.longitude != null) {
+                                    LocationUtils.calculateDistance(location.first, location.second, alert.latitude, alert.longitude)
+                                } else {
+                                    null
+                                }
+                                AlertWithDistance(alert, distance)
                             }
-                            AlertWithDistance(alert, distance)
                         }
                         _uiState.value = Resource.Success(alertsWithDistance)
                     }
@@ -61,17 +65,22 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
     fun updateUserLocation(latitude: Double, longitude: Double) {
         _userLocation.value = Pair(latitude, longitude)
         // Re-calculate distances when location changes
-        if (_uiState.value is Resource.Success) {
-            val alerts = (_uiState.value as Resource.Success<List<AlertWithDistance>>).data.map { it.alert }
-            val alertsWithDistance = alerts.map { alert ->
-                val distance = if (alert.latitude != null && alert.longitude != null) {
-                    LocationUtils.calculateDistance(latitude, longitude, alert.latitude, alert.longitude)
-                } else {
-                    null
+        viewModelScope.launch {
+            val currentState = _uiState.value
+            if (currentState is Resource.Success) {
+                val alerts = currentState.data.map { it.alert }
+                val alertsWithDistance = withContext(Dispatchers.Default) {
+                    alerts.map { alert ->
+                        val distance = if (alert.latitude != null && alert.longitude != null) {
+                            LocationUtils.calculateDistance(latitude, longitude, alert.latitude, alert.longitude)
+                        } else {
+                            null
+                        }
+                        AlertWithDistance(alert, distance)
+                    }
                 }
-                AlertWithDistance(alert, distance)
+                _uiState.value = Resource.Success(alertsWithDistance)
             }
-            _uiState.value = Resource.Success(alertsWithDistance)
         }
     }
 }

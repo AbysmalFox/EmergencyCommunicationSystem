@@ -245,7 +245,7 @@ fun EmergencyGuidesScreen(
                     }
                 }
             } else {
-                items(guides) { guide ->
+                items(guides, key = { it.id }) { guide ->
                     EmergencyGuideItem(
                         guide = guide,
                         onClick = { onGuideClick(guide.id) },

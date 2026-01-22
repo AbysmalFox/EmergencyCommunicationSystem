@@ -124,11 +124,13 @@ fun CompactEmergencyInstructions(alert: Alert, modifier: Modifier = Modifier) {
         else -> "general"
     }
     
-    val stepsEn = when (alertType) {
-        "flood" -> listOf("Avoid floodwaters", "Go to highest floor", "Turn off electricity if safe")
-        "fire" -> listOf("Use stairs only", "Stay low to avoid smoke", "Feel doors before opening")
-        "earthquake" -> listOf("Drop to hands and knees", "Cover head and neck", "Hold on to sturdy furniture")
-        else -> listOf("Follow local guidance", "Stay tuned for updates")
+    val stepsEn = remember(alertType) {
+        when (alertType) {
+            "flood" -> listOf("Avoid floodwaters", "Go to highest floor", "Turn off electricity if safe")
+            "fire" -> listOf("Use stairs only", "Stay low to avoid smoke", "Feel doors before opening")
+            "earthquake" -> listOf("Drop to hands and knees", "Cover head and neck", "Hold on to sturdy furniture")
+            else -> listOf("Follow local guidance", "Stay tuned for updates")
+        }
     }
 
     val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
@@ -187,6 +189,7 @@ fun CompactEmergencyInstructions(alert: Alert, modifier: Modifier = Modifier) {
 @Composable
 fun AlertItem(
     alert: Alert,
+    currentLanguage: String = "en",
     onMessageClick: (id: String, title: String) -> Unit
 ) {
     val localeContext = getLocaleContext()
@@ -219,7 +222,7 @@ fun AlertItem(
                         verticalAlignment = Alignment.Top
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            val categoryName = getCategoryName(alert, localeContext)
+                            val categoryName = getCategoryName(alert, currentLanguage)
                             Text(
                                 text = categoryName.uppercase(),
                                 color = categoryColor,
@@ -290,6 +293,7 @@ fun AlertItem(
 @Composable
 fun AlertItemLine(
     alert: Alert,
+    currentLanguage: String = "en",
     onMessageClick: (id: String, title: String) -> Unit
 ) {
     val categoryColor = getColorForCategory(alert)
@@ -343,6 +347,7 @@ fun AlertsScreen(
     val state by viewModel.uiState.collectAsState()
     val isRefreshing = state is Resource.Loading
     var isCompactMode by remember { mutableStateOf(false) }
+    val currentLanguage by UserPrefs.getLanguage(LocalContext.current).collectAsState(initial = "en")
 
     val pullRefreshState = rememberPullRefreshState(
         refreshing = isRefreshing, 
@@ -408,11 +413,11 @@ fun AlertsScreen(
                                         label = "size_transition"
                                     ) { compact ->
                                         if (compact) {
-                                            AlertItemLine(alert = alert) { id, title ->
+                                            AlertItemLine(alert = alert, currentLanguage = currentLanguage) { id, title ->
                                                 onMessageClick?.invoke(id, title)
                                             }
                                         } else {
-                                            AlertItem(alert = alert) { id, title ->
+                                            AlertItem(alert = alert, currentLanguage = currentLanguage) { id, title ->
                                                 onMessageClick?.invoke(id, title)
                                             }
                                         }
@@ -441,8 +446,7 @@ fun AlertsScreen(
 }
 
 @Composable
-fun getCategoryName(alert: Alert, localeContext: android.content.Context): String {
-    val context = LocalContext.current
+fun getCategoryName(alert: Alert, currentLanguage: String): String {
     val categoryId = try { alert.category?.toIntOrNull() ?: 0 } catch (_: Exception) { 0 }
     val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
     val nameEn = when {
@@ -451,10 +455,10 @@ fun getCategoryName(alert: Alert, localeContext: android.content.Context): Strin
         "fire" in title -> "Fire"; "health" in title -> "Health"
         else -> "General"
     }
-    val currentLang by UserPrefs.getLanguage(context).collectAsState(initial = "en")
+    
     var translated by remember { mutableStateOf(nameEn) }
-    LaunchedEffect(nameEn, currentLang) {
-        translated = if (currentLang != "en") TranslationService.translate(nameEn, currentLang) else nameEn
+    LaunchedEffect(nameEn, currentLanguage) {
+        translated = if (currentLanguage != "en") TranslationService.translate(nameEn, currentLanguage) else nameEn
     }
     return translated
 }
