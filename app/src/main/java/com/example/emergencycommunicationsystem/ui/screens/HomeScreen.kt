@@ -219,7 +219,8 @@ fun HomeScreen(
                             onReportClick = onReportIncidentClick,
                             onSafeClick = { if (!showSafeOverlay) showSafeOverlay = true },
                             onMessageClick = onMessageClick,
-                            isDarkMode = isDarkMode
+                            isDarkMode = isDarkMode,
+                            currentLanguage = currentLanguage
                         )
                     }
                 }
@@ -574,8 +575,21 @@ fun QuickActionsGrid(
     onReportClick: () -> Unit,
     onSafeClick: () -> Unit,
     onMessageClick: () -> Unit,
-    isDarkMode: Boolean
+    isDarkMode: Boolean,
+    currentLanguage: String = "en"
 ) {
+    val defaultMessage = "Chat with Responder"
+    val resourceMessage = localizedStringResource(R.string.message)
+    var buttonText by remember { mutableStateOf(resourceMessage) }
+
+    LaunchedEffect(currentLanguage, resourceMessage) {
+        if (currentLanguage != "en" && resourceMessage == defaultMessage) {
+            buttonText = com.example.emergencycommunicationsystem.util.TranslationService.translate(defaultMessage, currentLanguage)
+        } else {
+            buttonText = resourceMessage
+        }
+    }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -597,7 +611,7 @@ fun QuickActionsGrid(
             isDarkMode = isDarkMode
         )
         QuickActionCard(
-            title = localizedStringResource(R.string.message),
+            title = buttonText,
             icon = R.drawable.ic_tabler_message_plus,
             color = AlertaraTeal,
             onClick = onMessageClick,

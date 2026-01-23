@@ -42,6 +42,7 @@
     <string name="dark_theme">Madulom</string>
     <!-- Alerts Screen -->
     <string name="alerts_and_notifications">Mga Alerto asin Pahibalo</string>
+    <string name="message">Maki-ulay sa Responder</string>
     <string name="please_login_to_send_message">Mag-login tabi para makapadara nin mensahe</string>
     <string name="no_new_alerts">Mayo nin bagong alerto</string>
     <string name="community_alerts_will_appear_here">An mga alerto sa saindong komunidad mahihiling digdi.</string>

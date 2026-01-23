@@ -42,6 +42,7 @@
     <string name="dark_theme">Nasipnget</string>
     <!-- Alerts Screen -->
     <string name="alerts_and_notifications">Dagiti Alerto ken Pakaammo</string>
+    <string name="message">Makipang-sarita ti Responder</string>
     <string name="please_login_to_send_message">Pangaasim a mag-login tapno makaipatulod ka ti mensahe</string>
     <string name="no_new_alerts">Awan ti baro nga alerto</string>
     <string name="community_alerts_will_appear_here">Agparang ditoy dagiti alerto ti komunidadyo.</string>

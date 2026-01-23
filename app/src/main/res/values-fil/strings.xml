@@ -43,6 +43,7 @@
     <string name="dark_theme">Madilim</string>
     <!-- Alerts Screen -->
     <string name="alerts_and_notifications">Mga Alerto at Abiso</string>
+    <string name="message">Makipag-ugnayan sa Responder</string>
     <string name="please_login_to_send_message">Mangyaring mag-log in upang magpadala ng mensage</string>
     <string name="no_new_alerts">Walang bagong alerto</string>
     <string name="community_alerts_will_appear_here">Ang mga alerto ng inyong komunidad ay lilitaw dito.</string>
