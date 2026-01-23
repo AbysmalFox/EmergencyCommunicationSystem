@@ -21,14 +21,14 @@ object GeminiWeatherService {
     private const val TAG = "GeminiWeatherService"
     
     private val responseCache = mutableMapOf<String, String>()
-    private const val CACHE_EXPIRY_MS = 30 * 60 * 1000L // 30 minutes
+    private const val CACHE_EXPIRY_MS = 5 * 60 * 1000L // Reduced to 5 minutes for more variety
     private val cacheTimestamps = mutableMapOf<String, Long>()
     
     private var lastUsedModel: String? = "gemini-1.5-flash"
     
     // DEBUG MODE: Set to true to add [AI] prefix to responses
     private const val DEBUG_MODE = false 
-    
+
     suspend fun getWeatherAdvice(
         condition: String,
         temp: Double,
@@ -47,8 +47,8 @@ object GeminiWeatherService {
             return@withContext templateFallback()
         }
         
-        // Include condition and temp in cache key but ignore minute variations
-        val cacheKey = "${condition}_${temp.toInt()}_${humidity}_${language}"
+        // Use a more granular cache key to allow for subtle changes
+        val cacheKey = "${condition}_${temp}_${humidity}_${language}_${Calendar.getInstance().get(Calendar.HOUR_OF_DAY)}"
         
         val cachedResponse = responseCache[cacheKey]
         val cacheTime = cacheTimestamps[cacheKey] ?: 0L
@@ -72,7 +72,7 @@ object GeminiWeatherService {
             responseCache[cacheKey] = finalResponse
             cacheTimestamps[cacheKey] = System.currentTimeMillis()
             
-            finalResponse
+            if (DEBUG_MODE) "[AI] $finalResponse" else finalResponse
         } catch (e: Exception) {
             Log.e(TAG, "Gemini API Error: ${e.message}")
             templateFallback()
@@ -92,6 +92,12 @@ object GeminiWeatherService {
                         put(JSONObject().apply { put("text", prompt) })
                     })
                 })
+            })
+            // Added generationConfig to increase randomness/creativity
+            put("generationConfig", JSONObject().apply {
+                put("temperature", 0.9) // Higher temperature = more creative/random
+                put("topK", 40)
+                put("topP", 0.95)
             })
         }.toString()
 
@@ -142,46 +148,54 @@ object GeminiWeatherService {
         }
         
         val languageHint = when(language) {
-            "fil", "tl" -> "Tagalog/Filipino (e.g., 'Mainit ang panahon today')"
-            "es" -> "Spanish (e.g., 'El clima está caluroso')"
-            "ceb" -> "Cebuano/Bisaya (e.g., 'Init kaayo ang panahon karon')"
-            "war" -> "Waray-Waray (the Samar-Leyte language, e.g., 'Mapaso an panahon yana')"
-            "ilo" -> "Ilocano (e.g., 'Napudot ti tiempo ita')"
-            "bcl" -> "Bicolano (e.g., 'Mainit an panahon ngunyan')"
-            else -> "English"
+            "fil", "tl" -> "Tagalog/Filipino (conversational, not formal)"
+            "es" -> "Spanish (natural and local)"
+            "ceb" -> "Cebuano/Bisaya (informal, everyday talk)"
+            "war" -> "Waray-Waray (the Samar-Leyte language)"
+            "ilo" -> "Ilocano (natural dialect)"
+            "bcl" -> "Bicolano (conversational)"
+            else -> "English (warm and friendly)"
         }
+
+        // Randomly pick a focus to ensure variety in responses
+        val focusPoint = listOf(
+            "the humidity and how it feels on the skin",
+            "the wind and its effect on travel",
+            "the sky's appearance and visibility",
+            "practical clothing and hydration advice",
+            "a specific local safety tip for this time of day"
+        ).random()
         
         val prompt = """
-            You are a friendly, talkative local weather reporter for $location. 
-            
-            REAL-TIME WEATHER DATA:
-            - Location: $location
-            - Current Sky: $condition
-            - Temperature: ${temp.toInt()}°C (Feels like ${feelsLike.toInt()}°C)
-            - Humidity: $humidity%
-            - Wind Speed: $windSpeed km/h
+            You are a charismatic, observant local weather storyteller for $location. 
+            Avoid being a generic robot. Talk like a real person who lives in $location and cares about the neighbors.
+
+            CURRENT VIBE AT $location:
+            - Sky: $condition
+            - Temp: ${temp.toInt()}°C (Actually feels like ${feelsLike.toInt()}°C)
+            - Humidity: $humidity% (Sticky or Dry?)
+            - Wind: $windSpeed km/h
             - Visibility: ${visibility / 1000} km
             - Time: $timeOfDay
             
-            HOURLY FORECAST FOR THE NEXT FEW HOURS:
+            HOURLY FORECAST:
             $forecastInfo
             
-            YOUR TASK:
-            Write a detailed, helpful, and community-oriented weather update in the $languageHint language.
-            
-            STRUCTURE YOUR RESPONSE:
-            1. A warm local greeting in $languageHint.
-            2. Describe current conditions using ALL details (feels like, humidity, wind, and visibility).
-            3. Mention the forecast (e.g., "Expect rain later this afternoon" or "It will stay clear until evening").
-            4. Practical advice on clothing, travel, or hydration based on these specific details.
-            5. A caring safety reminder for the people in $location.
-            
+            INSTRUCTIONS:
+            1. Language: Use $languageHint EXCLUSIVELY. No English mixed in.
+            2. Personality: Be warm and conversational. Use local-style greetings.
+            3. UNIQUE FOCUS: For this specific update, emphasize **$focusPoint**.
+            4. Be Vivid: Instead of "It is humid," say something like "The air feels heavy today, so stay in the shade."
+            5. Content: Mention the current sky, the "feels like" temp, and a quick look at the forecast.
+            6. Advice: Give one specific, clever piece of advice (e.g., if it's hot, mention a specific local drink; if it's rainy, mention a common local travel issue).
+            7. Safety: End with a short, sincere neighborly reminder.
+
             CONSTRAINTS:
-            - USE ONLY the $languageHint language. No English words.
-            - LENGTH: Be descriptive. Write at least 4-5 long sentences. 
-            - TONE: Professional but friendly, like a radio broadcaster.
-            
-            Output: (Respond only in $languageHint)
+            - Length: 4-6 rich, descriptive sentences.
+            - NO CLICHÉS: Do not use "Stay safe," "Stay tuned," or "Have a nice day." Use something more unique.
+            - NO LISTS: Write in natural paragraph form.
+
+            Response in $languageHint:
         """.trimIndent()
         
         return callGeminiAPI(prompt)
