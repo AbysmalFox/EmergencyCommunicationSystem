@@ -87,19 +87,4 @@
     <string name="tip_earthquake">Drop, Cover, and Hold On. Hirayo ha mga bintana.</string>
     <string name="tip_storm">I-secure an mga gamit ha gawas. Pabilin ha sakob hirayo ha mga bintana.</string>
     <string name="tip_default">Pirme pag-andam hin emergency kit nga may tubig, pagkaon, ngan tambal.</string>
-    <string name="logout_confirm">Sigurado ka ba nga gusto nimo mag-logout?</string>
-    <string name="cancel">Kanselahon</string>
-    <string name="anonymous_user">Waray Kilal-i nga User</string>
-    <string name="login">Log in</string>
-    <string name="signup">Sign up</string>
-    <string name="preferences">MGA PREPERENSYA</string>
-    <string name="accessibility">AKSESIBILIDAD</string>
-    <string name="security">SEGURIDAD</string>
-    <string name="edit_profile">I-edit an Profile</string>
-    <string name="save_changes">I-save an mga Pagbag-o</string>
-    <string name="floating_magnifier">Lutang nga Magnifier</string>
-    <string name="appearance">Hitsura</string>
-    <string name="system_theme">System</string>
-    <string name="light_theme">Masagana</string>
-    <string name="dark_theme">Madulom</string>
 </resources>

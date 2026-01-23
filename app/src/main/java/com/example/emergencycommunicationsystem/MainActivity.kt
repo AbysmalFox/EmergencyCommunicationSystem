@@ -60,6 +60,13 @@ class MainActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // Set locale early in onCreate
+        lifecycleScope.launch(Dispatchers.IO) {
+            val lang = UserPrefs.getLanguage(this@MainActivity).first()
+            val locale = LocaleManager.getLocaleFromCode(lang)
+            Locale.setDefault(locale)
+        }
+
         Configuration.getInstance().userAgentValue = packageName
 
         lifecycleScope.launch(Dispatchers.IO) {

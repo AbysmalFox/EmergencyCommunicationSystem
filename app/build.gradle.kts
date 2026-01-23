@@ -107,9 +107,8 @@ dependencies {
     // Attempted: com.woowla.compose.icon.collections:tabler-android:3.33.0 (not available)
 
     // Coil for Compose
-    implementation("io.coil-kt:coil:2.7.0")
-    implementation("io.coil-kt:coil-compose:2.7.0")
-    implementation("io.coil-kt:coil-gif:2.7.0")
+    implementation("io.coil-kt:coil-compose:2.4.0")
+    implementation("io.coil-kt:coil-gif:2.4.0")
 
     // Retrofit + Gson
     implementation("com.squareup.retrofit2:retrofit:2.9.0")

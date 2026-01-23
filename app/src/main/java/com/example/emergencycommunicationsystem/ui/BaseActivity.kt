@@ -19,11 +19,8 @@ import androidx.core.graphics.toColorInt
 import androidx.lifecycle.lifecycleScope
 import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.data.UserPrefs
-import com.example.emergencycommunicationsystem.util.LocaleManager
-import com.example.emergencycommunicationsystem.util.createLocaleContext
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlin.math.hypot
 
 abstract class BaseActivity : ComponentActivity() {
@@ -31,14 +28,6 @@ abstract class BaseActivity : ComponentActivity() {
     private var magnifier: Magnifier? = null
     private var bubble: View? = null
     
-    override fun attachBaseContext(newBase: android.content.Context) {
-        val lang = runBlocking { UserPrefs.getLanguage(newBase).first() }
-        val locale = LocaleManager.getLocaleFromCode(lang)
-        LocaleManager.updateLocale(locale) // Set as default for the whole app process
-        val localeContext = newBase.createLocaleContext(locale)
-        super.attachBaseContext(localeContext)
-    }
-
     private val handler = Handler(Looper.getMainLooper())
     private var isLongPress = false
     private val longPressRunnable = Runnable {

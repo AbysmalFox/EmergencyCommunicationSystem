@@ -25,21 +25,6 @@
     <string name="map">Map</string>
     <string name="profile">Profile</string>
     <string name="logout">Logout</string>
-    <string name="logout_confirm">Are you sure you want to log out?</string>
-    <string name="cancel">Cancel</string>
-    <string name="anonymous_user">Anonymous User</string>
-    <string name="login">Login</string>
-    <string name="signup">Sign Up</string>
-    <string name="preferences">PREFERENCES</string>
-    <string name="accessibility">ACCESSIBILITY</string>
-    <string name="security">SECURITY</string>
-    <string name="edit_profile">Edit Profile</string>
-    <string name="save_changes">Save Changes</string>
-    <string name="floating_magnifier">Floating Magnifier</string>
-    <string name="appearance">Appearance</string>
-    <string name="system_theme">System</string>
-    <string name="light_theme">Light</string>
-    <string name="dark_theme">Dark</string>
     <!-- Alerts Screen -->
     <string name="alerts_and_notifications">Alerts &amp; Notifications</string>
     <string name="message" translatable="false">Ask our Chatbot</string>
