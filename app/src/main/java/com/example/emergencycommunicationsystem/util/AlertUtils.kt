@@ -79,6 +79,28 @@ fun getAlertSeverity(alert: Alert): String {
     }
 }
 
+fun getCategoryDisplayName(alert: Alert): String {
+    val categoryId = try { alert.category?.toIntOrNull() ?: 0 } catch (_: Exception) { 0 }
+    val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
+    val categoryStr = alert.category?.lowercase(Locale.getDefault()) ?: ""
+    
+    return when {
+        categoryId == 1 || "weather" in categoryStr || "flood" in title || "typhoon" in title || "storm" in title || "rain" in title -> "Weather"
+        categoryId == 2 || "earthquake" in categoryStr || "tremor" in title -> "Earthquake"
+        categoryId == 3 || "health" in categoryStr || "medical" in title -> "Health"
+        categoryId == 4 || "fire" in categoryStr || "smoke" in title -> "Fire"
+        categoryId == 5 || "security" in categoryStr || "crime" in title -> "Security"
+        else -> {
+            // If it's a string that's not a number, capitalize it and use it
+            if (categoryStr.isNotEmpty() && categoryId == 0) {
+                categoryStr.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+            } else {
+                "General"
+            }
+        }
+    }
+}
+
 @Composable
 fun getSeverityColor(severity: String): Color {
     return when (severity) {

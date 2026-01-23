@@ -72,6 +72,7 @@ import com.example.emergencycommunicationsystem.util.TranslationService
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 import com.example.emergencycommunicationsystem.util.getIconForCategory
 import com.example.emergencycommunicationsystem.util.getColorForCategory
+import com.example.emergencycommunicationsystem.util.getCategoryDisplayName
 import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
 import java.util.Locale
 
@@ -150,7 +151,17 @@ fun AlertItem(
                         verticalAlignment = Alignment.Top
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            val categoryName = getCategoryName(alert, currentLanguage)
+                            var categoryName by remember { mutableStateOf("") }
+                            val baseCategory = getCategoryDisplayName(alert)
+                            
+                            LaunchedEffect(baseCategory, currentLanguage) {
+                                categoryName = if (currentLanguage != "en") {
+                                    TranslationService.translate(baseCategory, currentLanguage)
+                                } else {
+                                    baseCategory
+                                }
+                            }
+                            
                             Text(
                                 text = categoryName.uppercase(),
                                 color = categoryColor,
@@ -370,24 +381,6 @@ fun AlertsScreen(
             )
         }
     }
-}
-
-@Composable
-fun getCategoryName(alert: Alert, currentLanguage: String): String {
-    val categoryId = try { alert.category?.toIntOrNull() ?: 0 } catch (_: Exception) { 0 }
-    val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
-    val nameEn = when {
-        categoryId == 1 -> "Weather"; categoryId == 2 -> "Earthquake"; categoryId == 3 -> "Health"; categoryId == 4 -> "Fire"; categoryId == 5 -> "General"
-        "weather" in title || "rain" in title -> "Weather"; "earthquake" in title -> "Earthquake"
-        "fire" in title -> "Fire"; "health" in title -> "Health"
-        else -> "General"
-    }
-    
-    var translated by remember { mutableStateOf(nameEn) }
-    LaunchedEffect(nameEn, currentLanguage) {
-        translated = if (currentLanguage != "en") TranslationService.translate(nameEn, currentLanguage) else nameEn
-    }
-    return translated
 }
 
 @Composable

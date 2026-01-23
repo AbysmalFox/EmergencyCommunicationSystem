@@ -112,7 +112,10 @@ import com.example.emergencycommunicationsystem.data.models.WeatherState
 import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.navigation.Screen
 import com.example.emergencycommunicationsystem.util.getIconForCategory
+import com.example.emergencycommunicationsystem.util.getColorForCategory
+import com.example.emergencycommunicationsystem.util.getCategoryDisplayName
 import com.example.emergencycommunicationsystem.util.getSeverityColor
+import com.example.emergencycommunicationsystem.util.getAlertSeverity
 import kotlinx.coroutines.delay
 import java.util.Locale
 
@@ -1086,22 +1089,22 @@ fun CompactAlertCard(
     
     // Dynamic translation
     var translatedTitle by remember(alert.title) { mutableStateOf(alert.title ?: "") }
-    var translatedCategory by remember(alert.category) { mutableStateOf(alert.category ?: "") }
+    var translatedCategory by remember(alert.category) { mutableStateOf("") }
     
     LaunchedEffect(alert.title, alert.category, currentLanguage) {
         val title = alert.title ?: "No Title"
-        val category = alert.category ?: "General"
+        val categoryBase = getCategoryDisplayName(alert)
         
         if (currentLanguage != "en") {
             launch {
                 translatedTitle = TranslationService.translate(title, currentLanguage)
             }
             launch {
-                translatedCategory = TranslationService.translate(category, currentLanguage)
+                translatedCategory = TranslationService.translate(categoryBase, currentLanguage)
             }
         } else {
             translatedTitle = title
-            translatedCategory = category
+            translatedCategory = categoryBase
         }
     }
     
@@ -1109,6 +1112,7 @@ fun CompactAlertCard(
     val displayCategory = if (translatedCategory.isEmpty()) localeContext.getString(R.string.general) else translatedCategory
 
     val severityColor = getSeverityColor(severity)
+    val categoryColor = getColorForCategory(alert)
     val bgColor = MaterialTheme.colorScheme.background
     val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
     
@@ -1166,7 +1170,7 @@ fun CompactAlertCard(
                 imageVector = getIconForCategory(alert),
                 contentDescription = alert.category,
                 modifier = Modifier.size(32.dp),
-                tint = severityColor
+                tint = categoryColor
             )
             
             Spacer(modifier = Modifier.width(12.dp))
@@ -1182,7 +1186,7 @@ fun CompactAlertCard(
                         text = displayCategory.uppercase(),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = severityColor
+                        color = categoryColor
                     )
                     // Semi-transparent badge styling
                     Box(
