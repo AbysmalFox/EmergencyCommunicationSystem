@@ -102,4 +102,21 @@
     <string name="tip_earthquake">Agáchese, Cúbrase y Sujétese. Aléjese de las ventanas.</string>
     <string name="tip_storm">Asegure los objetos al aire libre. Quédese adentro lejos de las ventanas.</string>
     <string name="tip_default">Mantenga siempre un kit de emergencia listo con agua, comida y medicinas.</string>
+    <!-- Map Screen -->
+    <string name="map_legend">Leyenda</string>
+    <string name="map_directions">Direcciones</string>
+    <string name="map_navigation">Navegación</string>
+    <string name="map_to">Para</string>
+    <string name="map_distance">Distancia</string>
+    <string name="map_capacity">Capacidad</string>
+    <string name="map_remaining">Restante</string>
+    <string name="map_eta">ETA</string>
+    <string name="map_then">Después</string>
+    <string name="map_route_instruction">Siga la línea de ruta verde en el mapa para llegar al centro de evacuación.</string>
+    <string name="map_finding_nearest">Buscando el centro de evacuación más cercano...</string>
+    <string name="map_no_evac_found">No se encontraron centros de evacuación</string>
+    <string name="map_loc_not_available">Ubicación no disponible. Por favor, habilite los servicios de ubicación.</string>
+    <string name="map_hospital">Hospital</string>
+    <string name="map_evacuation">Evacuación</string>
+    <string name="map_alert">Alerta</string>
 </resources>

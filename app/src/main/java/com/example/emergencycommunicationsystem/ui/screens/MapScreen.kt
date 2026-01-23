@@ -80,6 +80,8 @@ fun MapScreen() {
     val lifecycleOwner = LocalLifecycleOwner.current
     val alertsViewModel: AlertsViewModel = viewModel()
     val alertsState by alertsViewModel.uiState.collectAsState()
+    val currentLanguage by com.example.emergencycommunicationsystem.data.UserPrefs.getLanguage(context).collectAsState(initial = "en")
+    val localeContext = com.example.emergencycommunicationsystem.util.getLocaleContext()
 
     // State to hold MapView and Overlay for interaction
     var mapView by remember { mutableStateOf<MapView?>(null) }
@@ -158,21 +160,12 @@ fun MapScreen() {
                     
                     // AGGRESSIVE tile loading optimization to minimize HWUI logs
                     try {
-                        // Use higher minimum zoom to reduce tile count (fewer tiles = fewer HWUI logs)
-                        minZoomLevel = 12.0  // Increased from 10.0 to reduce initial tile load
-                        maxZoomLevel = 18.0  // Reduced from 19.0 to limit maximum tiles
-                        
-                        // Disable map repetition to prevent duplicate tile loading
+                        minZoomLevel = 12.0
+                        maxZoomLevel = 18.0
                         isHorizontalMapRepetitionEnabled = false
                         isVerticalMapRepetitionEnabled = false
-                        
-                        // Disable built-in zoom controls to reduce tile update triggers
                         setBuiltInZoomControls(false)
-                        
-                        // Keep hardware acceleration enabled for better performance
-                        // Software rendering was causing significant frame rate drops
                     } catch (e: Exception) {
-                        // Some methods might not be available on all Android versions
                         LogFilter.w(TAG, "Could not apply all tile optimizations: ${e.message}")
                     }
 
@@ -197,7 +190,6 @@ fun MapScreen() {
                     // User Location
                     val overlay = MyLocationNewOverlay(GpsMyLocationProvider(ctx), this)
                     overlay.enableMyLocation()
-                    // If permission is already granted, this starts it. If not, the launcher callback handles it.
                     overlays.add(overlay)
                     locationOverlay = overlay
                     
@@ -206,16 +198,42 @@ fun MapScreen() {
                     safeZones.forEach { safeZone ->
                         val marker = Marker(this).apply {
                             position = GeoPoint(safeZone.latitude, safeZone.longitude)
-                            // Add type prefix to title for clarity
-                            val typeLabel = when (safeZone.type) {
-                                SafeZoneType.HOSPITAL -> "🏥 Hospital: "
-                                SafeZoneType.EVACUATION_CENTER -> "🛟 Evacuation: "
+                            
+                            // Apply dynamic translation to safe zone info
+                            CoroutineScope(Dispatchers.Main).launch {
+                                val translatedType = if (currentLanguage != "en") {
+                                    val typeStr = when (safeZone.type) {
+                                        SafeZoneType.HOSPITAL -> "Hospital"
+                                        SafeZoneType.EVACUATION_CENTER -> "Evacuation Center"
+                                    }
+                                    com.example.emergencycommunicationsystem.util.TranslationService.translate(typeStr, currentLanguage)
+                                } else {
+                                    when (safeZone.type) {
+                                        SafeZoneType.HOSPITAL -> "Hospital"
+                                        SafeZoneType.EVACUATION_CENTER -> "Evacuation Center"
+                                    }
+                                }
+                                
+                                val typeIcon = when (safeZone.type) {
+                                    SafeZoneType.HOSPITAL -> "🏥"
+                                    SafeZoneType.EVACUATION_CENTER -> "🛟"
+                                }
+                                
+                                title = "$typeIcon $translatedType: ${safeZone.name}"
+                                
+                                snippet = if (safeZone.address != null) {
+                                    if (currentLanguage != "en") com.example.emergencycommunicationsystem.util.TranslationService.translate(safeZone.address, currentLanguage)
+                                    else safeZone.address
+                                } else {
+                                    val fallbackSnippet = when (safeZone.type) {
+                                        SafeZoneType.HOSPITAL -> "Hospital - ${safeZone.contact ?: "Contact available"}"
+                                        SafeZoneType.EVACUATION_CENTER -> "Evacuation Center${if (safeZone.capacity != null) " - Capacity: ${safeZone.capacity}" else ""}"
+                                    }
+                                    if (currentLanguage != "en") com.example.emergencycommunicationsystem.util.TranslationService.translate(fallbackSnippet, currentLanguage)
+                                    else fallbackSnippet
+                                }
                             }
-                            title = "$typeLabel${safeZone.name}"
-                            snippet = safeZone.address ?: when (safeZone.type) {
-                                SafeZoneType.HOSPITAL -> "Hospital - ${safeZone.contact ?: "Contact available"}"
-                                SafeZoneType.EVACUATION_CENTER -> "Evacuation Center${if (safeZone.capacity != null) " - Capacity: ${safeZone.capacity}" else ""}"
-                            }
+                            
                             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                             icon = createSafeZoneMarkerIcon(ctx, safeZone.type)
                         }
@@ -233,40 +251,49 @@ fun MapScreen() {
         // Track previous alerts to avoid unnecessary marker updates
         var previousAlertIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
         
-        // Update alert markers when alerts state changes - optimized to only update when data actually changes
-        LaunchedEffect(alertsState) {
+        // Update alert markers when alerts state changes
+        LaunchedEffect(alertsState, currentLanguage) {
             mapView?.let { mapView ->
                 when (val state = alertsState) {
                     is com.example.emergencycommunicationsystem.util.Resource.Success -> {
                         val currentAlerts = state.data.map { it.alert }.filter { it.latitude != null && it.longitude != null }
                         val currentAlertIds = currentAlerts.map { it.id }.toSet()
                         
-                        // Only update markers if alerts have actually changed
                         if (currentAlertIds != previousAlertIds) {
-                            // Remove existing alert markers (keep boundary, user location, and safe zones)
                             val markersToRemove = mapView.overlays
                                 .filterIsInstance<Marker>()
                                 .filter { marker ->
-                                    marker.title?.let { title ->
-                                        title.startsWith("🚨 Alert:")
-                                    } ?: false
+                                    marker.title?.contains("Alert") == true || marker.title?.contains("Alerto") == true
                                 }
                                 .toList()
                             markersToRemove.forEach { mapView.overlays.remove(it) }
                             
-                            // Add new alert markers
                             currentAlerts.forEach { alert ->
                                 val marker = Marker(mapView).apply {
                                     position = GeoPoint(alert.latitude!!, alert.longitude!!)
-                                    title = "🚨 Alert: ${alert.title ?: "Emergency Alert"}"
-                                    snippet = alert.location ?: alert.content ?: "Emergency alert in this area"
+                                    
+                                    CoroutineScope(Dispatchers.Main).launch {
+                                        val translatedAlertLabel = if (currentLanguage != "en") {
+                                            com.example.emergencycommunicationsystem.util.TranslationService.translate("Alert", currentLanguage)
+                                        } else "Alert"
+                                        
+                                        val translatedTitle = if (currentLanguage != "en" && alert.title != null) {
+                                            com.example.emergencycommunicationsystem.util.TranslationService.translate(alert.title, currentLanguage)
+                                        } else alert.title ?: "Emergency Alert"
+                                        
+                                        title = "🚨 $translatedAlertLabel: $translatedTitle"
+                                        
+                                        val snippetText = alert.location ?: alert.content ?: "Emergency alert in this area"
+                                        snippet = if (currentLanguage != "en") {
+                                            com.example.emergencycommunicationsystem.util.TranslationService.translate(snippetText, currentLanguage)
+                                        } else snippetText
+                                    }
+                                    
                                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                                     icon = createAlertMarkerIcon(mapView.context)
                                 }
                                 mapView.overlays.add(marker)
                             }
-                            
-                            // Only invalidate once after all markers are added
                             mapView.invalidate()
                             previousAlertIds = currentAlertIds
                         }
@@ -276,12 +303,13 @@ fun MapScreen() {
             }
         }
 
-        // Map Legend - Top Right Corner
+        // Map Legend
         MapLegend(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(top = 8.dp, end = 8.dp)
-                .widthIn(max = 110.dp)
+                .widthIn(max = 130.dp),
+            currentLanguage = currentLanguage
         )
         
         // 3. "Find Nearest Evacuation Center" Button
@@ -298,29 +326,21 @@ fun MapScreen() {
                         )
                         
                         if (nearestEvac != null) {
-                            // Clear previous destination and route to prevent showing old card
                             routeDestination = null
                             isCalculatingRoute = true
-                            
-                            // Remove previous route if exists
-                            currentRoutePolyline?.let { oldRoute ->
-                                map.overlays.remove(oldRoute)
-                            }
+                            currentRoutePolyline?.let { map.overlays.remove(it) }
                             currentRoutePolyline = null
-                            
-                            // Stop any existing navigation
                             navigationManager.stopNavigation()
                             
-                            // Show loading toast
-                            Toast.makeText(
-                                context,
-                                "Calculating route to ${nearestEvac.name}...",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            
-                            // Get route using OSRM routing service
                             CoroutineScope(Dispatchers.Main).launch {
-                                LogFilter.d(TAG, "Requesting route to evacuation center: ${nearestEvac.name}")
+                                val loadingMsg = if (currentLanguage != "en") {
+                                    com.example.emergencycommunicationsystem.util.TranslationService.translate(
+                                        "Calculating route to ${nearestEvac.name}...", currentLanguage
+                                    )
+                                } else {
+                                    localeContext.getString(R.string.map_finding_nearest).replace("nearest evacuation center", nearestEvac.name)
+                                }
+                                Toast.makeText(context, loadingMsg, Toast.LENGTH_SHORT).show()
                                 
                                 val result = RoutingService.getRoute(
                                     originLat = userLocation.latitude,
@@ -330,220 +350,97 @@ fun MapScreen() {
                                 )
                                 
                                 result.onSuccess { routeResponse ->
-                                    LogFilter.d(TAG, "Route response received successfully")
-                                    
                                     if (routeResponse.routes.isNotEmpty()) {
                                         val route = routeResponse.routes[0]
-                                        LogFilter.d(TAG, "Processing route: ${route.distance}m, ${route.duration}s")
-                                        
-                                        // Decode route geometry from route object (OSRM returns geometry at route level)
                                         val routeGeometry = try {
                                             val geometryStr = when (val geom = route.geometry) {
-                                                is String -> {
-                                                    geom
-                                                }
-                                                is Map<*, *> -> {
-                                                    val gson = com.google.gson.Gson()
-                                                    gson.toJson(geom)
-                                                }
-                                                else -> {
-                                                    LogFilter.w(TAG, "Route geometry is null or unknown type: ${route.geometry?.javaClass?.simpleName}")
-                                                    null
-                                                }
+                                                is String -> geom
+                                                is Map<*, *> -> com.google.gson.Gson().toJson(geom)
+                                                else -> null
                                             }
-                                            
-                                            if (geometryStr != null) {
-                                                val decoded = RoutingService.decodeGeometry(geometryStr)
-                                                if (decoded.isNotEmpty()) {
-                                                    LogFilter.d(TAG, "Decoded ${decoded.size} points from route geometry")
-                                                    decoded
-                                                } else {
-                                                    LogFilter.w(TAG, "Route geometry decoding returned empty, trying step geometries")
-                                                    // Fallback: use step geometries
-                                                    decodeStepGeometries(route)
-                                                }
-                                            } else {
-                                                LogFilter.w(TAG, "Route geometry string is null, using step geometries")
-                                                decodeStepGeometries(route)
-                                            }
-                                        } catch (e: Exception) {
-                                            LogFilter.e(TAG, "Error decoding route geometry: ${e.message}", e)
-                                            emptyList()
-                                        }
+                                            if (geometryStr != null) RoutingService.decodeGeometry(geometryStr)
+                                            else decodeStepGeometries(route)
+                                        } catch (e: Exception) { emptyList() }
                                         
-                                        // Draw route polyline
                                         if (routeGeometry.isNotEmpty()) {
-                                            LogFilter.d(TAG, "Drawing route polyline with ${routeGeometry.size} points")
-                                            
                                             val routePolyline = Polyline().apply {
                                                 setPoints(routeGeometry)
-                                                color = Color(0xFFFF9800).toArgb() // Orange color for route
+                                                color = Color(0xFFFF9800).toArgb()
                                                 width = 14.0f
-                                                isGeodesic = false // Use actual road geometry
+                                                isGeodesic = false
                                             }
                                             map.overlays.add(routePolyline)
                                             currentRoutePolyline = routePolyline
                                             
-                                            // Start navigation
-                                            LogFilter.d(TAG, "Starting navigation manager")
                                             navigationManager.startNavigation(
                                                 originLat = userLocation.latitude,
                                                 originLon = userLocation.longitude,
                                                 destLat = nearestEvac.latitude,
                                                 destLon = nearestEvac.longitude,
-                                                onSuccess = { navGeometry ->
-                                                    LogFilter.d(TAG, "Navigation started successfully with ${navGeometry.size} points")
-                                                    // Only set destination after navigation is ready to prevent card flash
+                                                onSuccess = {
                                                     routeDestination = nearestEvac
                                                     isCalculatingRoute = false
                                                 },
                                                 onError = { error ->
-                                                    LogFilter.e(TAG, "Navigation manager error: $error")
-                                                    // Set destination even on navigation error so user can see the route
                                                     routeDestination = nearestEvac
                                                     isCalculatingRoute = false
-                                                    Toast.makeText(
-                                                        context,
-                                                        "Navigation error: $error",
-                                                        Toast.LENGTH_LONG
-                                                    ).show()
+                                                    CoroutineScope(Dispatchers.Main).launch {
+                                                        val errorPrefix = if (currentLanguage != "en") com.example.emergencycommunicationsystem.util.TranslationService.translate("Navigation error", currentLanguage)
+                                                        else "Navigation error"
+                                                        Toast.makeText(context, "$errorPrefix: $error", Toast.LENGTH_LONG).show()
+                                                    }
                                                 }
                                             )
                                             
-                                            // Zoom to show entire route
                                             val allPoints = routeGeometry + GeoPoint(userLocation.latitude, userLocation.longitude)
-                                            if (allPoints.isNotEmpty()) {
-                                                val minLat = allPoints.minOf { it.latitude }
-                                                val maxLat = allPoints.maxOf { it.latitude }
-                                                val minLon = allPoints.minOf { it.longitude }
-                                                val maxLon = allPoints.maxOf { it.longitude }
-                                                val boundingBox = BoundingBox(maxLat, maxLon, minLat, minLon)
-                                                map.post {
-                                                    map.zoomToBoundingBox(boundingBox, true, 50)
-                                                }
-                                            }
-                                            
-                                            Toast.makeText(
-                                                context,
-                                                "Route to: ${nearestEvac.name}",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
+                                            val boundingBox = BoundingBox(allPoints.maxOf { it.latitude }, allPoints.maxOf { it.longitude }, allPoints.minOf { it.latitude }, allPoints.minOf { it.longitude })
+                                            map.post { map.zoomToBoundingBox(boundingBox, true, 50) }
                                         } else {
-                                            LogFilter.w(TAG, "Route geometry is empty, falling back to straight line")
-                                            // Fallback to straight line if geometry decoding fails
                                             val routePolyline = Polyline().apply {
-                                                val routePoints = listOf(
-                                                    GeoPoint(userLocation.latitude, userLocation.longitude),
-                                                    GeoPoint(nearestEvac.latitude, nearestEvac.longitude)
-                                                )
-                                                setPoints(routePoints)
-                                                color = Color(0xFFFF9800).toArgb() // Orange color for route
+                                                setPoints(listOf(GeoPoint(userLocation.latitude, userLocation.longitude), GeoPoint(nearestEvac.latitude, nearestEvac.longitude)))
+                                                color = Color(0xFFFF9800).toArgb()
                                                 width = 12.0f
                                                 isGeodesic = true
                                             }
                                             map.overlays.add(routePolyline)
                                             currentRoutePolyline = routePolyline
-                                            
-                                            // Set destination after route is drawn
                                             routeDestination = nearestEvac
                                             isCalculatingRoute = false
-                                            
-                                            val evacPoint = GeoPoint(nearestEvac.latitude, nearestEvac.longitude)
-                                            map.controller.animateTo(evacPoint)
+                                            map.controller.animateTo(GeoPoint(nearestEvac.latitude, nearestEvac.longitude))
                                             map.controller.setZoom(15.0)
-                                            
-                                            Toast.makeText(
-                                                context,
-                                                "Using direct route (geometry unavailable)",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
                                         }
-                                        
                                         map.invalidate()
-                                    } else {
-                                        LogFilter.e(TAG, "Route response contains no routes")
-                                        val fallbackPolyline = fallbackToStraightLine(map, userLocation, nearestEvac, context)
-                                        currentRoutePolyline = fallbackPolyline
-                                        // Set destination after fallback route is drawn
-                                        routeDestination = nearestEvac
-                                        isCalculatingRoute = false
                                     }
                                 }.onFailure { error ->
                                     val errorMsg = error.message ?: "Unknown error"
-                                    val errorClass = error.javaClass.simpleName
-                                    LogFilter.e(TAG, "Failed to get route: $errorMsg (${errorClass})", error)
-                                    
-                                    // Show user-friendly error message based on error type and message
-                                    val userMessage = when {
-                                        // Network connectivity issues
-                                        errorMsg.contains("No internet", ignoreCase = true) || 
-                                        errorMsg.contains("Cannot reach", ignoreCase = true) ||
-                                        error is java.net.UnknownHostException ->
-                                            "No internet connection. Check your network."
-                                        
-                                        // Timeout issues
-                                        errorMsg.contains("timeout", ignoreCase = true) ||
-                                        errorMsg.contains("took too long", ignoreCase = true) ||
-                                        error is java.net.SocketTimeoutException ->
-                                            "Request timeout. Please try again."
-                                        
-                                        // Network IO errors
-                                        errorMsg.contains("Network error", ignoreCase = true) ||
-                                        errorMsg.contains("IO error", ignoreCase = true) ||
-                                        error is java.io.IOException ->
-                                            "Network error. Check your connection."
-                                        
-                                        // Routing service errors
-                                        errorMsg.contains("No road route available", ignoreCase = true) ||
-                                        errorMsg.contains("No route found", ignoreCase = true) ->
-                                            "No road route found. Using direct path."
-                                        
-                                        errorMsg.contains("temporarily unavailable", ignoreCase = true) ||
-                                        errorMsg.contains("service unavailable", ignoreCase = true) ||
-                                        errorMsg.contains("HTTP 50", ignoreCase = true) ->
-                                            "Routing service unavailable. Try again later."
-                                        
-                                        errorMsg.contains("Too many requests", ignoreCase = true) ||
-                                        errorMsg.contains("HTTP 429", ignoreCase = true) ->
-                                            "Too many requests. Please wait a moment."
-                                        
-                                        // Invalid input
-                                        errorMsg.contains("Invalid", ignoreCase = true) ||
-                                        errorMsg.contains("coordinates", ignoreCase = true) ->
-                                            "Invalid location. Please check GPS."
-                                        
-                                        // Default fallback
-                                        else -> 
-                                            "Routing unavailable. Using direct path."
+                                    CoroutineScope(Dispatchers.Main).launch {
+                                        val translatedError = if (currentLanguage != "en") {
+                                            com.example.emergencycommunicationsystem.util.TranslationService.translate(
+                                                if (errorMsg.contains("No internet")) "No internet connection. Check your network." else "Routing unavailable. Using direct path.",
+                                                currentLanguage
+                                            )
+                                        } else {
+                                            if (errorMsg.contains("No internet")) "No internet connection. Check your network." else "Routing unavailable. Using direct path."
+                                        }
+                                        Toast.makeText(context, translatedError, Toast.LENGTH_LONG).show()
                                     }
-                                    
-                                    Toast.makeText(
-                                        context,
-                                        userMessage,
-                                        Toast.LENGTH_LONG
-                                    ).show()
-                                    
-                                    // Fallback to straight line on error (don't show toast, already shown above)
                                     val fallbackPolyline = fallbackToStraightLine(map, userLocation, nearestEvac, context, showToast = false)
                                     currentRoutePolyline = fallbackPolyline
-                                    // Set destination after fallback route is drawn
                                     routeDestination = nearestEvac
                                     isCalculatingRoute = false
                                 }
                             }
                         } else {
-                            Toast.makeText(
-                                context,
-                                "No evacuation centers found",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            CoroutineScope(Dispatchers.Main).launch {
+                                val noEvacMsg = localeContext.getString(R.string.map_no_evac_found)
+                                Toast.makeText(context, noEvacMsg, Toast.LENGTH_SHORT).show()
+                            }
                         }
                     } else {
-                        Toast.makeText(
-                            context,
-                            "Location not available. Please enable location services.",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        CoroutineScope(Dispatchers.Main).launch {
+                            val locNotAvailMsg = localeContext.getString(R.string.map_loc_not_available)
+                            Toast.makeText(context, locNotAvailMsg, Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
             },
@@ -554,7 +451,7 @@ fun MapScreen() {
         ) {
             Icon(
                 painter = painterResource(id = R.drawable.ic_tabler_home_search),
-                contentDescription = "Find Nearest Evacuation Center"
+                contentDescription = localeContext.getString(R.string.map_finding_nearest)
             )
         }
         
@@ -572,52 +469,23 @@ fun MapScreen() {
                 .align(Alignment.BottomEnd)
                 .padding(end = 16.dp, bottom = 130.dp)
         ) {
-            Icon(AppIcons.MyLocation, contentDescription = "My Location")
+            Icon(AppIcons.MyLocation, contentDescription = null)
         }
         
-        // 5. Navigation Card or Directions Card - Shows route information
-        // Only show card if route is calculated (not during calculation)
+        // 5. Navigation Card or Directions Card
         if (!isCalculatingRoute) {
             routeDestination?.let { destination ->
                 if (navigationState.isNavigating) {
-                    // Show Navigation Card with turn-by-turn instructions
                     NavigationCard(
-                    navigationState = navigationState,
-                    destination = destination,
-                    navigationManager = navigationManager,
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(start = 16.dp, bottom = 130.dp)
-                        .fillMaxWidth(0.7f), // Reduced from 0.9f to 0.7f for less screen space
-                    onClose = {
-                        // Stop navigation and clear route
-                        navigationManager.stopNavigation()
-                        currentRoutePolyline?.let { route ->
-                            mapView?.overlays?.remove(route)
-                            mapView?.invalidate()
-                        }
-                        currentRoutePolyline = null
-                        routeDestination = null
-                    }
-                )
-            } else {
-                // Show simple Directions Card
-                locationOverlay?.myLocation?.let { userLoc ->
-                    val distance = LocationUtils.calculateDistance(
-                        userLoc.latitude, userLoc.longitude,
-                        destination.latitude, destination.longitude
-                    )
-                    val distanceText = LocationUtils.formatDistance(distance)
-                    
-                    DirectionsCard(
+                        navigationState = navigationState,
                         destination = destination,
-                        distance = distanceText,
+                        navigationManager = navigationManager,
+                        currentLanguage = currentLanguage,
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .padding(start = 16.dp, bottom = 130.dp)
-                            .fillMaxWidth(0.85f),
+                            .fillMaxWidth(0.75f),
                         onClose = {
-                            // Clear route
                             navigationManager.stopNavigation()
                             currentRoutePolyline?.let { route ->
                                 mapView?.overlays?.remove(route)
@@ -627,36 +495,57 @@ fun MapScreen() {
                             routeDestination = null
                         }
                     )
+                } else {
+                    locationOverlay?.myLocation?.let { userLoc ->
+                        val distance = LocationUtils.calculateDistance(
+                            userLoc.latitude, userLoc.longitude,
+                            destination.latitude, destination.longitude
+                        )
+                        val distanceText = LocationUtils.formatDistance(distance)
+                        
+                        DirectionsCard(
+                            destination = destination,
+                            distance = distanceText,
+                            currentLanguage = currentLanguage,
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(start = 16.dp, bottom = 130.dp)
+                                .fillMaxWidth(0.85f),
+                            onClose = {
+                                navigationManager.stopNavigation()
+                                currentRoutePolyline?.let { route ->
+                                    mapView?.overlays?.remove(route)
+                                    mapView?.invalidate()
+                                }
+                                currentRoutePolyline = null
+                                routeDestination = null
+                            }
+                        )
+                    }
                 }
-            }
             }
         }
         
-        // Real-time location tracking for navigation - optimized for performance
+        // Real-time location tracking
         LaunchedEffect(navigationState.isNavigating, locationOverlay) {
             if (navigationState.isNavigating && locationOverlay != null) {
                 var lastLocation: org.osmdroid.util.GeoPoint? = null
                 while (navigationState.isNavigating) {
                     locationOverlay?.myLocation?.let { location ->
-                        // Only update if location has changed significantly (at least 10 meters)
                         val shouldUpdate = lastLocation == null || 
                             LocationUtils.calculateDistance(
                                 lastLocation!!.latitude, lastLocation!!.longitude,
                                 location.latitude, location.longitude
-                            ) * 1000 > 10.0 // Convert km to meters, check if > 10m
+                            ) * 1000 > 10.0
                         
                         if (shouldUpdate) {
-                            // Perform update on background thread to avoid blocking UI
                             kotlinx.coroutines.withContext(Dispatchers.Default) {
-                                navigationManager.updateLocation(
-                                    location.latitude,
-                                    location.longitude
-                                )
+                                navigationManager.updateLocation(location.latitude, location.longitude)
                             }
                             lastLocation = location
                         }
                     }
-                    delay(3000) // Update every 3 seconds (reduced frequency for better performance)
+                    delay(3000)
                 }
             }
         }
@@ -664,13 +553,19 @@ fun MapScreen() {
 }
 
 /**
- * Map Legend component to show what each marker type represents
+ * Map Legend component
  */
 @Composable
-fun MapLegend(modifier: Modifier = Modifier) {
+fun MapLegend(modifier: Modifier = Modifier, currentLanguage: String = "en") {
     val isDarkMode = ThemeManager.isDarkMode()
     val backgroundColor = if (isDarkMode) Color(0xFF1E1E1E).copy(alpha = 0.95f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
     val contentColor = if (isDarkMode) Color.White else MaterialTheme.colorScheme.onSurface
+    val localeContext = com.example.emergencycommunicationsystem.util.getLocaleContext()
+    
+    val translatedLegend = localeContext.getString(R.string.map_legend)
+    val translatedAlert = localeContext.getString(R.string.map_alert)
+    val translatedHospital = localeContext.getString(R.string.map_hospital)
+    val translatedEvac = localeContext.getString(R.string.map_evacuation)
     
     Surface(
         modifier = modifier,
@@ -683,7 +578,7 @@ fun MapLegend(modifier: Modifier = Modifier) {
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text(
-                text = "Legend",
+                text = translatedLegend,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
                 color = contentColor,
@@ -696,36 +591,15 @@ fun MapLegend(modifier: Modifier = Modifier) {
                 color = contentColor.copy(alpha = 0.3f)
             )
             
-            // Alert Marker
-            LegendItem(
-                color = Color.Red,
-                label = "Alert",
-                textColor = contentColor
-            )
-            
-            // Hospital Marker
-            LegendItem(
-                color = Color(0xFF4CAF50),
-                label = "Hospital",
-                textColor = contentColor
-            )
-            
-            // Evacuation Center Marker
-            LegendItem(
-                color = Color(0xFF2196F3),
-                label = "Evacuation",
-                textColor = contentColor
-            )
+            LegendItem(color = Color.Red, label = translatedAlert, textColor = contentColor)
+            LegendItem(color = Color(0xFF4CAF50), label = translatedHospital, textColor = contentColor)
+            LegendItem(color = Color(0xFF2196F3), label = translatedEvac, textColor = contentColor)
         }
     }
 }
 
 @Composable
-fun LegendItem(
-    color: Color,
-    label: String,
-    textColor: Color
-) {
+fun LegendItem(color: Color, label: String, textColor: Color) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -733,16 +607,193 @@ fun LegendItem(
     ) {
         Box(
             modifier = Modifier
-                .size(14.dp)
+                .size(12.dp)
                 .background(color, RoundedCornerShape(50))
-                .border(1.5.dp, textColor.copy(alpha = 0.8f), RoundedCornerShape(50))
+                .border(1.5.dp, textColor.copy(alpha = 0.5f), RoundedCornerShape(50))
         )
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Medium,
-            color = textColor
+            color = textColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
+    }
+}
+
+/**
+ * Directions Card
+ */
+@Composable
+fun DirectionsCard(
+    destination: SafeZone,
+    distance: String,
+    currentLanguage: String = "en",
+    modifier: Modifier = Modifier,
+    onClose: () -> Unit
+) {
+    val localeContext = com.example.emergencycommunicationsystem.util.getLocaleContext()
+    
+    val translatedDirections = localeContext.getString(R.string.map_directions)
+    val translatedTo = localeContext.getString(R.string.map_to)
+    val translatedDistanceLabel = localeContext.getString(R.string.map_distance)
+    val translatedCapacityLabel = localeContext.getString(R.string.map_capacity)
+    val translatedRouteInstr = localeContext.getString(R.string.map_route_instruction)
+    
+    var translatedAddress by remember(destination.address) { mutableStateOf(destination.address ?: "") }
+    var translatedDestName by remember(destination.name) { mutableStateOf(destination.name) }
+    
+    LaunchedEffect(currentLanguage, destination.address, destination.name) {
+        if (currentLanguage != "en") {
+            destination.address?.let { addr ->
+                launch { translatedAddress = com.example.emergencycommunicationsystem.util.TranslationService.translate(addr, currentLanguage) }
+            }
+            launch { translatedDestName = com.example.emergencycommunicationsystem.util.TranslationService.translate(destination.name, currentLanguage) }
+        } else {
+            translatedAddress = destination.address ?: ""
+            translatedDestName = destination.name
+        }
+    }
+
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 8.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Icons.Filled.Navigation, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Text(text = translatedDirections, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+                IconButton(onClick = onClose) {
+                    Icon(Icons.Filled.Close, contentDescription = null)
+                }
+            }
+            
+            HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
+            
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(text = "$translatedTo: $translatedDestName", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                if (translatedAddress.isNotEmpty()) {
+                    Text(text = translatedAddress, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Row(modifier = Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = "$translatedDistanceLabel: $distance", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.primary)
+                    destination.capacity?.let { cap ->
+                        Text(text = "• $translatedCapacityLabel: $cap", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+            
+            Surface(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)) {
+                Text(text = translatedRouteInstr, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(12.dp))
+            }
+        }
+    }
+}
+
+/**
+ * Navigation Card
+ */
+@Composable
+fun NavigationCard(
+    navigationState: com.example.emergencycommunicationsystem.data.models.NavigationState,
+    destination: SafeZone,
+    navigationManager: com.example.emergencycommunicationsystem.util.NavigationManager,
+    currentLanguage: String = "en",
+    modifier: Modifier = Modifier,
+    onClose: () -> Unit
+) {
+    val localeContext = com.example.emergencycommunicationsystem.util.getLocaleContext()
+    
+    val translatedNavLabel = localeContext.getString(R.string.map_navigation)
+    val translatedRemaining = localeContext.getString(R.string.map_remaining)
+    val translatedEtaLabel = localeContext.getString(R.string.map_eta)
+    val translatedThen = localeContext.getString(R.string.map_then)
+    
+    var translatedCurInstr by remember(navigationState.currentInstruction?.instruction) { mutableStateOf(navigationState.currentInstruction?.instruction ?: "") }
+    var translatedNextInstr by remember(navigationState.nextInstruction?.instruction) { mutableStateOf(navigationState.nextInstruction?.instruction ?: "") }
+    var translatedDestName by remember(destination.name) { mutableStateOf(destination.name) }
+
+    LaunchedEffect(currentLanguage, navigationState.currentInstruction, navigationState.nextInstruction, destination.name) {
+        if (currentLanguage != "en") {
+            navigationState.currentInstruction?.instruction?.let { instr ->
+                launch { translatedCurInstr = com.example.emergencycommunicationsystem.util.TranslationService.translate(instr, currentLanguage) }
+            }
+            navigationState.nextInstruction?.instruction?.let { instr ->
+                launch { translatedNextInstr = com.example.emergencycommunicationsystem.util.TranslationService.translate(instr, currentLanguage) }
+            }
+            launch { translatedDestName = com.example.emergencycommunicationsystem.util.TranslationService.translate(destination.name, currentLanguage) }
+        } else {
+            translatedCurInstr = navigationState.currentInstruction?.instruction ?: ""
+            translatedNextInstr = navigationState.nextInstruction?.instruction ?: ""
+            translatedDestName = destination.name
+        }
+    }
+
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 8.dp
+    ) {
+        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(Icons.Filled.Navigation, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Text(text = translatedNavLabel, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+                IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Filled.Close, contentDescription = "Stop", modifier = Modifier.size(18.dp))
+                }
+            }
+            
+            HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f), thickness = 0.5.dp)
+            Text(text = translatedDestName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            
+            if (translatedCurInstr.isNotEmpty()) {
+                Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)) {
+                    Row(modifier = Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = translatedCurInstr, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        navigationState.currentInstruction?.let { instr ->
+                            Text(text = LocationUtils.formatDistance(instr.distance / 1000.0), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+            }
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(text = "$translatedRemaining:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(text = LocationUtils.formatDistance(navigationState.remainingDistance / 1000.0), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(text = "$translatedEtaLabel:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(text = navigationManager.formatETA(navigationState.remainingDuration), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                }
+            }
+            
+            if (translatedNextInstr.isNotEmpty()) {
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(Icons.Filled.Place, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
+                    Text(text = "$translatedThen: $translatedNextInstr", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
     }
 }
 
@@ -828,295 +879,6 @@ private fun createSafeZoneMarkerIcon(context: android.content.Context, type: Saf
     canvas.drawText(symbol, centerX, textY, textPaint)
     
     return BitmapDrawable(context.resources, bitmap)
-}
-
-/**
- * Directions Card component showing route information to evacuation center
- */
-@Composable
-fun DirectionsCard(
-    destination: SafeZone,
-    distance: String,
-    modifier: Modifier = Modifier,
-    onClose: () -> Unit
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 8.dp
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Header with close button
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        Icons.Filled.Navigation,
-                        contentDescription = "Route",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = "Directions",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                IconButton(onClick = onClose) {
-                    Icon(
-                        Icons.Filled.Close,
-                        contentDescription = "Close",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 4.dp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-            )
-            
-            // Destination info
-            Column(
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = "To: ${destination.name}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                
-                destination.address?.let { address ->
-                    Text(
-                        text = address,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                
-                Row(
-                    modifier = Modifier.padding(top = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "Distance: $distance",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    
-                    destination.capacity?.let { capacity ->
-                        Text(
-                            text = "• Capacity: $capacity",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-            
-            // Route instruction
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-            ) {
-                Text(
-                    text = "Follow the green route line on the map to reach the evacuation center.",
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(12.dp),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        }
-    }
-}
-
-/**
- * Navigation Card with turn-by-turn instructions and real-time navigation info
- */
-@Composable
-fun NavigationCard(
-    navigationState: com.example.emergencycommunicationsystem.data.models.NavigationState,
-    destination: SafeZone,
-    navigationManager: com.example.emergencycommunicationsystem.util.NavigationManager,
-    modifier: Modifier = Modifier,
-    onClose: () -> Unit
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp), // Reduced from 16.dp
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 8.dp // Reduced from 12.dp
-    ) {
-        Column(
-            modifier = Modifier.padding(10.dp), // Reduced from 16.dp
-            verticalArrangement = Arrangement.spacedBy(6.dp) // Reduced from 12.dp
-        ) {
-            // Header - more compact
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp) // Reduced from 8.dp
-                ) {
-                    Icon(
-                        Icons.Filled.Navigation,
-                        contentDescription = "Navigation",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp) // Reduced from 24.dp
-                    )
-                    Text(
-                        text = "Navigation",
-                        style = MaterialTheme.typography.titleMedium, // Reduced from titleLarge
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                IconButton(
-                    onClick = onClose,
-                    modifier = Modifier.size(32.dp) // Smaller close button
-                ) {
-                    Icon(
-                        Icons.Filled.Close,
-                        contentDescription = "Stop Navigation",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp) // Smaller icon
-                    )
-                }
-            }
-            
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
-                thickness = 0.5.dp // Thinner divider
-            )
-            
-            // Destination - more compact, single line if possible
-            Text(
-                text = destination.name,
-                style = MaterialTheme.typography.bodyMedium, // Reduced from bodyLarge
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            
-            // Current instruction (highlighted) - more compact
-            navigationState.currentInstruction?.let { instruction ->
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp), // Reduced from 12.dp
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp), // Reduced from 12.dp
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = instruction.instruction,
-                            style = MaterialTheme.typography.bodyMedium, // Reduced from bodyLarge
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.weight(1f),
-                            maxLines = 2, // Limit to 2 lines
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = LocationUtils.formatDistance(instruction.distance / 1000.0), // Convert meters to km
-                                style = MaterialTheme.typography.bodySmall, // Reduced from bodyMedium
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                    }
-                }
-            }
-            
-            // Route stats - more compact, single row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = "Remaining:",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = LocationUtils.formatDistance(navigationState.remainingDistance / 1000.0), // Convert meters to km
-                        style = MaterialTheme.typography.bodySmall, // Reduced from bodyMedium
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = "ETA:",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = navigationManager.formatETA(navigationState.remainingDuration),
-                        style = MaterialTheme.typography.bodySmall, // Reduced from bodyMedium
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-            
-            // Next instruction - only show if there's space, make it smaller
-            navigationState.nextInstruction?.let { nextInstruction ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp) // Reduced from 8.dp
-                ) {
-                    Icon(
-                        Icons.Filled.Place,
-                        contentDescription = "Next",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(14.dp) // Reduced from 16.dp
-                    )
-                    Text(
-                        text = "Then: ${nextInstruction.instruction}",
-                        style = MaterialTheme.typography.labelMedium, // Reduced from bodySmall
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.weight(1f),
-                        maxLines = 1, // Single line only
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-        }
-    }
 }
 
 /**

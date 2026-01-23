@@ -101,4 +101,21 @@
     <string name="tip_earthquake">Drop, Cover, and Hold On. Hirayo ha mga bintana.</string>
     <string name="tip_storm">I-secure an mga gamit ha gawas. Pabilin ha sakob hirayo ha mga bintana.</string>
     <string name="tip_default">Pirme pag-andam hin emergency kit nga may tubig, pagkaon, ngan tambal.</string>
+    <!-- Map Screen -->
+    <string name="map_legend">Legend</string>
+    <string name="map_directions">Direksyon</string>
+    <string name="map_navigation">Nabigasyon</string>
+    <string name="map_to">Para ha</string>
+    <string name="map_distance">Distansya</string>
+    <string name="map_capacity">Kapasidad</string>
+    <string name="map_remaining">Nahibibilin</string>
+    <string name="map_eta">ETA</string>
+    <string name="map_then">Dangan</string>
+    <string name="map_route_instruction">Sunda an berde nga linya han ruta ha mapa para makakadto ha evacuation center.</string>
+    <string name="map_finding_nearest">Ginpapamiling an pinakaharani nga evacuation center...</string>
+    <string name="map_no_evac_found">Waray nahanap nga mga evacuation center</string>
+    <string name="map_loc_not_available">Diri available an lokasyon. Pakibukas an location services.</string>
+    <string name="map_hospital">Ospital</string>
+    <string name="map_evacuation">Bakwit</string>
+    <string name="map_alert">Alerto</string>
 </resources>

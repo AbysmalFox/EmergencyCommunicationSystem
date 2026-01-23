@@ -102,4 +102,21 @@
     <string name="tip_storm">Igalut dagiti banag iti ruar. Agtalinaed iti uneg nga adayo kadagiti tawa.</string>
     <string name="tip_default">Kanayon a mangisagana ti emergency
 kit nga addaan danum, taraon, ken ag-agong.</string>
+    <!-- Map Screen -->
+    <string name="map_legend">Legend</string>
+    <string name="map_directions">Direksyon</string>
+    <string name="map_navigation">Nabigasyon</string>
+    <string name="map_to">Para iti</string>
+    <string name="map_distance">Kaadayo</string>
+    <string name="map_capacity">Kapasidad</string>
+    <string name="map_remaining">Mabatbati</string>
+    <string name="map_eta">ETA</string>
+    <string name="map_then">Kalpasanna</string>
+    <string name="map_route_instruction">Suroten ti berde a linya ti ruta iti mapa tapno makadanon iti evacuation center.</string>
+    <string name="map_finding_nearest">Birbiroken ti kasingit nga evacuation center...</string>
+    <string name="map_no_evac_found">Awan ti nasarakana nga evacuation center</string>
+    <string name="map_loc_not_available">Saan a magun-od ti lokasyon. Pangaasi a silutan ti location services.</string>
+    <string name="map_hospital">Ospital</string>
+    <string name="map_evacuation">Bakwit</string>
+    <string name="map_alert">Alerto</string>
 </resources>

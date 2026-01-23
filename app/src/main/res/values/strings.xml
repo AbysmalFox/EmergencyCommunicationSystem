@@ -101,4 +101,21 @@
     <string name="tip_earthquake">Drop, Cover, and Hold On. Stay away from windows.</string>
     <string name="tip_storm">Secure outdoor items. Stay indoors away from windows.</string>
     <string name="tip_default">Always keep an emergency\nkit ready with water, food, and medicine.</string>
+    <!-- Map Screen -->
+    <string name="map_legend">Legend</string>
+    <string name="map_directions">Directions</string>
+    <string name="map_navigation">Navigation</string>
+    <string name="map_to">To</string>
+    <string name="map_distance">Distance</string>
+    <string name="map_capacity">Capacity</string>
+    <string name="map_remaining">Remaining</string>
+    <string name="map_eta">ETA</string>
+    <string name="map_then">Then</string>
+    <string name="map_route_instruction">Follow the green route line on the map to reach the evacuation center.</string>
+    <string name="map_finding_nearest">Finding nearest evacuation center...</string>
+    <string name="map_no_evac_found">No evacuation centers found</string>
+    <string name="map_loc_not_available">Location not available. Please enable location services.</string>
+    <string name="map_hospital">Hospital</string>
+    <string name="map_evacuation">Evacuation</string>
+    <string name="map_alert">Alert</string>
 </resources>

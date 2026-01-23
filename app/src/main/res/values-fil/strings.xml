@@ -103,4 +103,21 @@
     <string name="tip_storm">I-secure ang mga gamit sa labas. Manatili sa loob at malayo sa mga bintana.</string>
     <string name="tip_default">Laging maghanda ng emergency
 kit na may tubig, pagkain, at gamot.</string>
+    <!-- Map Screen -->
+    <string name="map_legend">Legend</string>
+    <string name="map_directions">Direksyon</string>
+    <string name="map_navigation">Nabigasyon</string>
+    <string name="map_to">Papunta sa</string>
+    <string name="map_distance">Distansya</string>
+    <string name="map_capacity">Kapasidad</string>
+    <string name="map_remaining">Natitira</string>
+    <string name="map_eta">Inaasahang Oras ng Dating</string>
+    <string name="map_then">Pagkatapos</string>
+    <string name="map_route_instruction">Sundin ang berdeng linya ng ruta sa mapa para makarating sa evacuation center.</string>
+    <string name="map_finding_nearest">Hinahanap ang pinakamalapit na evacuation center...</string>
+    <string name="map_no_evac_found">Walang nahanap na evacuation center</string>
+    <string name="map_loc_not_available">Hindi available ang lokasyon. Pakibukas ang location services.</string>
+    <string name="map_hospital">Ospital</string>
+    <string name="map_evacuation">Evacuation</string>
+    <string name="map_alert">Alerto</string>
 </resources>
