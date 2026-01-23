@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.util.getLocaleContext
+import com.example.emergencycommunicationsystem.util.GeminiWeatherService
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -106,7 +107,10 @@ fun LanguageSettingsScreen(
             Spacer(modifier = Modifier.weight(1f))
 
             Button(
-                onClick = { onConfirm(selectedLanguage) },
+                onClick = { 
+                    GeminiWeatherService.clearCache()
+                    onConfirm(selectedLanguage) 
+                },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = selectedLanguage != currentLanguage,
                 shape = RoundedCornerShape(50)

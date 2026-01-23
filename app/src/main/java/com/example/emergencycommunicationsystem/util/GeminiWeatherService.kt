@@ -24,14 +24,11 @@ object GeminiWeatherService {
     private const val CACHE_EXPIRY_MS = 30 * 60 * 1000L // 30 minutes
     private val cacheTimestamps = mutableMapOf<String, Long>()
     
-    private var lastUsedModel: String? = null
+    private var lastUsedModel: String? = "gemini-1.5-flash"
     
-    // DEBUG MODE: Set to false to bypass cache and add [AI] prefix
-    private const val DEBUG_MODE = false // Turning off for production feel, can turn back on if needed
+    // DEBUG MODE: Set to true to add [AI] prefix to responses
+    private const val DEBUG_MODE = false 
     
-    /**
-     * Generate weather advice using Gemini AI with template fallback
-     */
     suspend fun getWeatherAdvice(
         condition: String,
         temp: Double,
@@ -41,28 +38,26 @@ object GeminiWeatherService {
         visibility: Int,
         location: String = "Quezon City, Philippines",
         language: String = "en",
+        forecastInfo: String = "",
         templateFallback: () -> String
     ): String = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Requesting detailed weather advice for $location in $language")
+        Log.d(TAG, "getWeatherAdvice called: Language=$language")
         
         if (BuildConfig.GEMINI_API_KEY.isBlank()) {
-            Log.e(TAG, "GEMINI_API_KEY is BLANK")
             return@withContext templateFallback()
         }
         
-        // Cache key should include language
-        val cacheKey = "${condition}_${temp.toInt()}_${humidity}_${windSpeed.toInt()}_${visibility / 1000}_$language"
+        // Include condition and temp in cache key but ignore minute variations
+        val cacheKey = "${condition}_${temp.toInt()}_${humidity}_${language}"
         
-        if (!DEBUG_MODE) {
-            val cachedResponse = responseCache[cacheKey]
-            val cacheTime = cacheTimestamps[cacheKey] ?: 0L
-            if (cachedResponse != null && (System.currentTimeMillis() - cacheTime) < CACHE_EXPIRY_MS) {
-                return@withContext cachedResponse
-            }
+        val cachedResponse = responseCache[cacheKey]
+        val cacheTime = cacheTimestamps[cacheKey] ?: 0L
+        if (cachedResponse != null && (System.currentTimeMillis() - cacheTime) < CACHE_EXPIRY_MS) {
+            return@withContext cachedResponse
         }
         
         try {
-            val aiResponse = generateAIAdvice(
+            val finalResponse = generateAIAdvice(
                 condition = condition,
                 temp = temp,
                 feelsLike = feelsLike,
@@ -70,73 +65,22 @@ object GeminiWeatherService {
                 windSpeed = windSpeed,
                 visibility = visibility,
                 location = location,
-                language = language
+                language = language,
+                forecastInfo = forecastInfo
             )
-            
-            val finalResponse = if (DEBUG_MODE) "[AI Bot] $aiResponse" else aiResponse
             
             responseCache[cacheKey] = finalResponse
             cacheTimestamps[cacheKey] = System.currentTimeMillis()
             
             finalResponse
         } catch (e: Exception) {
-            Log.e(TAG, "AI advice unavailable", e)
-            val errorDisplay = if (DEBUG_MODE) "[AI ERR: ${e.message}] " else ""
-            errorDisplay + templateFallback()
+            Log.e(TAG, "Gemini API Error: ${e.message}")
+            templateFallback()
         }
     }
 
-    /**
-     * Fetches the list of models available for the current API key and finds one
-     * that supports 'generateContent'.
-     */
-    private suspend fun discoverSupportedModel(): String = withContext(Dispatchers.IO) {
-        lastUsedModel?.let { return@withContext it }
-
-        Log.d(TAG, "Discovering supported models...")
-        val client = OkHttpClient()
-        val url = "https://generativelanguage.googleapis.com/v1beta/models?key=${BuildConfig.GEMINI_API_KEY.trim()}"
-        val request = Request.Builder().url(url).build()
-        
-        val response = client.newCall(request).execute()
-        val responseBody = response.body?.string() ?: throw Exception("Could not list models")
-        
-        if (!response.isSuccessful) throw Exception("List models failed: ${response.code}")
-
-        val json = JSONObject(responseBody)
-        val models = json.getJSONArray("models")
-        
-        val priorityModels = listOf("gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro")
-        
-        val supportedModels = mutableListOf<String>()
-        for (i in 0 until models.length()) {
-            val model = models.getJSONObject(i)
-            val name = model.getString("name").substringAfter("models/")
-            val methods = model.getJSONArray("supportedGenerationMethods")
-            
-            var supportsGenerate = false
-            for (j in 0 until methods.length()) {
-                if (methods.getString(j) == "generateContent") {
-                    supportsGenerate = true
-                    break
-                }
-            }
-            
-            if (supportsGenerate) {
-                supportedModels.add(name)
-            }
-        }
-
-        val selectedModel = priorityModels.firstOrNull { it in supportedModels } 
-            ?: supportedModels.firstOrNull() 
-            ?: throw Exception("No models support generateContent")
-
-        lastUsedModel = selectedModel
-        selectedModel
-    }
-    
     private suspend fun callGeminiAPI(prompt: String): String = withContext(Dispatchers.IO) {
-        val model = discoverSupportedModel()
+        val model = "gemini-1.5-flash"
         val client = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .build()
@@ -186,7 +130,8 @@ object GeminiWeatherService {
         windSpeed: Double,
         visibility: Int,
         location: String,
-        language: String
+        language: String,
+        forecastInfo: String
     ): String {
         val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         val timeOfDay = when (currentHour) {
@@ -196,39 +141,47 @@ object GeminiWeatherService {
             else -> "night"
         }
         
-        // Map language code to full name for clearer prompt
-        val languageName = when(language) {
-            "fil", "tl" -> "Tagalog/Filipino"
-            "es" -> "Spanish"
-            "ceb" -> "Cebuano"
-            "war" -> "Waray"
-            "ilo" -> "Ilocano"
-            "bcl" -> "Bicolano"
+        val languageHint = when(language) {
+            "fil", "tl" -> "Tagalog/Filipino (e.g., 'Mainit ang panahon today')"
+            "es" -> "Spanish (e.g., 'El clima está caluroso')"
+            "ceb" -> "Cebuano/Bisaya (e.g., 'Init kaayo ang panahon karon')"
+            "war" -> "Waray-Waray (the Samar-Leyte language, e.g., 'Mapaso an panahon yana')"
+            "ilo" -> "Ilocano (e.g., 'Napudot ti tiempo ita')"
+            "bcl" -> "Bicolano (e.g., 'Mainit an panahon ngunyan')"
             else -> "English"
         }
         
         val prompt = """
-            You are a helpful, friendly, and knowledgeable weather assistant for $location.
+            You are a friendly, talkative local weather reporter for $location. 
             
-            Based on the following real-time weather data, provide a comprehensive and practical update:
-            - Condition: $condition
+            REAL-TIME WEATHER DATA:
+            - Location: $location
+            - Current Sky: $condition
             - Temperature: ${temp.toInt()}°C (Feels like ${feelsLike.toInt()}°C)
             - Humidity: $humidity%
             - Wind Speed: $windSpeed km/h
             - Visibility: ${visibility / 1000} km
-            - Time of Day: $timeOfDay
+            - Time: $timeOfDay
             
-            Instructions:
-            1. **Summarize the Feel:** Briefly describe how the weather actually feels (e.g., "It's a hot and humid afternoon").
-            2. **Practical Advice:** Give specific recommendations on clothing (e.g., "Light cotton clothes are best"), hydration, or travel (e.g., "Roads might be slippery").
-            3. **Safety Warning:** If there are potential risks like high heat index, strong winds, or low visibility, explicitly mention them.
-            4. **Tone:** Be conversational, caring, and local-friendly.
+            HOURLY FORECAST FOR THE NEXT FEW HOURS:
+            $forecastInfo
             
-            Length Constraint: Keep it under 400 characters to fit in the widget, but ensure it is detailed enough to be truly useful.
+            YOUR TASK:
+            Write a detailed, helpful, and community-oriented weather update in the $languageHint language.
             
-            CRITICAL INSTRUCTION: You MUST translate your entire response to $languageName. Do NOT use English if the requested language is not English.
+            STRUCTURE YOUR RESPONSE:
+            1. A warm local greeting in $languageHint.
+            2. Describe current conditions using ALL details (feels like, humidity, wind, and visibility).
+            3. Mention the forecast (e.g., "Expect rain later this afternoon" or "It will stay clear until evening").
+            4. Practical advice on clothing, travel, or hydration based on these specific details.
+            5. A caring safety reminder for the people in $location.
             
-            Respond only with the translated advice in $languageName.
+            CONSTRAINTS:
+            - USE ONLY the $languageHint language. No English words.
+            - LENGTH: Be descriptive. Write at least 4-5 long sentences. 
+            - TONE: Professional but friendly, like a radio broadcaster.
+            
+            Output: (Respond only in $languageHint)
         """.trimIndent()
         
         return callGeminiAPI(prompt)

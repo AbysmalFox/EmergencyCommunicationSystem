@@ -15,7 +15,7 @@
     <string name="report_incident">Ire report ti Insidente</string>
     <string name="i_am_safe">Natalged Nak</string>
     <string name="gps_signal_lost">Napukaw ti signal ti GPS. Siguraduen a nakabukas ti location.</string>
-    <string name="feels_like">Kasla</string>
+    <string name="feels_like">Inaabat</string>
     <string name="humidity">Humidity</string>
     <string name="wind">Angin</string>
     <string name="visibility">Visibility</string>
@@ -25,6 +25,21 @@
     <string name="map">Mapa</string>
     <string name="profile">Profile</string>
     <string name="logout">Ag-logout</string>
+    <string name="logout_confirm">Siguradoka kadi a kayatmo ti ag-logout?</string>
+    <string name="cancel">Ikkaten</string>
+    <string name="anonymous_user">Di Ammo nga Agar-aramat</string>
+    <string name="login">Ag-login</string>
+    <string name="signup">Ag-sign up</string>
+    <string name="preferences">DAGITI PREPERENSYA</string>
+    <string name="accessibility">AKSESIBILIDAD</string>
+    <string name="security">SEGURIDAD</string>
+    <string name="edit_profile">I-edit ti Profile</string>
+    <string name="save_changes">I-save dagiti Panagbaliw</string>
+    <string name="floating_magnifier">Magnifier</string>
+    <string name="appearance">Itsura</string>
+    <string name="system_theme">System</string>
+    <string name="light_theme">Naraniag</string>
+    <string name="dark_theme">Nasipnget</string>
     <!-- Alerts Screen -->
     <string name="alerts_and_notifications">Dagiti Alerto ken Pakaammo</string>
     <string name="please_login_to_send_message">Pangaasim a mag-login tapno makaipatulod ka ti mensahe</string>
@@ -35,7 +50,7 @@
     <string name="unknown_source">Di Ammo a Naggapuana</string>
     <string name="general">Sapasap</string>
     <string name="no_title">Awan Titulo</string>
-    <string name="privacy_policy_content">Daytoy ket placeholder para iti annuroten ti pribado. Rumbeng a sukatam daytoy iti bukodmo nga annuroten ti pribado.</string>
+    <string name="privacy_policy_content">Daytoy ket placeholder para iti annuroten ti pribado.</string>
     <!-- Language settings -->
     <string name="language_settings_title">Piliem ti Pagsasao</string>
     <string name="language_settings_back">Agsubli</string>
@@ -48,28 +63,28 @@
     <string name="language_waray">Waray</string>
     <string name="language_ilocano">Ilocano</string>
     <!-- Weather advice -->
-    <string name="weather_advice_feels_much_hotter">Narikna a napupudot ngem iti pudno a temperatura.</string>
-    <string name="weather_advice_feels_much_cooler">Narikna a nalamlamiis ngem iti pudno a temperatura.</string>
+    <string name="weather_advice_feels_much_hotter">Inaabat a napupudot ngem iti pudno a temperatura.</string>
+    <string name="weather_advice_feels_much_cooler">Inaabat a nalamlamiis ngem iti pudno a temperatura.</string>
     <string name="weather_advice_humidity_high">Nangato ti humidity, namnamaen ti naalinggato a panawen.</string>
     <string name="weather_advice_wind_strong">Napigsa ti angin, agannad kadagiti agtaytayab a basura.</string>
     <string name="weather_advice_wind_breezy">Medyo nalamiis ti angin.</string>
     <string name="weather_advice_visibility_low">Nababa ti visibility. Agannad unay no agmanmaneho wenno magmagna.</string>
-    <string name="weather_advice_clear_1">Naraniag ken nainit nga aldaw. Nagsayaat a panawen para kadagiti plano sa ruar—saan a lipatan ti sunscreen ken uminom ti adu a danum.</string>
-    <string name="weather_advice_clear_2">Nalawag ti langit ita! Perpekto a rumuar, ngem baka pumudot ti init inton agan-ano, isu a protektaram ti bagim.</string>
-    <string name="weather_advice_clouds_1">Naulap ti langit. Mabalin a bumaba ti temperatura, isu a nasayaat a kapanunotan ti agjacket.</string>
-    <string name="weather_advice_clouds_2">Kasla agul-ulep. Awan pay ti ulan, ngem bantayam ti langit.</string>
-    <string name="weather_advice_rain_1">Agtutudo. Mabalin a nagalis dagiti kalsada, isu a magna a silalannad ken agawit ti payong wenno raincoat.</string>
-    <string name="weather_advice_rain_2">Namnamaen ti panagtudo. Siguraduen a nakasaganaka kadagiti waterproof a gamit ken agannad.</string>
-    <string name="weather_advice_drizzle_1">Adda bassit nga arbis. Kaya met, ngem baka kayatmo ti agjacket tapno saan a mabasa.</string>
-    <string name="weather_advice_drizzle_2">Namnamaen ti bassit nga arbis. Saan a napigsa, ngem umdas a mangabasa kadagiti banag.</string>
-    <string name="weather_advice_thunderstorm_1">Manamnama ti bagyo. Kasayaatan nga agtalinaed iti uneg ken liklikan dagiti nawaya a lugar.</string>
-    <string name="weather_advice_thunderstorm_2">Umay a bagyo. Iyalat dagiti plano sa ruar ken agtalinaed a nakabantay kadagiti alerto.</string>
-    <string name="weather_advice_snow_1">Agregreg ti niebe. Agkawes ti napuskol ken agannad—mabalin a nagalis dagiti kalsada.</string>
-    <string name="weather_advice_snow_2">Namnamaen dagiti kondisyon ti niebe. Agkawes a nasayaat ken agbiyahe a silalannad no masapul a rumuarka.</string>
-    <string name="weather_advice_low_visibility_1">Nababa ti visibility gapu kadagiti agdama a kondisyon. Agin-inayad nga agmaneho ken agannad.</string>
-    <string name="weather_advice_low_visibility_2">Nadedetect ti nababa a visibility. Mabalin a delikado ti agbiyahe, isu a pangaasi nga agannad.</string>
-    <string name="weather_advice_unusual_1">Kasla karkarna ti panawen ita. Bantayam dagiti update ken agsagana.</string>
-    <string name="weather_advice_unusual_2">Medyo saan a mapakpakadaan dagiti kondisyon. Kasayaatan nga agannad ken agsagana para iti aniaman.</string>
+    <string name="weather_advice_clear_1">Naraniag ken nainit nga aldaw. Nagsayaat a panawen para kadagiti plano sa ruar.</string>
+    <string name="weather_advice_clear_2">Nalawag ti langit ita! Perpekto a rumuar.</string>
+    <string name="weather_advice_clouds_1">Naulap ti langit. Mabalin a bumaba ti temperatura.</string>
+    <string name="weather_advice_clouds_2">Kasla agul-ulep. Bantayam ti langit.</string>
+    <string name="weather_advice_rain_1">Agtutudo. Mabalin a nagalis dagiti kalsada, isu a magna a silalannad.</string>
+    <string name="weather_advice_rain_2">Namnamaen ti panagtudo. Siguraduen a nakasaganaka.</string>
+    <string name="weather_advice_drizzle_1">Adda bassit nga arbis. Agjacket tapno saan a mabasa.</string>
+    <string name="weather_advice_drizzle_2">Namnamaen ti bassit nga arbis.</string>
+    <string name="weather_advice_thunderstorm_1">Manamnama ti bagyo. Kasayaatan nga agtalinaed iti uneg.</string>
+    <string name="weather_advice_thunderstorm_2">Umay a bagyo. Agsagana para kadagiti alerto.</string>
+    <string name="weather_advice_snow_1">Ag-niebe ita. Ag-jacket ti napuskol.</string>
+    <string name="weather_advice_snow_2">Manamnama ti nalamiis a tiempo. Agannad iti biyahe.</string>
+    <string name="weather_advice_low_visibility_1">Nababa ti visibility gapu ti tiempo. Agin-inayad nga agmaneho.</string>
+    <string name="weather_advice_low_visibility_2">Delikado ti agbiyahe ita. Agannadkayo amin.</string>
+    <string name="weather_advice_unusual_1">Kasla karkarna ti panawen ita. Bantayam dagiti update.</string>
+    <string name="weather_advice_unusual_2">Medyo saan a mapakpakadaan dagiti kondisyon. Agsagana para iti aniaman.</string>
     <!-- Dashboard -->
     <string name="live_qc">LIVE QC</string>
     <string name="active_alerts_title">Aktibo nga Alerto</string>

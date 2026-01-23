@@ -26,9 +26,24 @@
     <string name="map">Mapa</string>
     <string name="profile">Profile</string>
     <string name="logout">Mag-logout</string>
+    <string name="logout_confirm">Sigurado ka bang gusto mong mag-logout?</string>
+    <string name="cancel">Kanselahon</string>
+    <string name="anonymous_user">Hindi Kilalang User</string>
+    <string name="login">Mag-login</string>
+    <string name="signup">Mag-sign Up</string>
+    <string name="preferences">MGA PREPERENSYA</string>
+    <string name="accessibility">AKSESIBILIDAD</string>
+    <string name="security">SEGURIDAD</string>
+    <string name="edit_profile">I-edit ang Profile</string>
+    <string name="save_changes">I-save ang mga Pagbabago</string>
+    <string name="floating_magnifier">Lutang na Magnifier</string>
+    <string name="appearance">Anyo</string>
+    <string name="system_theme">System</string>
+    <string name="light_theme">Maliwanag</string>
+    <string name="dark_theme">Madilim</string>
     <!-- Alerts Screen -->
     <string name="alerts_and_notifications">Mga Alerto at Abiso</string>
-    <string name="please_login_to_send_message">Mangyaring mag-log in upang magpadala ng mensahe</string>
+    <string name="please_login_to_send_message">Mangyaring mag-log in upang magpadala ng mensage</string>
     <string name="no_new_alerts">Walang bagong alerto</string>
     <string name="community_alerts_will_appear_here">Ang mga alerto ng inyong komunidad ay lilitaw dito.</string>
     <string name="failed_to_load_alerts">Nabigo sa pag-load ng mga alerto</string>
@@ -55,22 +70,22 @@
     <string name="weather_advice_wind_strong">Malakas ang hangin, kaya mag-ingat sa posibleng lumilipad na mga bagay.</string>
     <string name="weather_advice_wind_breezy">Medyo mahangin.</string>
     <string name="weather_advice_visibility_low">Mababa ang visibility. Mag-ingat lalo na sa pagmamaneho o paglalakad.</string>
-    <string name="weather_advice_clear_1">Maaraw at maliwanag ang panahon. Magandang oras para sa mga gawain sa labas—huwag kalimutang mag-sunscreen at uminom ng maraming tubig.</string>
-    <string name="weather_advice_clear_2">Malilinaw ang kalangitan ngayon. Sakto para lumabas, pero maaaring sobrang tirik ang araw mamaya, kaya mag-ingat.</string>
-    <string name="weather_advice_clouds_1">Maulap ang kalangitan. Puwedeng bahagyang bumaba ang temperatura, kaya mainam ang magdala ng magaan na jacket.</string>
+    <string name="weather_advice_clear_1">Maaraw at maliwanag ang panahon. Magandang oras para sa mga gawain sa labas.</string>
+    <string name="weather_advice_clear_2">Malilinaw ang kalangitan ngayon. Sakto para lumabas.</string>
+    <string name="weather_advice_clouds_1">Maulap ang kalangitan. Puwedeng bahagyang bumaba ang temperatura.</string>
     <string name="weather_advice_clouds_2">Mukhang makulimlim. Wala pang ulan, pero mabuting bantayan ang lagay ng panahon.</string>
-    <string name="weather_advice_rain_1">Umuulan. Puwedeng dumulas ang mga kalsada, kaya dahan-dahan lang at magdala ng payong o raincoat.</string>
-    <string name="weather_advice_rain_2">Inaasahan ang ulan. Siguraduhing handa ka sa gamit na hindi nababasa at mag-ingat nang higit sa karaniwan.</string>
-    <string name="weather_advice_drizzle_1">May bahagyang ambon. Kaya naman, pero baka gusto mong mag-jacket para hindi mabasa.</string>
-    <string name="weather_advice_drizzle_2">Asahan ang mahinang ulan. Hindi ito malakas, pero sapat para mabasa ang paligid.</string>
-    <string name="weather_advice_thunderstorm_1">May paparating na thunderstorm. Mas mabuting manatili sa loob at iwasan ang mga bukas na lugar.</string>
-    <string name="weather_advice_thunderstorm_2">May paparating na malalakas na bagyo. Ipagsantabi muna ang mga lakad sa labas at manatiling nakaantabay sa mga abiso.</string>
-    <string name="weather_advice_snow_1">Umuulan ng niyebe. Magbihis nang makapal at mag-ingat—maaaring madulas ang mga kalsada.</string>
-    <string name="weather_advice_snow_2">Inaasahan ang malamig at maniyebeng panahon. Magbalot nang mabuti at maglakbay nang maingat kung kailangan lumabas.</string>
-    <string name="weather_advice_low_visibility_1">Mababa ang visibility dahil sa kasalukuyang kondisyon. Magmaneho nang mabagal at manatiling alerto.</string>
-    <string name="weather_advice_low_visibility_2">May mababang visibility sa panahon ngayon. Panganib ang pagbiyahe, kaya mag-ingat nang husto.</string>
-    <string name="weather_advice_unusual_1">Mukhang kakaiba ang lagay ng panahon ngayon. Manatiling nakatutok sa mga update at maging handa.</string>
-    <string name="weather_advice_unusual_2">Medyo hindi tiyak ang mga kondisyon. Mas mabuti nang manatiling alerto at handa sa anumang mangyari.</string>
+    <string name="weather_advice_rain_1">Umuulan. Puwedeng dumulas ang mga kalsada, kaya dahan-dahan lang.</string>
+    <string name="weather_advice_rain_2">Inaasahan ang ulan. Siguraduhing handa ka.</string>
+    <string name="weather_advice_drizzle_1">May bahagyang ambon.</string>
+    <string name="weather_advice_drizzle_2">Asahan ang mahinang ulan.</string>
+    <string name="weather_advice_thunderstorm_1">May paparating na thunderstorm. Mas mabuting manatili sa loob.</string>
+    <string name="weather_advice_thunderstorm_2">May paparating na malalakas na bagyo. Manatiling nakaantabay sa mga abiso.</string>
+    <string name="weather_advice_snow_1">Umuulan ng niyebe. Magbihis nang makapal.</string>
+    <string name="weather_advice_snow_2">Inaasahan ang malamig at maniyebeng panahon. Magbalot nang mabuti.</string>
+    <string name="weather_advice_low_visibility_1">Mababa ang visibility dahil sa kasalukuyang kondisyon. Magmaneho nang mabagal.</string>
+    <string name="weather_advice_low_visibility_2">May mababang visibility sa panahon ngayon. Mag-ingat nang husto.</string>
+    <string name="weather_advice_unusual_1">Mukhang kakaiba ang lagay ng panahon ngayon. Manatiling nakatutok sa mga update.</string>
+    <string name="weather_advice_unusual_2">Medyo hindi tiyak ang mga kondisyon. Mas mabuti nang manatiling alerto.</string>
     <!-- Dashboard -->
     <string name="live_qc">LIVE QC</string>
     <string name="active_alerts_title">Aktibong Alerto</string>
@@ -85,5 +100,6 @@
     <string name="tip_fire">Manatiling mababa sa lupa. Lumikas agad kung ipinag-uutos.</string>
     <string name="tip_earthquake">Drop, Cover, at Hold On. Lumayo sa mga bintana.</string>
     <string name="tip_storm">I-secure ang mga gamit sa labas. Manatili sa loob at malayo sa mga bintana.</string>
-    <string name="tip_default">Laging maghanda ng emergency\nkit na may tubig, pagkain, at gamot.</string>
+    <string name="tip_default">Laging maghanda ng emergency
+kit na may tubig, pagkain, at gamot.</string>
 </resources>

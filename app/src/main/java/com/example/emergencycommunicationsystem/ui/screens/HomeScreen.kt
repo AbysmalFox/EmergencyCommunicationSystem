@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.emergencycommunicationsystem.R
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.emergencycommunicationsystem.data.models.Alert
@@ -758,7 +759,7 @@ fun ModernAlertsSection(
 fun TypewriterText(
     text: String,
     modifier: Modifier = Modifier,
-    speedMillis: Long = 40,
+    speedMillis: Long = 20,
     style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.bodyMedium,
     color: Color = Color.Unspecified,
     fontWeight: FontWeight? = null,
@@ -886,7 +887,10 @@ fun CompactWeatherCard(
                         contentAlignment = Alignment.Center
                     ) {
                         AsyncImage(
-                            model = WeatherIconUtils.getWeatherAnimation(weatherState.condition),
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(WeatherIconUtils.getWeatherAnimation(weatherState.condition))
+                                .crossfade(true)
+                                .build(),
                             contentDescription = weatherState.condition,
                             modifier = Modifier.size(54.dp),
                             contentScale = ContentScale.Fit

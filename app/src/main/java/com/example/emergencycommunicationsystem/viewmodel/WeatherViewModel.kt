@@ -26,6 +26,8 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -147,6 +149,14 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
 
             val iconCode = weatherResponse.weather.firstOrNull()?.icon ?: "01d"
             val condition = weatherResponse.weather.firstOrNull()?.main ?: "Clear"
+            val conditionId = weatherResponse.weather.firstOrNull()?.id ?: 800
+
+            val weatherAlert = generateWeatherAlert(conditionId)
+
+            val forecastInfo = forecastResponse?.list?.take(5)?.joinToString("; ") {
+                val time = SimpleDateFormat("ha", Locale.US).format(Date(it.dt * 1000L))
+                "$time: ${it.main.temp.toInt()}°C, ${it.weather.firstOrNull()?.main}"
+            } ?: ""
 
             val weatherAdvice = withContext(Dispatchers.IO) {
                 GeminiWeatherService.getWeatherAdvice(
@@ -158,6 +168,7 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
                     visibility = weatherResponse.visibility,
                     location = locationName,
                     language = language,
+                    forecastInfo = forecastInfo,
                     templateFallback = {
                         // Create a locale-specific context for fallback strings
                         val locale = LocaleManager.getLocaleFromCode(language)
@@ -243,6 +254,19 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
     private fun setLocationNotFound() {
         _weatherState.value = WeatherState.Error("GPS signal lost. Ensure location is on.")
         hasLoadedData = true
+    }
+
+    private fun generateWeatherAlert(conditionId: Int): String? {
+        return when (conditionId) {
+            in 200..232 -> "THUNDERSTORM ALERT: Seek shelter immediately."
+            in 502..504 -> "HEAVY RAIN WARNING: Potential flooding."
+            511 -> "FREEZING RAIN: Roads may be slippery."
+            in 601..622 -> "SNOW WARNING: Heavy snow expected."
+            781 -> "TORNADO ALERT: Seek underground shelter."
+            762 -> "VOLCANIC ASH: Wear masks and stay indoors."
+            771 -> "SQUALLS: Secure loose objects."
+            else -> null
+        }
     }
 
     private fun getTemplateWeatherAdvice(context: android.content.Context, condition: String, temp: Double, feelsLike: Double, humidity: Int, windSpeed: Double, visibility: Int): String {

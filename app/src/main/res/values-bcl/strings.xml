@@ -15,7 +15,7 @@
     <string name="report_incident">I-report an Insidente</string>
     <string name="i_am_safe">Ligtas Ako</string>
     <string name="gps_signal_lost">Nawara an signal nin GPS. Siguraduhon na bukas an lokasyon.</string>
-    <string name="feels_like">Mate</string>
+    <string name="feels_like">Inaamate</string>
     <string name="humidity">Humidity</string>
     <string name="wind">Duros</string>
     <string name="visibility">Kalinawan</string>
@@ -25,7 +25,21 @@
     <string name="map">Mapa</string>
     <string name="profile">Profile</string>
     <string name="logout">Log out</string>
-    
+    <string name="logout_confirm">Sigurado ka na gusto mong mag-logout?</string>
+    <string name="cancel">Kanselahon</string>
+    <string name="anonymous_user">Dai Aram na User</string>
+    <string name="login">Log in</string>
+    <string name="signup">Sign up</string>
+    <string name="preferences">MGA PREPERENSYA</string>
+    <string name="accessibility">AKSESIBILIDAD</string>
+    <string name="security">SEGURIDAD</string>
+    <string name="edit_profile">I-edit an Profile</string>
+    <string name="save_changes">I-save an mga Pagbabago</string>
+    <string name="floating_magnifier">Lutang na Magnifier</string>
+    <string name="appearance">Hitsura</string>
+    <string name="system_theme">System</string>
+    <string name="light_theme">Maliwanag</string>
+    <string name="dark_theme">Madulom</string>
     <!-- Alerts Screen -->
     <string name="alerts_and_notifications">Mga Alerto asin Pahibalo</string>
     <string name="please_login_to_send_message">Mag-login tabi para makapadara nin mensahe</string>
@@ -36,7 +50,7 @@
     <string name="unknown_source">Dai Aram na Ginikanan</string>
     <string name="general">Pangkagabsan</string>
     <string name="no_title">Mayong Titulo</string>
-    
+    <string name="privacy_policy_content">Ini an placeholder para sa polisiya sa pribasiya.</string>
     <!-- Language settings -->
     <string name="language_settings_title">Pili nin Lengguwahe</string>
     <string name="language_settings_back">Balik</string>
@@ -48,30 +62,29 @@
     <string name="language_bisaya">Bisaya</string>
     <string name="language_waray">Waray</string>
     <string name="language_ilocano">Ilocano</string>
-    <string name="privacy_policy_content">This is a placeholder for the privacy policy. You should replace this with your own privacy policy.</string>
     <!-- Weather advice -->
-    <string name="weather_advice_feels_much_hotter">It feels much hotter than the actual temperature.</string>
-    <string name="weather_advice_feels_much_cooler">It feels much cooler than the actual temperature.</string>
-    <string name="weather_advice_humidity_high">The humidity is high, so expect some stickiness.</string>
-    <string name="weather_advice_wind_strong">Winds are quite strong, so be careful of flying debris.</string>
-    <string name="weather_advice_wind_breezy">It’s a bit breezy.</string>
-    <string name="weather_advice_visibility_low">Visibility is low. Be extra careful when driving or walking.</string>
-    <string name="weather_advice_clear_1">It’s a bright, sunny day. A great time for outdoor plans—just don’t forget sunscreen and stay hydrated.</string>
-    <string name="weather_advice_clear_2">Clear skies today! Perfect for going out, but the sun might get strong later, so stay protected.</string>
-    <string name="weather_advice_clouds_1">The sky is cloudy. The temperature might drop a bit, so a light jacket could be a good idea.</string>
-    <string name="weather_advice_clouds_2">It’s looking overcast. No rain yet, but keep an eye on the sky.</string>
-    <string name="weather_advice_rain_1">It’s raining. Roads can get slippery, so move carefully and carry an umbrella or raincoat.</string>
-    <string name="weather_advice_rain_2">Expect rainfall. Make sure you’re prepared with waterproof gear and take extra caution.</string>
-    <string name="weather_advice_drizzle_1">A light drizzle is happening. It’s manageable, but you might want a jacket to stay dry.</string>
-    <string name="weather_advice_drizzle_2">Expect some light rain. Nothing heavy, but enough to make things damp.</string>
-    <string name="weather_advice_thunderstorm_1">A thunderstorm is expected. It’s best to stay indoors and avoid open areas.</string>
-    <string name="weather_advice_thunderstorm_2">Thunderstorms incoming. Postpone outdoor plans and stay updated on alerts.</string>
-    <string name="weather_advice_snow_1">Snow is falling. Dress warmly and be cautious—roads can be slippery.</string>
-    <string name="weather_advice_snow_2">Expect snowy conditions. Bundle up and travel carefully if you need to go out.</string>
-    <string name="weather_advice_low_visibility_1">Visibility is low due to current conditions. Drive slowly and stay alert.</string>
-    <string name="weather_advice_low_visibility_2">Low-visibility weather detected. Travel can be risky, so please be careful.</string>
-    <string name="weather_advice_unusual_1">The weather seems unusual today. Keep an eye on updates and stay prepared.</string>
-    <string name="weather_advice_unusual_2">An mga kondisyon medyo dai masiguro. Mas marhay na magdanay na alerto asin andam sa anuman na mangyari.</string>
+    <string name="weather_advice_feels_much_hotter">Inaamate na mas mainit pa kaysa sa tunay na temperatura.</string>
+    <string name="weather_advice_feels_much_cooler">Inaamate na mas malipot kaysa sa tunay na temperatura.</string>
+    <string name="weather_advice_humidity_high">Mataas an humidity, asahan na medyo mapilit an mate.</string>
+    <string name="weather_advice_wind_strong">Makusog an duros, mag-ingat sa mga nagraralupad na bagay.</string>
+    <string name="weather_advice_wind_breezy">Medyo mahangin.</string>
+    <string name="weather_advice_visibility_low">Hababa an kalinawan kan palibot. Mag-ingat sa pagmaneho.</string>
+    <string name="weather_advice_clear_1">Mainit asin maliwanag an panahon. Marhay ini para sa mga aktibidad sa luwas.</string>
+    <string name="weather_advice_clear_2">Matinuok an langit! Magandang aldaw para magluwas.</string>
+    <string name="weather_advice_clouds_1">Madulom an langit. Tibaad maglipot nin dikit an panahon.</string>
+    <string name="weather_advice_clouds_2">Nagtitikadulom na an langit. Bantayan an panahon.</string>
+    <string name="weather_advice_rain_1">Nag-uuran. Madalupot an dalan, mag-ingat tabi.</string>
+    <string name="weather_advice_rain_2">Inaasahan an uran. Siguraduhon na may darang payong.</string>
+    <string name="weather_advice_drizzle_1">May dikit na talingasaw. Magdarang jacket para dai mabasa.</string>
+    <string name="weather_advice_drizzle_2">Medyo ma-uuran nin dikit.</string>
+    <string name="weather_advice_thunderstorm_1">May daguob asin linti. Mas marhay na magpirmi na muna sa laog.</string>
+    <string name="weather_advice_thunderstorm_2">Maabot an mga linti. Magdanay na handa.</string>
+    <string name="weather_advice_snow_1">Nag-uuran nin yelo. Mag-sulot nin mahibog na bado.</string>
+    <string name="weather_advice_snow_2">Inaasahan an malipot na panahon. Mag-ingat sa pagbiyahe.</string>
+    <string name="weather_advice_low_visibility_1">Hababa an kalinawan huli sa panahon. Luway-luway sana sa pagmaneho.</string>
+    <string name="weather_advice_low_visibility_2">Delikado an pagbiyahe ngunyan. Magdanay na alerto.</string>
+    <string name="weather_advice_unusual_1">Kakaiba an panahon ngunyan. Bantayan an mga anunsyo.</string>
+    <string name="weather_advice_unusual_2">Dai masierto an panahon. Magdanay na alerto.</string>
     <!-- Dashboard -->
     <string name="live_qc">LIVE QC</string>
     <string name="active_alerts_title">Aktibong mga Alerto</string>

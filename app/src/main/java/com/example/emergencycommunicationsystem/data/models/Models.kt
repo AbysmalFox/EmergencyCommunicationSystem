@@ -14,7 +14,7 @@ data class Main(
     @SerializedName("feels_like") val feelsLike: Double,
     val humidity: Int
 )
-data class Weather(val main: String, val icon: String)
+data class Weather(val id: Int, val main: String, val icon: String)
 data class Wind(val speed: Double)
 
 data class ForecastResponse(
