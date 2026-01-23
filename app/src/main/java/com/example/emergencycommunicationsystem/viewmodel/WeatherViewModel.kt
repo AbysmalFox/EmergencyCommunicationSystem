@@ -147,6 +147,9 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
 
             val iconCode = weatherResponse.weather.firstOrNull()?.icon ?: "01d"
             val condition = weatherResponse.weather.firstOrNull()?.main ?: "Clear"
+            val conditionId = weatherResponse.weather.firstOrNull()?.id ?: 800
+
+            val weatherAlert = generateWeatherAlert(conditionId)
 
             val weatherAdvice = withContext(Dispatchers.IO) {
                 GeminiWeatherService.getWeatherAdvice(
@@ -184,7 +187,8 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
                 windSpeed = "${String.format(Locale.US, "%.1f", weatherResponse.wind.speed)} km/h",
                 visibility = "${weatherResponse.visibility / 1000} km",
                 forecastData = forecastResponse?.list?.take(48) ?: emptyList(),
-                isOffline = false
+                isOffline = false,
+                weatherAlert = weatherAlert // Include the generated alert
             )
 
             // Save to Cache
@@ -243,6 +247,19 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
     private fun setLocationNotFound() {
         _weatherState.value = WeatherState.Error("GPS signal lost. Ensure location is on.")
         hasLoadedData = true
+    }
+
+    private fun generateWeatherAlert(conditionId: Int): String? {
+        return when (conditionId) {
+            in 200..232 -> "THUNDERSTORM ALERT: Seek shelter immediately."
+            in 502..504 -> "HEAVY RAIN WARNING: Potential flooding."
+            511 -> "FREEZING RAIN: Roads may be slippery."
+            in 601..622 -> "SNOW WARNING: Heavy snow expected."
+            781 -> "TORNADO ALERT: Seek underground shelter."
+            762 -> "VOLCANIC ASH: Wear masks and stay indoors."
+            771 -> "SQUALLS: Secure loose objects."
+            else -> null
+        }
     }
 
     private fun getTemplateWeatherAdvice(context: android.content.Context, condition: String, temp: Double, feelsLike: Double, humidity: Int, windSpeed: Double, visibility: Int): String {

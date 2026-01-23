@@ -25,7 +25,21 @@
     <string name="map">Mapa</string>
     <string name="profile">Profile</string>
     <string name="logout">Log out</string>
-    
+    <string name="logout_confirm">Sigurado ka na gusto mong mag-logout?</string>
+    <string name="cancel">Kanselahon</string>
+    <string name="anonymous_user">Dai Aram na User</string>
+    <string name="login">Log in</string>
+    <string name="signup">Sign up</string>
+    <string name="preferences">MGA PREPERENSYA</string>
+    <string name="accessibility">AKSESIBILIDAD</string>
+    <string name="security">SEGURIDAD</string>
+    <string name="edit_profile">I-edit an Profile</string>
+    <string name="save_changes">I-save an mga Pagbabago</string>
+    <string name="floating_magnifier">Lutang na Magnifier</string>
+    <string name="appearance">Hitsura</string>
+    <string name="system_theme">System</string>
+    <string name="light_theme">Maliwanag</string>
+    <string name="dark_theme">Madulom</string>
     <!-- Alerts Screen -->
     <string name="alerts_and_notifications">Mga Alerto asin Pahibalo</string>
     <string name="please_login_to_send_message">Mag-login tabi para makapadara nin mensahe</string>
@@ -36,7 +50,7 @@
     <string name="unknown_source">Dai Aram na Ginikanan</string>
     <string name="general">Pangkagabsan</string>
     <string name="no_title">Mayong Titulo</string>
-    
+    <string name="privacy_policy_content">Ini an placeholder para sa polisiya sa pribasiya.</string>
     <!-- Language settings -->
     <string name="language_settings_title">Pili nin Lengguwahe</string>
     <string name="language_settings_back">Balik</string>
@@ -48,7 +62,6 @@
     <string name="language_bisaya">Bisaya</string>
     <string name="language_waray">Waray</string>
     <string name="language_ilocano">Ilocano</string>
-    <string name="privacy_policy_content">This is a placeholder for the privacy policy. You should replace this with your own privacy policy.</string>
     <!-- Weather advice -->
     <string name="weather_advice_feels_much_hotter">It feels much hotter than the actual temperature.</string>
     <string name="weather_advice_feels_much_cooler">It feels much cooler than the actual temperature.</string>

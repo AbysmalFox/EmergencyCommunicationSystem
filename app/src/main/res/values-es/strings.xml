@@ -26,6 +26,21 @@
     <string name="map">Mapa</string>
     <string name="profile">Perfil</string>
     <string name="logout">Cerrar Sesión</string>
+    <string name="logout_confirm">¿Estás seguro de que quieres cerrar la sesión?</string>
+    <string name="cancel">Cancelar</string>
+    <string name="anonymous_user">Usuario Anónimo</string>
+    <string name="login">Iniciar Sesión</string>
+    <string name="signup">Registrarse</string>
+    <string name="preferences">PREFERENCIAS</string>
+    <string name="accessibility">ACCESIBILIDAD</string>
+    <string name="security">SEGURIDAD</string>
+    <string name="edit_profile">Editar Perfil</string>
+    <string name="save_changes">Guardar Cambios</string>
+    <string name="floating_magnifier">Lupa Flotante</string>
+    <string name="appearance">Apariencia</string>
+    <string name="system_theme">Sistema</string>
+    <string name="light_theme">Claro</string>
+    <string name="dark_theme">Oscuro</string>
     <!-- Alerts Screen -->
     <string name="alerts_and_notifications">Alertas y Notificaciones</string>
     <string name="please_login_to_send_message">Por favor, inicia sesión para enviar un mensaje</string>

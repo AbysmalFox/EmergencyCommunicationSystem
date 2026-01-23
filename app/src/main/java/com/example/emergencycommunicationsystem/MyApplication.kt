@@ -1,15 +1,28 @@
 package com.example.emergencycommunicationsystem
 
 import android.app.Application
+import android.content.Context
 import android.os.Build
 import android.util.Log
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
+import com.example.emergencycommunicationsystem.data.UserPrefs
+import com.example.emergencycommunicationsystem.util.LocaleManager
+import com.example.emergencycommunicationsystem.util.createLocaleContext
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import org.osmdroid.config.Configuration
 
 class MyApplication : Application(), ImageLoaderFactory {
+
+    override fun attachBaseContext(base: Context) {
+        val lang = runBlocking { UserPrefs.getLanguage(base).first() }
+        val locale = LocaleManager.getLocaleFromCode(lang)
+        LocaleManager.updateLocale(locale)
+        super.attachBaseContext(base.createLocaleContext(locale))
+    }
 
     override fun newImageLoader(): ImageLoader {
         return ImageLoader.Builder(this)

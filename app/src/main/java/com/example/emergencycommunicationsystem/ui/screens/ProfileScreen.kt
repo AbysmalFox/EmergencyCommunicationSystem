@@ -80,7 +80,7 @@ fun ProfileScreen(
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
             title = { Text(localeContext.getString(R.string.logout)) },
-            text = { Text("Are you sure you want to log out?") },
+            text = { Text(localeContext.getString(R.string.logout_confirm)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -94,7 +94,7 @@ fun ProfileScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("Cancel")
+                    Text(localeContext.getString(R.string.cancel))
                 }
             }
         )
@@ -118,19 +118,21 @@ fun ProfileScreen(
                     email = email ?: "",
                     onEditClick = {
                         showEditProfile = true
-                    }
+                    },
+                    localeContext = localeContext
                 )
             } else {
-                AnonymousHeader(onLoginClick, onSignUpClick)
+                AnonymousHeader(onLoginClick, onSignUpClick, localeContext)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
             // B. Settings List (Grouped)
-            SettingsGroupHeader(text = "PREFERENCES")
+            SettingsGroupHeader(text = localeContext.getString(R.string.preferences))
             
             SettingsItem(
                 text = localeContext.getString(R.string.receive_notifications),
+                icon = AppIcons.Notifications,
                 trailingContent = {
                     Switch(
                         checked = true, 
@@ -156,6 +158,7 @@ fun ProfileScreen(
 
             SettingsItem(
                 text = localeContext.getString(R.string.language_preference),
+                icon = AppIcons.Language,
                 valueText = when(currentLanguage) {
                     "fil", "tl" -> "Tagalog"
                     "es" -> "Español" 
@@ -171,7 +174,7 @@ fun ProfileScreen(
             // Embedded Theme Selector
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Appearance",
+                text = localeContext.getString(R.string.appearance),
                 style = MaterialTheme.typography.titleMedium,
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
@@ -184,21 +187,21 @@ fun ProfileScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 ThemeSelectionCard(
-                    text = "System",
+                    text = localeContext.getString(R.string.system_theme),
                     selected = currentTheme == "system",
                     icon = AppIcons.Settings,
                     onClick = { onThemeChange("system") },
                     modifier = Modifier.weight(1f)
                 )
                 ThemeSelectionCard(
-                    text = "Light",
+                    text = localeContext.getString(R.string.light_theme),
                     selected = currentTheme == "light",
                     icon = AppIcons.LightMode, 
                     onClick = { onThemeChange("light") },
                     modifier = Modifier.weight(1f)
                 )
                 ThemeSelectionCard(
-                    text = "Dark",
+                    text = localeContext.getString(R.string.dark_theme),
                     selected = currentTheme == "dark",
                     icon = AppIcons.DarkMode,
                     onClick = { onThemeChange("dark") },
@@ -209,10 +212,11 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            SettingsGroupHeader(text = "ACCESSIBILITY")
+            SettingsGroupHeader(text = localeContext.getString(R.string.accessibility))
 
             SettingsItem(
-                text = "Floating Magnifier",
+                text = localeContext.getString(R.string.floating_magnifier),
+                icon = AppIcons.Search,
                 trailingContent = {
                     Switch(
                         checked = isMagnifierEnabled,
@@ -234,20 +238,17 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            SettingsGroupHeader(text = "SECURITY")
-
-            SettingsItem(
-                text = "Change Password",
-                onClick = { Toast.makeText(context, "Change Password clicked", Toast.LENGTH_SHORT).show() }
-            )
+            SettingsGroupHeader(text = localeContext.getString(R.string.security))
 
             SettingsItem(
                 text = localeContext.getString(R.string.privacy_policy),
+                icon = AppIcons.Shield,
                 onClick = onPrivacyPolicyClick
             )
 
             SettingsItem(
                 text = "Terms of Service",
+                icon = AppIcons.Info,
                 onClick = onAboutAppClick 
             )
 
@@ -340,6 +341,7 @@ fun EditProfileSheet(
     onSave: (String, String, String) -> Unit,
     onCancel: () -> Unit
 ) {
+    val localeContext = getLocaleContext()
     var name by remember { mutableStateOf(currentName) }
     var email by remember { mutableStateOf(currentEmail) }
     var phone by remember { mutableStateOf(currentPhone) }
@@ -351,7 +353,7 @@ fun EditProfileSheet(
             .padding(bottom = 32.dp)
     ) {
         Text(
-            text = "Edit Profile",
+            text = localeContext.getString(R.string.edit_profile),
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 24.dp)
@@ -398,7 +400,8 @@ fun EditProfileSheet(
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Cancel")
+                val localeContext = getLocaleContext()
+                Text(localeContext.getString(R.string.cancel))
             }
             Button(
                 onClick = { onSave(name, email, phone) },
@@ -406,7 +409,8 @@ fun EditProfileSheet(
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
             ) {
-                Text("Save Changes")
+                val localeContext = getLocaleContext()
+                Text(localeContext.getString(R.string.save_changes))
             }
         }
     }
@@ -457,33 +461,11 @@ fun ThemeSelectionCard(
 }
 
 @Composable
-fun ThemeOption(
-    text: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp, horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        RadioButton(
-            selected = selected,
-            onClick = null,
-            colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.secondary)
-        )
-        Spacer(modifier = Modifier.width(16.dp))
-        Text(text = text, style = MaterialTheme.typography.bodyLarge)
-    }
-}
-
-@Composable
 fun ProfileHeader(
     username: String,
     email: String,
-    onEditClick: () -> Unit
+    onEditClick: () -> Unit,
+    localeContext: android.content.Context
 ) {
     Column(
         modifier = Modifier
@@ -550,13 +532,13 @@ fun ProfileHeader(
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp)
         ) {
-            Text("Edit Profile", fontWeight = FontWeight.Bold)
+            Text(localeContext.getString(R.string.edit_profile), fontWeight = FontWeight.Bold)
         }
     }
 }
 
 @Composable
-fun AnonymousHeader(onLoginClick: () -> Unit, onSignUpClick: () -> Unit) {
+fun AnonymousHeader(onLoginClick: () -> Unit, onSignUpClick: () -> Unit, localeContext: android.content.Context) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -579,7 +561,7 @@ fun AnonymousHeader(onLoginClick: () -> Unit, onSignUpClick: () -> Unit) {
         }
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Anonymous User",
+            text = localeContext.getString(R.string.anonymous_user),
             fontSize = 24.sp,
             fontWeight = FontWeight.ExtraBold,
             color = Color.White
@@ -592,7 +574,7 @@ fun AnonymousHeader(onLoginClick: () -> Unit, onSignUpClick: () -> Unit) {
                 colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = MaterialTheme.colorScheme.background),
                 modifier = Modifier.height(48.dp).weight(1f).padding(start = 24.dp)
             ) {
-                Text("Login", fontWeight = FontWeight.ExtraBold)
+                Text(localeContext.getString(R.string.login), fontWeight = FontWeight.ExtraBold)
             }
             OutlinedButton(
                 onClick = onSignUpClick, 
@@ -601,7 +583,7 @@ fun AnonymousHeader(onLoginClick: () -> Unit, onSignUpClick: () -> Unit) {
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
                 modifier = Modifier.height(48.dp).weight(1f).padding(end = 24.dp)
             ) {
-                Text("Sign Up", fontWeight = FontWeight.ExtraBold)
+                Text(localeContext.getString(R.string.signup), fontWeight = FontWeight.ExtraBold)
             }
         }
     }
@@ -624,6 +606,7 @@ fun SettingsGroupHeader(text: String) {
 @Composable
 fun SettingsItem(
     text: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     valueText: String? = null,
     trailingContent: (@Composable () -> Unit)? = null,
     onClick: () -> Unit
@@ -642,12 +625,7 @@ fun SettingsItem(
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
-                    imageVector = when(text) {
-                        "Language", "언어" -> AppIcons.Info
-                        "Appearance" -> AppIcons.ArrowBack
-                        "Push Notifications" -> AppIcons.ChevronRight
-                        else -> AppIcons.Info
-                    },
+                    imageVector = icon,
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
                     tint = Color.White

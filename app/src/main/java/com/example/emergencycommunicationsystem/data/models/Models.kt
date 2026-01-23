@@ -14,7 +14,7 @@ data class Main(
     @SerializedName("feels_like") val feelsLike: Double,
     val humidity: Int
 )
-data class Weather(val main: String, val icon: String)
+data class Weather(val id: Int, val main: String, val icon: String)
 data class Wind(val speed: Double)
 
 data class ForecastResponse(
@@ -81,7 +81,8 @@ sealed interface WeatherState {
         val visibility: String,
         val forecastData: List<ForecastItem> = emptyList(),
         var address: String? = null,
-        val isOffline: Boolean = false // Added isOffline property
+        val isOffline: Boolean = false,
+        val weatherAlert: String? = null // Added specific weather alert
     ) : WeatherState
     data class Error(val message: String) : WeatherState
 }

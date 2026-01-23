@@ -25,6 +25,21 @@
     <string name="map">Mapa</string>
     <string name="profile">Profile</string>
     <string name="logout">Ag-logout</string>
+    <string name="logout_confirm">Siguradoka kadi a kayatmo ti ag-logout?</string>
+    <string name="cancel">Ikkaten</string>
+    <string name="anonymous_user">Di Ammo nga Agar-aramat</string>
+    <string name="login">Ag-login</string>
+    <string name="signup">Ag-sign up</string>
+    <string name="preferences">DAGITI PREPERENSYA</string>
+    <string name="accessibility">AKSESIBILIDAD</string>
+    <string name="security">SEGURIDAD</string>
+    <string name="edit_profile">I-edit ti Profile</string>
+    <string name="save_changes">I-save dagiti Panagbaliw</string>
+    <string name="floating_magnifier">Magnifier</string>
+    <string name="appearance">Itsura</string>
+    <string name="system_theme">System</string>
+    <string name="light_theme">Naraniag</string>
+    <string name="dark_theme">Nasipnget</string>
     <!-- Alerts Screen -->
     <string name="alerts_and_notifications">Dagiti Alerto ken Pakaammo</string>
     <string name="please_login_to_send_message">Pangaasim a mag-login tapno makaipatulod ka ti mensahe</string>
@@ -35,7 +50,7 @@
     <string name="unknown_source">Di Ammo a Naggapuana</string>
     <string name="general">Sapasap</string>
     <string name="no_title">Awan Titulo</string>
-    <string name="privacy_policy_content">Daytoy ket placeholder para iti annuroten ti pribado. Rumbeng a sukatam daytoy iti bukodmo nga annuroten ti pribado.</string>
+    <string name="privacy_policy_content">Daytoy ket placeholder para iti annuroten ti pribado.</string>
     <!-- Language settings -->
     <string name="language_settings_title">Piliem ti Pagsasao</string>
     <string name="language_settings_back">Agsubli</string>
