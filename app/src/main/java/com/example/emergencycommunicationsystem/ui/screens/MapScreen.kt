@@ -303,14 +303,68 @@ fun MapScreen() {
             }
         }
 
-        // Map Legend
+        // Map Legend (Always visible at TopEnd)
         MapLegend(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = 8.dp, end = 8.dp)
+                .padding(top = 16.dp, end = 16.dp)
                 .widthIn(max = 130.dp),
             currentLanguage = currentLanguage
         )
+
+        // 5. Navigation Card or Directions Card (Overlays Legend at TopEnd)
+        if (!isCalculatingRoute) {
+            routeDestination?.let { destination ->
+                if (navigationState.isNavigating) {
+                    NavigationCard(
+                        navigationState = navigationState,
+                        destination = destination,
+                        navigationManager = navigationManager,
+                        currentLanguage = currentLanguage,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = 16.dp, end = 16.dp)
+                            .fillMaxWidth(0.85f),
+                        onClose = {
+                            navigationManager.stopNavigation()
+                            currentRoutePolyline?.let { route ->
+                                mapView?.overlays?.remove(route)
+                                mapView?.invalidate()
+                            }
+                            currentRoutePolyline = null
+                            routeDestination = null
+                        }
+                    )
+                } else {
+                    locationOverlay?.myLocation?.let { userLoc ->
+                        val distance = LocationUtils.calculateDistance(
+                            userLoc.latitude, userLoc.longitude,
+                            destination.latitude, destination.longitude
+                        )
+                        val distanceText = LocationUtils.formatDistance(distance)
+                        
+                        DirectionsCard(
+                            destination = destination,
+                            distance = distanceText,
+                            currentLanguage = currentLanguage,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(top = 16.dp, end = 16.dp)
+                                .fillMaxWidth(0.85f),
+                            onClose = {
+                                navigationManager.stopNavigation()
+                                currentRoutePolyline?.let { route ->
+                                    mapView?.overlays?.remove(route)
+                                    mapView?.invalidate()
+                                }
+                                currentRoutePolyline = null
+                                routeDestination = null
+                            }
+                        )
+                    }
+                }
+            }
+        }
         
         // 3. "Find Nearest Evacuation Center" Button
         FloatingActionButton(
@@ -455,77 +509,6 @@ fun MapScreen() {
             )
         }
         
-        // 4. "My Location" Button
-        FloatingActionButton(
-            onClick = {
-                val overlay = locationOverlay
-                val map = mapView
-                if (overlay != null && map != null && overlay.myLocation != null) {
-                    map.controller.animateTo(overlay.myLocation)
-                    map.controller.setZoom(18.0)
-                }
-            },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 130.dp)
-        ) {
-            Icon(AppIcons.MyLocation, contentDescription = null)
-        }
-        
-        // 5. Navigation Card or Directions Card
-        if (!isCalculatingRoute) {
-            routeDestination?.let { destination ->
-                if (navigationState.isNavigating) {
-                    NavigationCard(
-                        navigationState = navigationState,
-                        destination = destination,
-                        navigationManager = navigationManager,
-                        currentLanguage = currentLanguage,
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(start = 16.dp, bottom = 130.dp)
-                            .fillMaxWidth(0.75f),
-                        onClose = {
-                            navigationManager.stopNavigation()
-                            currentRoutePolyline?.let { route ->
-                                mapView?.overlays?.remove(route)
-                                mapView?.invalidate()
-                            }
-                            currentRoutePolyline = null
-                            routeDestination = null
-                        }
-                    )
-                } else {
-                    locationOverlay?.myLocation?.let { userLoc ->
-                        val distance = LocationUtils.calculateDistance(
-                            userLoc.latitude, userLoc.longitude,
-                            destination.latitude, destination.longitude
-                        )
-                        val distanceText = LocationUtils.formatDistance(distance)
-                        
-                        DirectionsCard(
-                            destination = destination,
-                            distance = distanceText,
-                            currentLanguage = currentLanguage,
-                            modifier = Modifier
-                                .align(Alignment.BottomStart)
-                                .padding(start = 16.dp, bottom = 130.dp)
-                                .fillMaxWidth(0.85f),
-                            onClose = {
-                                navigationManager.stopNavigation()
-                                currentRoutePolyline?.let { route ->
-                                    mapView?.overlays?.remove(route)
-                                    mapView?.invalidate()
-                                }
-                                currentRoutePolyline = null
-                                routeDestination = null
-                            }
-                        )
-                    }
-                }
-            }
-        }
-        
         // Real-time location tracking
         LaunchedEffect(navigationState.isNavigating, locationOverlay) {
             if (navigationState.isNavigating && locationOverlay != null) {
@@ -663,8 +646,8 @@ fun DirectionsCard(
         shadowElevation = 8.dp
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -673,33 +656,33 @@ fun DirectionsCard(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Icon(Icons.Filled.Navigation, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Text(text = translatedDirections, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Icon(Icons.Filled.Navigation, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Text(text = translatedDirections, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 }
-                IconButton(onClick = onClose) {
-                    Icon(Icons.Filled.Close, contentDescription = null)
+                IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Filled.Close, contentDescription = null, modifier = Modifier.size(18.dp))
                 }
             }
             
-            HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f), thickness = 0.5.dp)
             
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(text = "$translatedTo: $translatedDestName", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(text = "$translatedTo: $translatedDestName", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (translatedAddress.isNotEmpty()) {
-                    Text(text = translatedAddress, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(text = translatedAddress, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Row(modifier = Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(text = "$translatedDistanceLabel: $distance", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.primary)
+                Row(modifier = Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = "$translatedDistanceLabel: $distance", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     destination.capacity?.let { cap ->
-                        Text(text = "• $translatedCapacityLabel: $cap", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(text = "• $translatedCapacityLabel: $cap", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
             
-            Surface(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)) {
-                Text(text = translatedRouteInstr, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(12.dp))
+            Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)) {
+                Text(text = translatedRouteInstr, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(8.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
@@ -750,27 +733,27 @@ fun NavigationCard(
         color = MaterialTheme.colorScheme.surface,
         shadowElevation = 8.dp
     ) {
-        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Icon(Icons.Filled.Navigation, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                    Text(text = translatedNavLabel, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Icon(Icons.Filled.Navigation, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    Text(text = translatedNavLabel, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 }
-                IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Filled.Close, contentDescription = "Stop", modifier = Modifier.size(18.dp))
+                IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.Filled.Close, contentDescription = "Stop", modifier = Modifier.size(16.dp))
                 }
             }
             
-            HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f), thickness = 0.5.dp)
-            Text(text = translatedDestName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f), thickness = 0.5.dp)
+            Text(text = translatedDestName, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             
             if (translatedCurInstr.isNotEmpty()) {
-                Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = translatedCurInstr, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        Spacer(modifier = Modifier.width(8.dp))
+                Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)) {
+                    Row(modifier = Modifier.fillMaxWidth().padding(6.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = translatedCurInstr, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Spacer(modifier = Modifier.width(6.dp))
                         navigationState.currentInstruction?.let { instr ->
-                            Text(text = LocationUtils.formatDistance(instr.distance / 1000.0), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                            Text(text = LocationUtils.formatDistance(instr.distance / 1000.0), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
@@ -779,18 +762,18 @@ fun NavigationCard(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(text = "$translatedRemaining:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(text = LocationUtils.formatDistance(navigationState.remainingDistance / 1000.0), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                    Text(text = LocationUtils.formatDistance(navigationState.remainingDistance / 1000.0), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(text = "$translatedEtaLabel:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(text = navigationManager.formatETA(navigationState.remainingDuration), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                    Text(text = navigationManager.formatETA(navigationState.remainingDuration), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 }
             }
             
             if (translatedNextInstr.isNotEmpty()) {
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Icon(Icons.Filled.Place, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
-                    Text(text = "$translatedThen: $translatedNextInstr", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Icon(Icons.Filled.Place, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(12.dp))
+                    Text(text = "$translatedThen: $translatedNextInstr", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
