@@ -45,6 +45,23 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.fillMaxSize
+import kotlin.math.roundToInt
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import kotlin.math.PI
 import kotlin.math.sin
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
@@ -223,176 +240,237 @@ private fun DrawScope.drawWavePattern(
 @Composable
 fun EmergencyCallButton(onClick: () -> Unit) {
     val localeContext = getLocaleContext()
-    // Unique shape: Cut corners for a more urgent, technical look
-    val shape = CutCornerShape(
-        topStart = 8.dp, 
-        topEnd = 24.dp, 
-        bottomStart = 24.dp, 
-        bottomEnd = 8.dp
-    )
-    // Use MaterialTheme to detect dark mode (respects user's theme preference)
-    // Check if background is dark by comparing luminance
+    val density = LocalDensity.current
+    val haptic = LocalHapticFeedback.current
+    
+    // Theme and colors
     val bgColor = MaterialTheme.colorScheme.background
     val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
     
-    // Use refined emergency palette
-    val baseRed = if (isDarkMode) VibrantRedLight else EmergencyRedMain
-    val lightRed = if (isDarkMode) EmergencyRedPulse else EmergencyRedLight
-    val darkRed = if (isDarkMode) EmergencyRedMain else EmergencyRedDark
+    // Refined Palette for "Modern Minimal Emergency"
+    val activeRed = if (isDarkMode) Color(0xFFFF453A) else Color(0xFFE02E2E) // Bright, urgent red
+    val trackBg = if (isDarkMode) Color(0xFF2C2C2E) else Color(0xFFF2F2F7)   // Subtle gray track
+    val glowColor = activeRed.copy(alpha = 0.6f)
     
-    // Pulsing animation - makes the red lighter periodically (more noticeable)
+    // Swipe state
+    val swipeOffset = remember { Animatable(0f) }
+    val coroutineScope = rememberCoroutineScope()
+    
+    // Completion state for visual feedback
+    var isCompleted by remember { mutableStateOf(false) }
+    
+    // Animations
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val pulseProgress by infiniteTransition.animateFloat(
-        initialValue = 0f,
+    val chevronAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = LinearEasing), // Slightly faster
+            animation = tween(1500, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "pulse_progress"
-    )
-    
-    // Wave animation - horizontal wave movement (slower for better performance)
-    val waveOffset by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 2 * PI.toFloat(),
-        animationSpec = infiniteRepeatable(
-            animation = tween(4000, easing = LinearEasing), // Slower = fewer updates = better performance
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "wave_offset"
-    )
-    
-    // Incoming call animation for the phone icon - subtle horizontal shake like phone ringing
-    val phoneShake by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(600, easing = LinearEasing), // Slower, more chill
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "phone_shake"
-    )
-    
-    // Get density for dp to px conversion
-    val density = LocalDensity.current
-    
-    // Calculate horizontal shake (left to right like phone vibrating)
-    // More subtle: moves between -2 and +2 dp
-    val shakeOffsetDp = (phoneShake * 4f) - 2f // Moves between -2 and +2 dp
-    val shakeOffsetX = with(density) { shakeOffsetDp.dp.toPx() }
-    
-    // Very subtle vertical movement (barely noticeable)
-    val subtleBounceDp = (phoneShake * 1f) - 0.5f // Moves between -0.5 and +0.5 dp
-    val shakeOffsetY = with(density) { subtleBounceDp.dp.toPx() }
-    
-    // Very subtle rotation (gentle sway)
-    val rotationAngle = (phoneShake - 0.5f) * 2f // Rotates between -1 and +1 degrees (very subtle)
-    
-    // Very subtle scale (gentle pulse)
-    val iconScale = 1f + (phoneShake * 0.03f) // Scales between 1.0 and 1.03 (very subtle)
-    
-    // Interpolate between lighter and base colors - make animation more noticeable
-    // Pulse between 30% lighter and 100% base for more visible effect
-    val lightnessFactor = 0.3f + (pulseProgress * 0.7f) // Oscillates between 0.3 and 1.0
-    
-    // Optimized inline color interpolation (no function call overhead)
-    val animatedLightRed = Color(
-        red = lightRed.red + (baseRed.red - lightRed.red) * lightnessFactor,
-        green = lightRed.green + (baseRed.green - lightRed.green) * lightnessFactor,
-        blue = lightRed.blue + (baseRed.blue - lightRed.blue) * lightnessFactor,
-        alpha = lightRed.alpha + (baseRed.alpha - lightRed.alpha) * lightnessFactor
-    )
-    
-    val factor = (1f - lightnessFactor) * 0.3f
-    val animatedBaseRed = Color(
-        red = baseRed.red + (lightRed.red - baseRed.red) * factor,
-        green = baseRed.green + (lightRed.green - baseRed.green) * factor,
-        blue = baseRed.blue + (lightRed.blue - baseRed.blue) * factor,
-        alpha = baseRed.alpha + (lightRed.alpha - baseRed.alpha) * factor
-    )
-    
-    // Gradient: Top-light to Bottom-dark Red with animation
-    val gradientBrush = Brush.verticalGradient(
-        colors = listOf(
-            animatedLightRed,
-            animatedBaseRed,
-            darkRed
-        )
+        label = "chevron_alpha"
     )
 
-    Box(
+    // Expand thumb on completion
+    val thumbSize by animateDpAsState(
+        targetValue = if (isCompleted) 200.dp else 72.dp, // Expand to fill
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy),
+        label = "thumb_expansion"
+    )
+
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
-            .height(92.dp) // Slightly increased height for better presence
-            .shadow(
-                elevation = 20.dp, // Increased elevation for a "floating" look
-                shape = shape,
-                spotColor = baseRed.copy(alpha = 0.8f),
-                ambientColor = baseRed.copy(alpha = 0.4f)
+            .height(96.dp)
+            .padding(vertical = 6.dp)
+    ) {
+        val widthPx = with(density) { this@BoxWithConstraints.maxWidth.toPx() }
+        val thumbWidth = 72.dp
+        val thumbWidthPx = with(density) { thumbWidth.toPx() }
+        val padding = 4.dp
+        val paddingPx = with(density) { padding.toPx() }
+        
+        // Max offset calculations
+        val maxOffset = (widthPx - thumbWidthPx - (paddingPx * 2)).coerceAtLeast(0f)
+        val progress = (swipeOffset.value / maxOffset).coerceIn(0f, 1f)
+        
+        val shape = RoundedCornerShape(100.dp) // Fully rounded capsule
+
+        // 1. The Track Container
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .shadow(
+                    elevation = if (isDarkMode) 4.dp else 2.dp,
+                    shape = shape,
+                    spotColor = Color.Black.copy(alpha = 0.1f)
+                )
+                .clip(shape)
+                .background(trackBg)
+                .border(1.dp, if (isDarkMode) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f), shape)
+        ) {
+            
+            // 2. The "Glowing Trail" (Active Background)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .drawBehind {
+                        // Draw the active red trail that follows the thumb
+                        // We use a brush to fade it slightly towards the left
+                        val trailWidth = swipeOffset.value + thumbWidthPx + paddingPx
+                        drawRect(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(activeRed.copy(alpha = 0.8f), activeRed),
+                                startX = 0f,
+                                endX = trailWidth
+                            ),
+                            size = Size(trailWidth, size.height)
+                        )
+                        
+                        // Add a glow effect at the leading edge of the trail
+                        if (progress > 0.05f) {
+                            drawCircle(
+                                color = Color.White.copy(alpha = 0.2f),
+                                radius = size.height / 1.5f,
+                                center = Offset(trailWidth - (thumbWidthPx / 2), size.height / 2)
+                            )
+                        }
+                    }
             )
-            .clip(shape)
-            .background(gradientBrush)
-            .border(
-                width = 1.dp,
-                color = Color.White.copy(alpha = 0.2f),
-                shape = shape
-            )
-            .drawBehind {
-                // Draw animated wave pattern (optimized for performance)
-                // Only draw if size is valid to avoid unnecessary calculations
-                if (size.width > 0 && size.height > 0) {
-                    drawWavePattern(
-                        size = size,
-                        waveOffset = waveOffset,
-                        waveColor = Color.White.copy(alpha = 0.25f), // Slightly more visible
-                        waveAmplitude = size.height * 0.25f, 
-                        waveFrequency = 1.0f 
+
+            // 3. Labels (Underneath the thumb)
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                // "Slide to Emergency Call" Text
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .offset(x = 16.dp) // Slight offset to balance visual center
+                        .graphicsLayer {
+                            // Fade out as thumb moves over it
+                            alpha = (1f - (progress * 3f)).coerceIn(0f, 1f)
+                        }
+                ) {
+                    Text(
+                        text = "SLIDE TO GO TO EMERGENCY CALL",
+                        color = if (isDarkMode) Color.White.copy(alpha = 0.9f) else Color.Black.copy(alpha = 0.6f),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        letterSpacing = 1.sp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    // Animated Chevron Trail
+                    Row {
+                        repeat(3) { index ->
+                            Text(
+                                text = "›",
+                                color = (if (isDarkMode) Color.White else Color.Black).copy(
+                                    alpha = (chevronAlpha - (index * 0.2f)).coerceIn(0.1f, 1f)
+                                ),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp
+                            )
+                        }
+                    }
+                }
+                
+                // "Release to Cancel" hint (only visible when dragging but not complete)
+                if (progress > 0.2f && !isCompleted) {
+                    Text(
+                        text = "RELEASE TO CANCEL",
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 12.sp,
+                        letterSpacing = 1.sp,
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(end = 32.dp)
+                            .graphicsLayer {
+                                alpha = (progress - 0.2f).coerceIn(0f, 1f)
+                            }
                     )
                 }
             }
-            .clickable(onClick = onClick)
-            .padding(horizontal = 24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            // Thicker icon stroke simulated by using a larger size and potentially a different icon if available
-            // Since we can't easily change the vector path here, we'll keep the icon but ensure it's prominent
-            // Add incoming call animation - bounce, rotate, and scale
-            Icon(
-                painter = painterResource(id = R.drawable.ic_tabler_phone),
-                contentDescription = localeContext.getString(R.string.emergency_call_label),
-                tint = Color.White,
+            
+            // 4. The Draggable Thumb
+            Box(
                 modifier = Modifier
-                    .size(40.dp) // Increased size
-                    .graphicsLayer(
-                        translationX = shakeOffsetX, // Horizontal shake (left to right)
-                        translationY = shakeOffsetY, // Very subtle vertical movement
-                        rotationZ = rotationAngle, // Gentle sway
-                        scaleX = iconScale,
-                        scaleY = iconScale
+                    .align(Alignment.CenterStart)
+                    .offset { IntOffset(swipeOffset.value.roundToInt() + paddingPx.toInt(), 0) }
+                    .size(thumbSize) // Animates size on completion
+                    .shadow(
+                        elevation = 8.dp,
+                        shape = CircleShape,
+                        spotColor = activeRed.copy(alpha = 0.5f)
                     )
-            )
-            Spacer(modifier = Modifier.width(20.dp))
-            Column {
-                Text(
-                    text = localeContext.getString(R.string.emergency_call_label).uppercase(),
-                    color = Color.White.copy(alpha = 0.85f),
-                    fontWeight = FontWeight.Black, // Heavier weight
-                    fontSize = 14.sp,
-                    letterSpacing = 1.5.sp
+                    .clip(CircleShape)
+                    .background(Color.White)
+                    .draggable(
+                        orientation = Orientation.Horizontal,
+                        state = rememberDraggableState { delta ->
+                            if (!isCompleted) {
+                                coroutineScope.launch {
+                                    val newOffset = (swipeOffset.value + delta).coerceIn(0f, maxOffset)
+                                    swipeOffset.snapTo(newOffset)
+                                    
+                                    // Haptic tick when starting drag
+                                    if (swipeOffset.value < 10f && delta > 0) {
+                                       // Light tick on start
+                                    }
+                                }
+                            }
+                        },
+                        onDragStopped = {
+                            if (swipeOffset.value >= maxOffset * 0.85f) { // High threshold for safety
+                                // TRIGGER ACTION
+                                isCompleted = true
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                
+                                // Snap to end
+                                coroutineScope.launch {
+                                    swipeOffset.animateTo(maxOffset, spring(stiffness = Spring.StiffnessMediumLow))
+                                    delay(200) // Wait for visual confirmation
+                                    onClick()
+                                    // Reset state after action (if user comes back)
+                                    delay(500)
+                                    isCompleted = false
+                                    swipeOffset.snapTo(0f)
+                                }
+                            } else {
+                                // Snap back
+                                coroutineScope.launch {
+                                    swipeOffset.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+                                }
+                            }
+                        }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                // Thumb Icon
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_tabler_phone),
+                    contentDescription = null,
+                    tint = activeRed,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .graphicsLayer {
+                            // Rotate icon slightly as you drag
+                            rotationZ = progress * 30f
+                            // Scale up on completion
+                            val scale = if (isCompleted) 1.5f else 1f + (progress * 0.1f)
+                            scaleX = scale
+                            scaleY = scale
+                        }
                 )
-                Text(
-                    text = localeContext.getString(R.string.call_button),
-                    color = Color.White,
-                    fontWeight = FontWeight.ExtraBold, // Extra bold
-                    fontSize = 28.sp,
-                    letterSpacing = 0.5.sp
-                )
+                
+                // Spinner/Loading indicator if processing (optional, adding for "state change" feel)
+                if (isCompleted) {
+                     Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(activeRed.copy(alpha = 0.1f))
+                    )
+                }
             }
         }
     }
