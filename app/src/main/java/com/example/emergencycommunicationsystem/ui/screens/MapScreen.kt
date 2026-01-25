@@ -509,6 +509,23 @@ fun MapScreen() {
             )
         }
         
+        // 4. "My Location" Button
+        FloatingActionButton(
+            onClick = {
+                val overlay = locationOverlay
+                val map = mapView
+                if (overlay != null && map != null && overlay.myLocation != null) {
+                    map.controller.animateTo(overlay.myLocation)
+                    map.controller.setZoom(18.0)
+                }
+            },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 130.dp)
+        ) {
+            Icon(AppIcons.MyLocation, contentDescription = null)
+        }
+        
         // Real-time location tracking
         LaunchedEffect(navigationState.isNavigating, locationOverlay) {
             if (navigationState.isNavigating && locationOverlay != null) {
