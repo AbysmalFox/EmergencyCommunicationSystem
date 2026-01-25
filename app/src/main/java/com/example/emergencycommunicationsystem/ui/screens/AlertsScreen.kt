@@ -109,9 +109,9 @@ fun AlertItem(
     val localeContext = getLocaleContext()
     val categoryColor = getColorForCategory(alert)
 
-    // Dynamic translation for "Chat with Responder" button
-    val defaultMessage = "Chat with Responder"
-    val resourceMessage = localeContext.getString(R.string.message)
+    // Dynamic translation for "Ask our Chatbot" button
+    val defaultMessage = "Ask our Chatbot"
+    val resourceMessage = localeContext.getString(R.string.ask_chatbot)
     var buttonText by remember { mutableStateOf(resourceMessage) }
 
     LaunchedEffect(currentLanguage, resourceMessage) {

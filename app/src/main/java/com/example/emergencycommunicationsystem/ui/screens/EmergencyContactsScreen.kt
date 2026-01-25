@@ -1,15 +1,6 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
 import android.content.Intent
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -31,30 +22,19 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -62,8 +42,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
-import java.util.Locale
-import kotlinx.coroutines.delay
 
 private data class Hotline(
     val name: String,
@@ -73,10 +51,9 @@ private data class Hotline(
     val buttonIcon: ImageVector
 )
 
-@Suppress("UNUSED_VALUE")
 @Composable
 fun EmergencyContactsScreen(onBackPressed: () -> Unit) {
-    var activeCall by remember { mutableStateOf<Hotline?>(null) }
+    val context = LocalContext.current
 
     val hotlineGroups = remember {
         mapOf(
@@ -95,27 +72,14 @@ fun EmergencyContactsScreen(onBackPressed: () -> Unit) {
         )
     }
 
-    Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
-        AnimatedContent(
-            modifier = Modifier.padding(padding),
-            targetState = activeCall,
-            transitionSpec = { fadeIn(animationSpec = tween(400)) togetherWith fadeOut(animationSpec = tween(400)) },
-            label = "ScreenSwitch"
-        ) { call ->
-            if (call == null) {
-                HotlineList(
-                    hotlineGroups = hotlineGroups,
-                    onItemClick = { hotline -> activeCall = hotline },
-                    onBackPressed = onBackPressed
-                )
-            } else {
-                SimulatedCallInterface(
-                    hotline = call,
-                    onEndCall = { activeCall = null }
-                )
-            }
-        }
-    }
+    HotlineList(
+        hotlineGroups = hotlineGroups,
+        onItemClick = { hotline ->
+            val intent = Intent(Intent.ACTION_DIAL, "tel:${hotline.number}".toUri())
+            context.startActivity(intent)
+        },
+        onBackPressed = onBackPressed
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -132,7 +96,7 @@ private fun HotlineList(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.background)
-                    .height(20.dp) // Reduced from default 64dp
+                    .height(56.dp) // Standard height for touch targets
             ) {
                 Row(
                     modifier = Modifier
@@ -155,7 +119,7 @@ private fun HotlineList(
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(start = 4.dp)
-            )
+                    )
                 }
             }
         },
@@ -230,104 +194,6 @@ private fun HotlineCard(hotline: Hotline, onClick: (Hotline) -> Unit) {
                 Icon(hotline.buttonIcon, "Call ${hotline.name}", tint = MaterialTheme.colorScheme.onPrimary)
             }
         }
-    }
-}
-
-@Composable
-private fun SimulatedCallInterface(hotline: Hotline, onEndCall: () -> Unit) {
-    var timerSeconds by remember { mutableIntStateOf(0) }
-    val context = LocalContext.current
-
-    LaunchedEffect(Unit) {
-        val intent = Intent(Intent.ACTION_DIAL, "tel:${hotline.number}".toUri())
-        context.startActivity(intent)
-
-        while (true) {
-            delay(1000)
-            timerSeconds++
-        }
-    }
-
-    val infiniteTransition = rememberInfiniteTransition(label = "Pulse")
-    val scale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.2f,
-        animationSpec = infiniteRepeatable(animation = tween(1000), repeatMode = RepeatMode.Reverse), label = "Scale"
-    )
-
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        Spacer(modifier = Modifier.height(100.dp))
-
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(contentAlignment = Alignment.Center) {
-                Box(modifier = Modifier.size(150.dp).scale(scale).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)))
-                Box(
-                    modifier = Modifier.size(120.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(hotline.buttonIcon, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(60.dp))
-                }
-            }
-            Spacer(modifier = Modifier.height(32.dp))
-            Text("Calling...", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(hotline.name, color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(8.dp))
-            val minutes = timerSeconds / 60
-            val seconds = timerSeconds % 60
-            Text(String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds), color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.titleLarge)
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 80.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            ActionButton(icon = AppIcons.MicOff, text = "Mute", onClick = {})
-            EndCallButton(onEndCall)
-            ActionButton(icon = AppIcons.Dialpad, text = "Keypad", onClick = {})
-        }
-    }
-}
-
-@Composable
-private fun ActionButton(icon: ImageVector, text: String, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(
-            onClick = onClick,
-            shape = CircleShape,
-            modifier = Modifier.size(64.dp),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)),
-            contentPadding = PaddingValues(0.dp)
-        ) {
-            Icon(icon, contentDescription = text, tint = MaterialTheme.colorScheme.onBackground)
-        }
-        Text(text, color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.bodyMedium)
-    }
-}
-
-
-@Composable
-private fun EndCallButton(onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        shape = CircleShape,
-        modifier = Modifier.size(72.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.error
-        ),
-        contentPadding = PaddingValues(0.dp)
-    ) {
-        Icon(
-            AppIcons.CallEnd,
-            contentDescription = "End Call",
-            modifier = Modifier.size(36.dp),
-            tint = MaterialTheme.colorScheme.onError
-        )
     }
 }
 

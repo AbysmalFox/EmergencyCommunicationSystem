@@ -135,7 +135,7 @@ fun AlertNotifCard(
                     Icon(AppIcons.Message, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     val localeContext = getLocaleContext()
-                    Text(localeContext.getString(R.string.message), fontWeight = FontWeight.Bold)
+                    Text(localeContext.getString(R.string.ask_chatbot), fontWeight = FontWeight.Bold)
                 }
             }
         }

@@ -43,6 +43,7 @@
     <!-- Alerts Screen -->
     <string name="alerts_and_notifications">Alerts &amp; Notifications</string>
     <string name="message" translatable="false">Chat with Responder</string>
+    <string name="ask_chatbot" translatable="false">Ask our Chatbot</string>
     <string name="please_login_to_send_message">Please log in to send a message</string>
     <string name="no_new_alerts">No new alerts</string>
     <string name="community_alerts_will_appear_here">Your community alerts will appear here.</string>
