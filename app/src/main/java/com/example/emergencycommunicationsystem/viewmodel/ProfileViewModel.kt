@@ -36,7 +36,14 @@ class ProfileViewModel(
                 val settings = settingsRepository.getSubscriptionSettings(userId)
                 _uiState.value = settings
             } catch (e: Exception) {
-                // Handle error
+                // Fallback to default categories if API fails (for offline/demo support)
+                _uiState.value = listOf(
+                    SubscriptionCategory(categoryId = 1, name = "Weather", isSubscribed = 1),
+                    SubscriptionCategory(categoryId = 2, name = "Earthquake", isSubscribed = 1),
+                    SubscriptionCategory(categoryId = 3, name = "Fire", isSubscribed = 1),
+                    SubscriptionCategory(categoryId = 4, name = "Flood", isSubscribed = 1),
+                    SubscriptionCategory(categoryId = 5, name = "Traffic", isSubscribed = 0)
+                )
             }
         }
     }

@@ -26,6 +26,7 @@ import com.example.emergencycommunicationsystem.data.UserPrefs
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModel
+import com.example.emergencycommunicationsystem.ui.screens.NotificationSettingsScreenContent
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
@@ -53,8 +54,14 @@ fun ProfileScreen(
     var showEditProfile by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     
-    val sheetState = rememberModalBottomSheetState()
-    val editSheetState = rememberModalBottomSheetState()
+    // Notification Settings State (Local for now, move to VM later)
+    var deliveryMethods by remember { mutableStateOf(mapOf("Push Notifications" to true, "SMS" to false, "Email" to false)) }
+    var isQuietHoursEnabled by remember { mutableStateOf(false) }
+    var quietHoursStart by remember { mutableStateOf(22 to 0) } // 22:00
+    var quietHoursEnd by remember { mutableStateOf(6 to 0) }   // 06:00
+    
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val editSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val localeContext = getLocaleContext()
@@ -287,16 +294,21 @@ fun ProfileScreen(
         ) {
             val settingsState by profileViewModel.uiState.collectAsState()
             if (settingsState != null) {
-                NotificationSettingsSheet(
+                NotificationSettingsScreenContent(
                     categories = settingsState!!,
                     onSubscriptionChange = { categoryId, isEnabled ->
                         profileViewModel.onSubscriptionChange(categoryId, isEnabled)
                     },
-                    onDoneClick = {
-                        scope.launch { sheetState.hide() }.invokeOnCompletion {
-                            if (!sheetState.isVisible) showNotificationSettings = false
-                        }
-                    }
+                    onDeliveryMethodChange = { method, isEnabled ->
+                        deliveryMethods = deliveryMethods.toMutableMap().apply { this[method] = isEnabled }
+                    },
+                    onQuietHoursChange = { isQuietHoursEnabled = it },
+                    isQuietHoursEnabled = isQuietHoursEnabled,
+                    deliveryMethods = deliveryMethods,
+                    quietHoursStart = quietHoursStart,
+                    quietHoursEnd = quietHoursEnd,
+                    onStartTimeChange = { h, m -> quietHoursStart = h to m },
+                    onEndTimeChange = { h, m -> quietHoursEnd = h to m }
                 )
             } else {
                 Box(
@@ -686,64 +698,4 @@ fun SettingsItem(
     }
 }
 
-@Composable
-fun NotificationSettingsSheet(
-    categories: List<SubscriptionCategory>,
-    onSubscriptionChange: (Int, Boolean) -> Unit,
-    onDoneClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-            .padding(bottom = 32.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Push Notifications",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
-            )
-            TextButton(onClick = onDoneClick) {
-                Text("Done", color = MaterialTheme.colorScheme.secondary)
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        categories.forEach { category ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = category.name,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = "Receive alerts for ${category.name.lowercase()} events",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Switch(
-                    checked = category.isSubscribed == 1,
-                    onCheckedChange = { onSubscriptionChange(category.categoryId, it) },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
-                        checkedTrackColor = MaterialTheme.colorScheme.secondary
-                    )
-                )
-            }
-        }
-    }
-}
+
