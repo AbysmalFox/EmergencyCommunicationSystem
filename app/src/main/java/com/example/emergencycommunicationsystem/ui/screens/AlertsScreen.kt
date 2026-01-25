@@ -209,14 +209,19 @@ fun AlertItem(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
+                
+                val isDark = ThemeManager.isDarkMode()
+                val btnContainer = if (isDark) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f)
+                val btnContent = if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.secondary
+                
                 Button(
                     onClick = { onMessageClick(alert.id.toString(), alert.title ?: "Chat") },
                     modifier = Modifier.height(32.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp),
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
-                        contentColor = MaterialTheme.colorScheme.secondary
+                        containerColor = btnContainer,
+                        contentColor = btnContent
                     ),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
                 ) {
