@@ -32,6 +32,9 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -87,7 +90,9 @@ fun ReportIncidentScreen(
         "Fire" to AppIcons.LocalFireDepartment,
         "Flood" to AppIcons.Flood,
         "Medical" to AppIcons.MedicalServices,
-        "Crime" to AppIcons.LocalPolice
+        "Accident" to AppIcons.Traffic,
+        "Earthquake" to AppIcons.Earthquake,
+        "Other" to AppIcons.Info
     )
     var selectedIncidentType by remember { mutableStateOf(incidentTypes.keys.first()) }
 
@@ -347,12 +352,15 @@ fun MapView(weatherState: WeatherState) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IncidentTypeSelector(
     incidentTypes: Map<String, ImageVector>,
     selectedType: String,
     onTypeSelect: (String) -> Unit
 ) {
+    var expanded by remember { mutableStateOf(false) }
+
     Column {
         Text(
             text = "Type of Incident",
@@ -360,37 +368,51 @@ fun IncidentTypeSelector(
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
         )
-        Spacer(modifier = Modifier.height(12.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded },
+            modifier = Modifier.fillMaxWidth()
         ) {
-            incidentTypes.forEach { (type, icon) ->
-                val isSelected = type == selectedType
-                val containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
-                val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+            OutlinedTextField(
+                value = selectedType,
+                onValueChange = {},
+                readOnly = true,
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = incidentTypes[selectedType] ?: AppIcons.Info,
+                        contentDescription = null
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(),
+                shape = MaterialTheme.shapes.large,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
+                )
+            )
 
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .aspectRatio(1f)
-                        .clickable { onTypeSelect(type) },
-                    shape = MaterialTheme.shapes.large,
-                    colors = CardDefaults.cardColors(
-                        containerColor = containerColor,
-                        contentColor = contentColor
-                    ),
-                    elevation = CardDefaults.cardElevation(if (isSelected) 4.dp else 1.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                    ) {
-                        Icon(imageVector = icon, contentDescription = type, modifier = Modifier.size(32.dp))
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(type, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
-                    }
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                incidentTypes.forEach { (type, icon) ->
+                    DropdownMenuItem(
+                        text = { Text(text = type) },
+                        leadingIcon = {
+                            Icon(imageVector = icon, contentDescription = null)
+                        },
+                        onClick = {
+                            onTypeSelect(type)
+                            expanded = false
+                        }
+                    )
                 }
             }
         }
