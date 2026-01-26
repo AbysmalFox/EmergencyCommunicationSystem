@@ -11,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import androidx.compose.material3.*
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import com.example.emergencycommunicationsystem.R
@@ -252,7 +254,7 @@ fun MapScreen() {
         var previousAlertIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
         
         // Update alert markers when alerts state changes
-        LaunchedEffect(alertsState, currentLanguage) {
+        LaunchedEffect(alertsState, currentLanguage, isDarkMode) {
             mapView?.let { mapView ->
                 when (val state = alertsState) {
                     is com.example.emergencycommunicationsystem.util.Resource.Success -> {
@@ -272,6 +274,8 @@ fun MapScreen() {
                                 val marker = Marker(mapView).apply {
                                     position = GeoPoint(alert.latitude!!, alert.longitude!!)
                                     
+                                    val alertColor = com.example.emergencycommunicationsystem.util.getStaticColorForCategory(alert, isDarkMode)
+                                    
                                     CoroutineScope(Dispatchers.Main).launch {
                                         val translatedAlertLabel = if (currentLanguage != "en") {
                                             com.example.emergencycommunicationsystem.util.TranslationService.translate("Alert", currentLanguage)
@@ -290,7 +294,7 @@ fun MapScreen() {
                                     }
                                     
                                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                                    icon = createAlertMarkerIcon(mapView.context)
+                                    icon = createAlertMarkerIcon(mapView.context, alertColor.toArgb())
                                 }
                                 mapView.overlays.add(marker)
                             }
@@ -591,25 +595,38 @@ fun MapLegend(modifier: Modifier = Modifier, currentLanguage: String = "en") {
                 color = contentColor.copy(alpha = 0.3f)
             )
             
-            LegendItem(color = Color.Red, label = translatedAlert, textColor = contentColor)
-            LegendItem(color = Color(0xFF4CAF50), label = translatedHospital, textColor = contentColor)
-            LegendItem(color = Color(0xFF2196F3), label = translatedEvac, textColor = contentColor)
+            LegendItem(color = Color.Red, label = translatedAlert, textColor = contentColor, isCircle = false, isPin = true)
+            LegendItem(color = Color(0xFF4CAF50), label = translatedHospital, textColor = contentColor, isCircle = false)
+            LegendItem(color = Color(0xFF2196F3), label = translatedEvac, textColor = contentColor, isCircle = false)
         }
     }
 }
 
 @Composable
-fun LegendItem(color: Color, label: String, textColor: Color) {
+fun LegendItem(
+    color: Color, 
+    label: String, 
+    textColor: Color, 
+    isCircle: Boolean = true,
+    isPin: Boolean = false
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        val shape = when {
+            isPin -> RoundedCornerShape(topStart = 50.dp, topEnd = 50.dp, bottomStart = 50.dp, bottomEnd = 2.dp) // Simulated Pin
+            isCircle -> CircleShape
+            else -> RoundedCornerShape(4.dp) // Square for Safe Zones
+        }
+        
         Box(
             modifier = Modifier
                 .size(12.dp)
-                .background(color, RoundedCornerShape(50))
-                .border(1.5.dp, textColor.copy(alpha = 0.5f), RoundedCornerShape(50))
+                .rotate(if (isPin) 45f else 0f) // Rotate pin simulation
+                .background(color, shape)
+                .border(1.dp, textColor.copy(alpha = 0.5f), shape)
         )
         Text(
             text = label,
@@ -798,57 +815,109 @@ fun NavigationCard(
 }
 
 /**
- * Creates a red marker icon for alerts
+ * Creates a colored marker icon for alerts.
+ * Visuals: Teardrop Pin shape with dynamic color and contrast border.
  */
-private fun createAlertMarkerIcon(context: android.content.Context): android.graphics.drawable.Drawable {
-    // Create a simple red circle marker
-    val size = 48
+private fun createAlertMarkerIcon(context: android.content.Context, colorInt: Int): android.graphics.drawable.Drawable {
+    val size = 64
     val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
     
-    // Draw red circle
     val paint = android.graphics.Paint().apply {
-        color = Color.Red.toArgb()
+        color = colorInt
         style = android.graphics.Paint.Style.FILL
         isAntiAlias = true
     }
+    
     val strokePaint = android.graphics.Paint().apply {
         color = Color.White.toArgb()
         style = android.graphics.Paint.Style.STROKE
-        strokeWidth = 4f
+        strokeWidth = 3f
+        isAntiAlias = true
+    }
+
+    val outerStrokePaint = android.graphics.Paint().apply {
+        color = Color.Black.toArgb()
+        alpha = 100
+        style = android.graphics.Paint.Style.STROKE
+        strokeWidth = 1f
         isAntiAlias = true
     }
     
+    // Draw Teardrop Pin Shape
+    val path = android.graphics.Path()
     val centerX = size / 2f
-    val centerY = size / 2f
-    val radius = (size / 2f) - 4f
+    val topY = size * 0.1f
+    val bottomY = size * 0.9f
+    val radius = size * 0.3f
     
-    canvas.drawCircle(centerX, centerY, radius, paint)
-    canvas.drawCircle(centerX, centerY, radius, strokePaint)
+    // Circle top
+    path.addCircle(centerX, topY + radius, radius, android.graphics.Path.Direction.CW)
+    
+    // Triangle bottom
+    val trianglePath = android.graphics.Path()
+    trianglePath.moveTo(centerX - radius, topY + radius + (radius * 0.5f))
+    trianglePath.lineTo(centerX + radius, topY + radius + (radius * 0.5f))
+    trianglePath.lineTo(centerX, bottomY)
+    trianglePath.close()
+    
+    path.op(trianglePath, android.graphics.Path.Op.UNION)
+    
+    // Draw Shadow
+    canvas.drawPath(path, android.graphics.Paint().apply {
+        color = Color.Black.toArgb()
+        alpha = 60
+        maskFilter = android.graphics.BlurMaskFilter(4f, android.graphics.BlurMaskFilter.Blur.NORMAL)
+    })
+    
+    canvas.drawPath(path, paint)
+    canvas.drawPath(path, strokePaint)
+    canvas.drawPath(path, outerStrokePaint)
+    
+    // Add white dot in center for focus
+    val dotPaint = android.graphics.Paint().apply {
+        color = Color.White.toArgb()
+        alpha = 180
+        style = android.graphics.Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawCircle(centerX, topY + radius, radius / 3f, dotPaint)
     
     return BitmapDrawable(context.resources, bitmap)
 }
 
 /**
  * Creates a marker icon for safe zones (hospitals = green, evacuation centers = blue)
+ * Visuals: Rounded Square with White Border and Shadow effect to differentiate from circular Alerts.
  */
 private fun createSafeZoneMarkerIcon(context: android.content.Context, type: SafeZoneType): android.graphics.drawable.Drawable {
-    val size = 48
+    val size = 64 // Increased size for better visibility
     val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
     
     // Choose color based on type
     val zoneColor = when (type) {
-        SafeZoneType.HOSPITAL -> Color(0xFF4CAF50) // Green
-        SafeZoneType.EVACUATION_CENTER -> Color(0xFF2196F3) // Blue
+        SafeZoneType.HOSPITAL -> Color(0xFF43A047) // Green 600
+        SafeZoneType.EVACUATION_CENTER -> Color(0xFF1E88E5) // Blue 600
     }
     
-    // Draw circle with appropriate color
+    // Shadow Paint
+    val shadowPaint = android.graphics.Paint().apply {
+        color = Color.Black.toArgb()
+        alpha = 80 // Semi-transparent black
+        style = android.graphics.Paint.Style.FILL
+        isAntiAlias = true
+        maskFilter = android.graphics.BlurMaskFilter(4f, android.graphics.BlurMaskFilter.Blur.NORMAL)
+    }
+
+    // Main Fill Paint
     val paint = android.graphics.Paint().apply {
         color = zoneColor.toArgb()
         style = android.graphics.Paint.Style.FILL
         isAntiAlias = true
     }
+    
+    // Border Paint
     val strokePaint = android.graphics.Paint().apply {
         color = Color.White.toArgb()
         style = android.graphics.Paint.Style.STROKE
@@ -856,27 +925,46 @@ private fun createSafeZoneMarkerIcon(context: android.content.Context, type: Saf
         isAntiAlias = true
     }
     
-    val centerX = size / 2f
-    val centerY = size / 2f
-    val radius = (size / 2f) - 4f
+    val rectSize = 48f // Size of the main shape
+    val offset = (size - rectSize) / 2f
+    val cornerRadius = 12f
     
-    canvas.drawCircle(centerX, centerY, radius, paint)
-    canvas.drawCircle(centerX, centerY, radius, strokePaint)
+    // Draw Shadow (slightly offset)
+    val shadowRect = android.graphics.RectF(offset + 2, offset + 4, offset + rectSize + 2, offset + rectSize + 4)
+    canvas.drawRoundRect(shadowRect, cornerRadius, cornerRadius, shadowPaint)
+    
+    // Draw Main Shape (Rounded Rect)
+    val mainRect = android.graphics.RectF(offset, offset, offset + rectSize, offset + rectSize)
+    canvas.drawRoundRect(mainRect, cornerRadius, cornerRadius, paint)
+    canvas.drawRoundRect(mainRect, cornerRadius, cornerRadius, strokePaint)
     
     // Add icon symbol (H for Hospital, E for Evacuation)
+    // Using a simple cross for Hospital and a person/shelter symbol for Evac would be better, but text is robust.
+    // Let's use "+" for Hospital if possible, or bold "H".
     val textPaint = android.graphics.Paint().apply {
         color = Color.White.toArgb()
-        textSize = 24f
+        textSize = 28f
         textAlign = android.graphics.Paint.Align.CENTER
         isAntiAlias = true
-        typeface = android.graphics.Typeface.DEFAULT_BOLD
+        typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
     }
+    
     val symbol = when (type) {
-        SafeZoneType.HOSPITAL -> "H"
+        SafeZoneType.HOSPITAL -> "H" // Or "+" if preferred
         SafeZoneType.EVACUATION_CENTER -> "E"
     }
-    val textY = centerY + (textPaint.descent() + textPaint.ascent()) / 2
+    
+    // Center text vertically
+    val centerX = size / 2f
+    val centerY = size / 2f
+    val textY = centerY - ((textPaint.descent() + textPaint.ascent()) / 2)
+    
     canvas.drawText(symbol, centerX, textY, textPaint)
+    
+    // Add small "Plus" badge for Hospital to make it distinct
+    if (type == SafeZoneType.HOSPITAL) {
+       // Optional: Draw a small white cross in the corner or just stick with "H"
+    }
     
     return BitmapDrawable(context.resources, bitmap)
 }

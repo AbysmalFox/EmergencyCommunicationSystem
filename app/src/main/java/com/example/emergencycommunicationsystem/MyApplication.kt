@@ -9,6 +9,8 @@ import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import org.osmdroid.config.Configuration
 
+import com.example.emergencycommunicationsystem.util.NotificationChannels
+
 class MyApplication : Application(), ImageLoaderFactory {
 
     override fun newImageLoader(): ImageLoader {
@@ -25,6 +27,9 @@ class MyApplication : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+
+        // Initialize Notification Channels
+        NotificationChannels.createNotificationChannels(this)
 
         // Suppress noisy system logs (always, not just in debug)
         suppressNoisySystemLogs()

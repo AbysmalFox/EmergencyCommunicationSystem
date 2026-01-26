@@ -39,26 +39,41 @@ fun getIconForCategory(alert: Alert): ImageVector {
 @Composable
 fun getColorForCategory(alert: Alert): Color {
     val isDark = ThemeManager.isDarkMode()
+    return getStaticColorForCategory(alert, isDark)
+}
+
+/**
+ * Non-composable version of getColorForCategory for use in LaunchedEffect or other contexts.
+ */
+fun getStaticColorForCategory(alert: Alert, isDark: Boolean): Color {
     val categoryId = try { alert.category?.toIntOrNull() ?: 0 } catch (_: Exception) { 0 }
     val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
     val categoryStr = alert.category?.lowercase(Locale.getDefault()) ?: ""
     
     return when {
-        // Weather - Move from Blue to Teal for Light Mode
-        categoryId == 1 || "weather" in categoryStr || "flood" in title -> {
+        // Flood / Water - Blue
+        categoryId == 1 || "flood" in title || "water" in categoryStr -> {
+            if (isDark) Color(0xFF64B5F6) else Color(0xFF1976D2) // Blue
+        }
+        // Weather - Teal (Distinct from Flood)
+        "weather" in categoryStr || "storm" in title || "rain" in title -> {
             if (isDark) Color(0xFF80CBC4) else Color(0xFF00ACC1)
         }
-        // Fire - Use a richer, more professional Red/Orange
+        // Fire - Red
         categoryId == 4 || "fire" in categoryStr -> {
             if (isDark) Color(0xFFFF8A80) else Color(0xFFE53935)
         }
-        // Earthquake - Professional Brown/Gray
+        // Earthquake - Brown
         categoryId == 2 || "earthquake" in categoryStr -> {
             if (isDark) Color(0xFFA1887F) else Color(0xFF795548)
         }
-        // Health / Security / General - Use the Primary Brand Teal
+        // Accident / Traffic - Orange
+        "accident" in categoryStr || "traffic" in categoryStr || "crash" in title -> {
+            if (isDark) Color(0xFFFFB74D) else Color(0xFFF57C00) // Orange
+        }
+        // Other / General - Gray or Teal
         else -> {
-            if (isDark) Color(0xFF4DB6AC) else Color(0xFF00897B)
+            if (isDark) Color(0xFF90A4AE) else Color(0xFF607D8B) // Blue Grey
         }
     }
 }
