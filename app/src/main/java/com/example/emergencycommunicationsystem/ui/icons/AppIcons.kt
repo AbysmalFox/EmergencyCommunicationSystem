@@ -78,4 +78,7 @@ object AppIcons {
     val Settings: ImageVector = Icons.Filled.Settings
     val LightMode: ImageVector = Icons.Filled.LightMode
     val DarkMode: ImageVector = Icons.Filled.DarkMode
+    
+    // Misc
+    val DateRange: ImageVector = Icons.Filled.DateRange
 }

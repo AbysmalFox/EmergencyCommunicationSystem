@@ -13,12 +13,12 @@ import kotlinx.coroutines.launch
 
 class MyReportsViewModel(private val repository: IncidentRepository) : ViewModel() {
 
-    private val _reportsState = MutableStateFlow<Resource<List<IncidentReport>>>(Resource.Loading())
+    private val _reportsState = MutableStateFlow<Resource<List<IncidentReport>>>(Resource.Loading)
     val reportsState: StateFlow<Resource<List<IncidentReport>>> = _reportsState.asStateFlow()
 
     fun fetchUserReports(userId: Int) {
         viewModelScope.launch {
-            _reportsState.value = Resource.Loading()
+            _reportsState.value = Resource.Loading
             try {
                 val result = repository.getUserReports(userId)
                 when (result) {
@@ -29,7 +29,7 @@ class MyReportsViewModel(private val repository: IncidentRepository) : ViewModel
                         _reportsState.value = Resource.Error(result.message ?: "Failed to load reports")
                     }
                     is Resource.Loading -> {
-                         _reportsState.value = Resource.Loading()
+                         _reportsState.value = Resource.Loading
                     }
                 }
             } catch (e: Exception) {
