@@ -487,7 +487,9 @@ fun DashboardHeroSection(
             
             // Stats Row
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Max), // Ensures all children take the height of the tallest child
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 StatCard(
@@ -495,7 +497,7 @@ fun DashboardHeroSection(
                     value = alertCount.toString(),
                     icon = AppIcons.Alerts,
                     color = Color.White,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                     onTeal = true
                 )
                 Spacer(modifier = Modifier.width(10.dp))
@@ -504,7 +506,7 @@ fun DashboardHeroSection(
                     value = highPriorityCount.toString(),
                     icon = AppIcons.Warning,
                     color = Color(0xFFFFD54F), // Amber for high priority
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                     onTeal = true
                 )
                 Spacer(modifier = Modifier.width(10.dp))
@@ -513,7 +515,7 @@ fun DashboardHeroSection(
                     value = "$temperature°",
                     icon = AppIcons.Thermostat,
                     color = Color(0xFF81D4FA), // Light blue for temp
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                     onTeal = true
                 )
             }
