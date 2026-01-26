@@ -49,6 +49,7 @@ fun ProfileScreen(
     onAboutAppClick: () -> Unit,
     onMagnifierToggle: (Boolean) -> Unit,
     onMyReportsClick: () -> Unit,
+    onCallHistoryClick: () -> Unit,
     profileViewModel: ProfileViewModel
 ) {
     var showNotificationSettings by remember { mutableStateOf(false) }
@@ -245,8 +246,12 @@ fun ProfileScreen(
             if (isLoggedIn) {
                 SettingsGroupHeader(text = "HISTORY")
                 SettingsItem(
-                    text = "My Reports",
+                    text = "Report History",
                     onClick = onMyReportsClick
+                )
+                SettingsItem(
+                    text = "Call History",
+                    onClick = onCallHistoryClick
                 )
                 Spacer(modifier = Modifier.height(24.dp))
             }

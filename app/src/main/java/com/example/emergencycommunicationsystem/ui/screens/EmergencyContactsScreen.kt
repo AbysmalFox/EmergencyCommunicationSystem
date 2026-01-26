@@ -52,7 +52,10 @@ private data class Hotline(
 )
 
 @Composable
-fun EmergencyContactsScreen(onBackPressed: () -> Unit) {
+fun EmergencyContactsScreen(
+    onBackPressed: () -> Unit,
+    onMyReportsClick: () -> Unit
+) {
     val context = LocalContext.current
 
     val hotlineGroups = remember {
@@ -78,7 +81,8 @@ fun EmergencyContactsScreen(onBackPressed: () -> Unit) {
             val intent = Intent(Intent.ACTION_DIAL, "tel:${hotline.number}".toUri())
             context.startActivity(intent)
         },
-        onBackPressed = onBackPressed
+        onBackPressed = onBackPressed,
+        onMyReportsClick = onMyReportsClick
     )
 }
 
@@ -87,7 +91,8 @@ fun EmergencyContactsScreen(onBackPressed: () -> Unit) {
 private fun HotlineList(
     hotlineGroups: Map<String, List<Hotline>>,
     onItemClick: (Hotline) -> Unit,
-    onBackPressed: () -> Unit
+    onBackPressed: () -> Unit,
+    onMyReportsClick: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -118,8 +123,19 @@ private fun HotlineList(
                         "Emergency Hotlines",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(start = 4.dp)
+                        modifier = Modifier.weight(1f).padding(start = 4.dp)
                     )
+                    IconButton(
+                        onClick = onMyReportsClick,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            // Using a history/list icon. DateRange is available now.
+                            AppIcons.DateRange, 
+                            contentDescription = "My Reports",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
         },

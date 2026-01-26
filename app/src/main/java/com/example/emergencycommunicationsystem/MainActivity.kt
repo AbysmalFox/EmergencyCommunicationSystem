@@ -254,14 +254,21 @@ fun EmergencyApp(
                         onAboutAppClick = { navController.navigate(Screen.AboutApp.route) },
                         onMagnifierToggle = onMagnifierToggle,
                         onMyReportsClick = { navController.navigate(Screen.MyReports.route) },
+                        onCallHistoryClick = { navController.navigate(Screen.CallHistory.route) },
                         profileViewModel = profileViewModel
                     )
                 }
                 composable(Screen.EmergencyContacts.route) {
-                    EmergencyContactsScreen(onBackPressed = { navController.popBackStack() })
+                    EmergencyContactsScreen(
+                        onBackPressed = { navController.popBackStack() },
+                        onMyReportsClick = { navController.navigate(Screen.MyReports.route) }
+                    )
                 }
                 composable(Screen.ReportIncident.route) {
                     ReportIncidentScreen(weatherState = weatherState, onBackPressed = { navController.popBackStack() })
+                }
+                composable(Screen.CallHistory.route) {
+                    CallHistoryScreen(onBackPressed = { navController.popBackStack() })
                 }
                 composable(Screen.EmergencyGuides.route) {
                     EmergencyGuidesScreen(
