@@ -21,12 +21,12 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
     data object EmergencyGuideDetail : Screen("emergency_guide_detail/{guideId}", "Emergency Guide Detail", null) {
         fun createRoute(guideId: String) = "emergency_guide_detail/$guideId"
     }
-
+    data object MyReports : Screen("my_reports", "My Reports", null)
 
     companion object {
-        @Suppress("UNUSED")
         fun fromRoute(route: String?): Screen {
             return when (route) {
+
                 "home" -> Home
                 "alerts" -> Alerts
                 "profile" -> Profile
@@ -38,7 +38,9 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
                 "about_app" -> AboutApp // Added AboutApp route handling
                 "messaging" -> Messaging // Added Messaging route handling
                 "auto_reply_chat" -> AutoReplyChat
+                "emergency_contacts" -> EmergencyContacts
                 "emergency_guides" -> EmergencyGuides
+                "my_reports" -> MyReports
                 else -> {
                     // Handle dynamic route for EmergencyGuideDetail
                     if (route?.startsWith("emergency_guide_detail/") == true) {

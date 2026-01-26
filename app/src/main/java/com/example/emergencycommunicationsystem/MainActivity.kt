@@ -253,6 +253,7 @@ fun EmergencyApp(
                         onPrivacyPolicyClick = { navController.navigate(Screen.PrivacyPolicy.route) },
                         onAboutAppClick = { navController.navigate(Screen.AboutApp.route) },
                         onMagnifierToggle = onMagnifierToggle,
+                        onMyReportsClick = { navController.navigate(Screen.MyReports.route) },
                         profileViewModel = profileViewModel
                     )
                 }
@@ -276,6 +277,15 @@ fun EmergencyApp(
                 ) { backStackEntry ->
                     val guideId = backStackEntry.arguments?.getString("guideId") ?: ""
                     EmergencyGuideDetailScreen(guideId = guideId, onBackPressed = { navController.popBackStack() })
+                }
+                composable(Screen.MyReports.route) {
+                    val userId = AuthManager.getUserId()
+                    if (userId != -1) {
+                        MyReportsScreen(userId = userId, onBackPressed = { navController.popBackStack() })
+                    } else {
+                        // Handle case where user is not logged in but somehow reached this screen
+                        LaunchedEffect(Unit) { navController.popBackStack() }
+                    }
                 }
                 composable(Screen.Login.route) {
                     LoginScreen(

@@ -48,6 +48,7 @@ fun ProfileScreen(
     onPrivacyPolicyClick: () -> Unit,
     onAboutAppClick: () -> Unit,
     onMagnifierToggle: (Boolean) -> Unit,
+    onMyReportsClick: () -> Unit,
     profileViewModel: ProfileViewModel
 ) {
     var showNotificationSettings by remember { mutableStateOf(false) }
@@ -240,6 +241,15 @@ fun ProfileScreen(
             )
 
             Spacer(modifier = Modifier.height(24.dp))
+
+            if (isLoggedIn) {
+                SettingsGroupHeader(text = "HISTORY")
+                SettingsItem(
+                    text = "My Reports",
+                    onClick = onMyReportsClick
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+            }
 
             SettingsGroupHeader(text = "SECURITY")
 
