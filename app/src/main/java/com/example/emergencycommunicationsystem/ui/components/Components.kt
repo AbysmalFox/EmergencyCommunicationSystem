@@ -118,6 +118,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -244,13 +245,11 @@ fun EmergencyCallButton(onClick: () -> Unit) {
     val haptic = LocalHapticFeedback.current
     
     // Theme and colors
-    val bgColor = MaterialTheme.colorScheme.background
-    val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
+    // User requested: "slider track should be a solid dark charcoal gray"
+    val trackBg = Color(0xFF2B2D30) 
     
     // Refined Palette for "Modern Minimal Emergency"
-    val activeRed = if (isDarkMode) Color(0xFFFF453A) else Color(0xFFE02E2E) // Bright, urgent red
-    val trackBg = if (isDarkMode) Color(0xFF2C2C2E) else Color(0xFFF2F2F7)   // Subtle gray track
-    val glowColor = activeRed.copy(alpha = 0.6f)
+    val activeRed = Color(0xFFE02E2E) // Bright, urgent red
     
     // Swipe state
     val swipeOffset = remember { Animatable(0f) }
@@ -272,8 +271,10 @@ fun EmergencyCallButton(onClick: () -> Unit) {
     )
 
     // Expand thumb on completion
+    // Base thumb size increased to 82.dp to cover the track height (which is ~84dp available)
+    // allowing a tiny margin but effectively hiding the background
     val thumbSize by animateDpAsState(
-        targetValue = if (isCompleted) 200.dp else 72.dp, // Expand to fill
+        targetValue = if (isCompleted) 200.dp else 82.dp, 
         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy),
         label = "thumb_expansion"
     )
@@ -285,9 +286,10 @@ fun EmergencyCallButton(onClick: () -> Unit) {
             .padding(vertical = 6.dp)
     ) {
         val widthPx = with(density) { this@BoxWithConstraints.maxWidth.toPx() }
-        val thumbWidth = 72.dp
+        val thumbWidth = 82.dp
         val thumbWidthPx = with(density) { thumbWidth.toPx() }
-        val padding = 4.dp
+        // Padding inside the track - set to 0 to allow full travel and clean start
+        val padding = 0.dp 
         val paddingPx = with(density) { padding.toPx() }
         
         // Max offset calculations
@@ -301,13 +303,12 @@ fun EmergencyCallButton(onClick: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .shadow(
-                    elevation = if (isDarkMode) 4.dp else 2.dp,
+                    elevation = 4.dp,
                     shape = shape,
-                    spotColor = Color.Black.copy(alpha = 0.1f)
+                    spotColor = Color.Black.copy(alpha = 0.2f)
                 )
                 .clip(shape)
                 .background(trackBg)
-                .border(1.dp, if (isDarkMode) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f), shape)
         ) {
             
             // 2. The "Glowing Trail" (Active Background)
@@ -316,23 +317,17 @@ fun EmergencyCallButton(onClick: () -> Unit) {
                     .fillMaxSize()
                     .drawBehind {
                         // Draw the active red trail that follows the thumb
-                        // We use a brush to fade it slightly towards the left
-                        val trailWidth = swipeOffset.value + thumbWidthPx + paddingPx
-                        drawRect(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(activeRed.copy(alpha = 0.8f), activeRed),
-                                startX = 0f,
-                                endX = trailWidth
-                            ),
-                            size = Size(trailWidth, size.height)
-                        )
-                        
-                        // Add a glow effect at the leading edge of the trail
-                        if (progress > 0.05f) {
-                            drawCircle(
-                                color = Color.White.copy(alpha = 0.2f),
-                                radius = size.height / 1.5f,
-                                center = Offset(trailWidth - (thumbWidthPx / 2), size.height / 2)
+                        // Trail width is exactly up to the LEFT edge of the thumb (plus tiny overlap)
+                        // This prevents the "red halo" around the thumb and ensures it's 0 width initially
+                        val trailWidth = swipeOffset.value + paddingPx + (2 * density.density) // +2px overlap
+                        if (trailWidth > 0) {
+                            drawRect(
+                                brush = Brush.horizontalGradient(
+                                    colors = listOf(activeRed.copy(alpha = 0.8f), activeRed),
+                                    startX = 0f,
+                                    endX = trailWidth
+                                ),
+                                size = Size(trailWidth, size.height)
                             )
                         }
                     }
@@ -345,26 +340,28 @@ fun EmergencyCallButton(onClick: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
                     modifier = Modifier
-                        .offset(x = 16.dp) // Slight offset to balance visual center
+                        .offset(x = 24.dp) // Offset to clear the initial thumb position
                         .graphicsLayer {
                             // Fade out as thumb moves over it
-                            alpha = (1f - (progress * 3f)).coerceIn(0f, 1f)
+                            alpha = (1f - (progress * 4f)).coerceIn(0f, 1f)
                         }
                 ) {
                     Text(
-                        text = "SLIDE TO GO TO EMERGENCY CALL",
-                        color = if (isDarkMode) Color.White.copy(alpha = 0.9f) else Color.Black.copy(alpha = 0.6f),
+                        text = "SLIDE TO GO TO\nEMERGENCY CALL",
+                        color = Color.White.copy(alpha = 0.9f),
                         fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
-                        letterSpacing = 1.sp
+                        fontSize = 13.sp,
+                        letterSpacing = 1.2.sp,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 16.sp
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
                     // Animated Chevron Trail
                     Row {
                         repeat(3) { index ->
                             Text(
                                 text = "›",
-                                color = (if (isDarkMode) Color.White else Color.Black).copy(
+                                color = Color.White.copy(
                                     alpha = (chevronAlpha - (index * 0.2f)).coerceIn(0.1f, 1f)
                                 ),
                                 fontWeight = FontWeight.Bold,
@@ -401,7 +398,7 @@ fun EmergencyCallButton(onClick: () -> Unit) {
                     .shadow(
                         elevation = 8.dp,
                         shape = CircleShape,
-                        spotColor = activeRed.copy(alpha = 0.5f)
+                        spotColor = Color.Black.copy(alpha = 0.3f)
                     )
                     .clip(CircleShape)
                     .background(Color.White)
@@ -412,11 +409,6 @@ fun EmergencyCallButton(onClick: () -> Unit) {
                                 coroutineScope.launch {
                                     val newOffset = (swipeOffset.value + delta).coerceIn(0f, maxOffset)
                                     swipeOffset.snapTo(newOffset)
-                                    
-                                    // Haptic tick when starting drag
-                                    if (swipeOffset.value < 10f && delta > 0) {
-                                       // Light tick on start
-                                    }
                                 }
                             }
                         },
@@ -452,7 +444,7 @@ fun EmergencyCallButton(onClick: () -> Unit) {
                     contentDescription = null,
                     tint = activeRed,
                     modifier = Modifier
-                        .size(32.dp)
+                        .size(32.dp) // Adjusted icon size
                         .graphicsLayer {
                             // Rotate icon slightly as you drag
                             rotationZ = progress * 30f
@@ -487,11 +479,13 @@ fun ActionGrid(
     val localeContext = getLocaleContext()
     Column(verticalArrangement = Arrangement.spacedBy(15.dp)) {
         EmergencyCallButton(onClick = onEmergencyCallClick)
-        Row(horizontalArrangement = Arrangement.spacedBy(15.dp)) {
+        
+        // Stacked actions
+        Column(verticalArrangement = Arrangement.spacedBy(15.dp)) {
             ActionGridItem(
                 title = localeContext.getString(R.string.report_incident),
                 onClick = onReportClick,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
                 useTablerIcon = true,
                 tablerIconRes = R.drawable.ic_tabler_file_alert,
                 accentColor = StatusDanger,
@@ -500,22 +494,25 @@ fun ActionGrid(
             ActionGridItem(
                 title = localeContext.getString(R.string.i_am_safe),
                 onClick = onSafeClick,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
                 useTablerIcon = true,
                 tablerIconRes = R.drawable.ic_tabler_shield_check,
                 accentColor = StatusSafe,
                 isFilled = true
             )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(15.dp)) {
             ActionGridItem(
                 title = "Message Responder",
                 onClick = onMessageClick,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
                 useTablerIcon = true,
                 tablerIconRes = R.drawable.ic_tabler_message_plus,
                 accentColor = StatusInfo,
-                isFilled = false,
+                isFilled = false, // Changed to false for variety or keep true? 
+                // Keeping consistent with previous request which had it as false/outline? 
+                // Previous code: isFilled = false.
+                // Let's keep it consistent or maybe make it filled for uniformity?
+                // User asked for "Stack buttons". Usually implies uniformity.
+                // But let's stick to the previous style for Message Responder unless asked.
                 isCentered = true
             )
         }
