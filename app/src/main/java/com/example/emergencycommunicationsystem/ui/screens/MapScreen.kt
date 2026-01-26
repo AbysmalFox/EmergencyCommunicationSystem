@@ -277,17 +277,15 @@ fun MapScreen() {
                                     val alertColor = com.example.emergencycommunicationsystem.util.getStaticColorForCategory(alert, isDarkMode)
                                     
                                     CoroutineScope(Dispatchers.Main).launch {
-                                        val translatedAlertLabel = if (currentLanguage != "en") {
-                                            com.example.emergencycommunicationsystem.util.TranslationService.translate("Alert", currentLanguage)
-                                        } else "Alert"
+                                        val translatedAlertLabel = localeContext.getString(R.string.map_alert)
                                         
                                         val translatedTitle = if (currentLanguage != "en" && alert.title != null) {
                                             com.example.emergencycommunicationsystem.util.TranslationService.translate(alert.title, currentLanguage)
-                                        } else alert.title ?: "Emergency Alert"
+                                        } else alert.title ?: localeContext.getString(R.string.no_title)
                                         
                                         title = "🚨 $translatedAlertLabel: $translatedTitle"
                                         
-                                        val snippetText = alert.location ?: alert.content ?: "Emergency alert in this area"
+                                        val snippetText = alert.location ?: alert.content ?: localeContext.getString(R.string.community_alerts_will_appear_here)
                                         snippet = if (currentLanguage != "en") {
                                             com.example.emergencycommunicationsystem.util.TranslationService.translate(snippetText, currentLanguage)
                                         } else snippetText
@@ -391,13 +389,7 @@ fun MapScreen() {
                             navigationManager.stopNavigation()
                             
                             CoroutineScope(Dispatchers.Main).launch {
-                                val loadingMsg = if (currentLanguage != "en") {
-                                    com.example.emergencycommunicationsystem.util.TranslationService.translate(
-                                        "Calculating route to ${nearestEvac.name}...", currentLanguage
-                                    )
-                                } else {
-                                    localeContext.getString(R.string.map_finding_nearest).replace("nearest evacuation center", nearestEvac.name)
-                                }
+                                val loadingMsg = localeContext.getString(R.string.map_calculating_route, nearestEvac.name)
                                 Toast.makeText(context, loadingMsg, Toast.LENGTH_SHORT).show()
                                 
                                 val result = RoutingService.getRoute(
@@ -443,8 +435,7 @@ fun MapScreen() {
                                                     routeDestination = nearestEvac
                                                     isCalculatingRoute = false
                                                     CoroutineScope(Dispatchers.Main).launch {
-                                                        val errorPrefix = if (currentLanguage != "en") com.example.emergencycommunicationsystem.util.TranslationService.translate("Navigation error", currentLanguage)
-                                                        else "Navigation error"
+                                                        val errorPrefix = localeContext.getString(R.string.map_navigation_error)
                                                         Toast.makeText(context, "$errorPrefix: $error", Toast.LENGTH_LONG).show()
                                                     }
                                                 }
@@ -470,19 +461,16 @@ fun MapScreen() {
                                         map.invalidate()
                                     }
                                 }.onFailure { error ->
-                                    val errorMsg = error.message ?: "Unknown error"
+                                    val errorMsg = error.message ?: ""
                                     CoroutineScope(Dispatchers.Main).launch {
-                                        val translatedError = if (currentLanguage != "en") {
-                                            com.example.emergencycommunicationsystem.util.TranslationService.translate(
-                                                if (errorMsg.contains("No internet")) "No internet connection. Check your network." else "Routing unavailable. Using direct path.",
-                                                currentLanguage
-                                            )
+                                        val translatedError = if (errorMsg.contains("No internet")) {
+                                            localeContext.getString(R.string.map_no_internet)
                                         } else {
-                                            if (errorMsg.contains("No internet")) "No internet connection. Check your network." else "Routing unavailable. Using direct path."
+                                            localeContext.getString(R.string.map_routing_unavailable)
                                         }
                                         Toast.makeText(context, translatedError, Toast.LENGTH_LONG).show()
                                     }
-                                    val fallbackPolyline = fallbackToStraightLine(map, userLocation, nearestEvac, context, showToast = false)
+                                    val fallbackPolyline = fallbackToStraightLine(map, userLocation, nearestEvac, localeContext, showToast = false)
                                     currentRoutePolyline = fallbackPolyline
                                     routeDestination = nearestEvac
                                     isCalculatingRoute = false
@@ -491,13 +479,13 @@ fun MapScreen() {
                         } else {
                             CoroutineScope(Dispatchers.Main).launch {
                                 val noEvacMsg = localeContext.getString(R.string.map_no_evac_found)
-                                Toast.makeText(context, noEvacMsg, Toast.LENGTH_SHORT).show()
+                                Toast.makeText(localeContext, noEvacMsg, Toast.LENGTH_SHORT).show()
                             }
                         }
                     } else {
                         CoroutineScope(Dispatchers.Main).launch {
                             val locNotAvailMsg = localeContext.getString(R.string.map_loc_not_available)
-                            Toast.makeText(context, locNotAvailMsg, Toast.LENGTH_SHORT).show()
+                            Toast.makeText(localeContext, locNotAvailMsg, Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -1035,7 +1023,7 @@ private fun fallbackToStraightLine(
     if (showToast) {
         android.widget.Toast.makeText(
             context,
-            "Using direct route (routing unavailable)",
+            context.getString(R.string.map_direct_route_fallback),
             android.widget.Toast.LENGTH_SHORT
         ).show()
     }

@@ -7,18 +7,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
+import com.example.emergencycommunicationsystem.util.getLocaleContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CallHistoryScreen(onBackPressed: () -> Unit) {
+    val localeContext = com.example.emergencycommunicationsystem.util.getLocaleContext()
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Call History", fontWeight = FontWeight.Bold) },
+                title = { Text(localeContext.getString(R.string.call_history_label), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
-                        Icon(AppIcons.ArrowBack, contentDescription = "Back")
+                        Icon(AppIcons.ArrowBack, contentDescription = localeContext.getString(R.string.language_settings_back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -45,7 +48,7 @@ fun CallHistoryScreen(onBackPressed: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    "No call history available",
+                    localeContext.getString(R.string.call_history_empty),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                 )

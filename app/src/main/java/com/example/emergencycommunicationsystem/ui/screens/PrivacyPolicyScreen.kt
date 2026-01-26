@@ -18,17 +18,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.emergencycommunicationsystem.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PrivacyPolicyScreen(onBackPressed: () -> Unit) {
+    val localeContext = com.example.emergencycommunicationsystem.util.getLocaleContext()
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Privacy Policy") },
+                title = { Text(localeContext.getString(R.string.privacy_policy)) },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
-                        Icon(AppIcons.ArrowBack, contentDescription = "Back")
+                        Icon(AppIcons.ArrowBack, contentDescription = localeContext.getString(R.string.language_settings_back))
                     }
                 }
             )

@@ -502,7 +502,7 @@ fun DashboardHeroSection(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 StatCard(
-                    label = localizedStringResource(R.string.high_priority),
+                    label = localizedStringResource(R.string.urgency_high),
                     value = highPriorityCount.toString(),
                     icon = AppIcons.Warning,
                     color = Color(0xFFFFD54F), // Amber for high priority

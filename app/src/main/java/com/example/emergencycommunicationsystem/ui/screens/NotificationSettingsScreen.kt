@@ -31,6 +31,7 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.material3.TimePickerState
 import androidx.compose.material3.ExperimentalMaterial3Api
+import com.example.emergencycommunicationsystem.R
 import java.util.Locale
 
 // --- Custom Palette ---
@@ -54,6 +55,7 @@ fun NotificationSettingsScreenContent(
     onStartTimeChange: (Int, Int) -> Unit,
     onEndTimeChange: (Int, Int) -> Unit
 ) {
+    val localeContext = com.example.emergencycommunicationsystem.util.getLocaleContext()
     val isDark = ThemeManager.isDarkMode()
     val scrollState = rememberScrollState()
     var showStartTimePicker by remember { mutableStateOf(false) }
@@ -101,7 +103,7 @@ fun NotificationSettingsScreenContent(
     ) {
         // Header
         Text(
-            text = "Notification Preferences",
+            text = localeContext.getString(R.string.notification_preferences),
             fontSize = 24.sp,
             fontWeight = FontWeight.ExtraBold,
             color = MaterialTheme.colorScheme.onSurface,
@@ -109,7 +111,7 @@ fun NotificationSettingsScreenContent(
         )
 
         // 1. Alert Categories
-        SectionHeader("Alert Categories", headingColor)
+        SectionHeader(localeContext.getString(R.string.alert_categories), headingColor)
         
         ModernSettingsCard(cardColor) {
             categories.forEachIndexed { index, category ->
@@ -150,7 +152,7 @@ fun NotificationSettingsScreenContent(
                                 color = headingColor
                             )
                             Text(
-                                text = "${category.name} Updates", // Simple subtext
+                                text = localeContext.getString(R.string.category_updates, category.name),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = subtextColor
                             )
@@ -172,13 +174,13 @@ fun NotificationSettingsScreenContent(
         Spacer(modifier = Modifier.height(28.dp))
 
         // 2. Delivery Methods
-        SectionHeader("Delivery Channels", headingColor)
+        SectionHeader(localeContext.getString(R.string.delivery_channels), headingColor)
         
         ModernSettingsCard(cardColor) {
             val methods = listOf(
-                Triple("Push Notifications", Icons.Default.Notifications, "Instant alerts on device"),
-                Triple("SMS", Icons.Default.Message, "Text alerts (Rates apply)"),
-                Triple("Email", Icons.Default.Email, "Detailed summaries")
+                Triple(localeContext.getString(R.string.push_notifications), Icons.Default.Notifications, localeContext.getString(R.string.push_desc)),
+                Triple(localeContext.getString(R.string.sms_notifications), Icons.Default.Message, localeContext.getString(R.string.sms_desc)),
+                Triple(localeContext.getString(R.string.email_notifications), Icons.Default.Email, localeContext.getString(R.string.email_desc))
             )
             
             methods.forEachIndexed { index, (name, icon, desc) ->
@@ -232,7 +234,7 @@ fun NotificationSettingsScreenContent(
         Spacer(modifier = Modifier.height(28.dp))
 
         // 3. Quiet Hours
-        SectionHeader("Do Not Disturb", headingColor)
+        SectionHeader(localeContext.getString(R.string.do_not_disturb), headingColor)
         
         ModernSettingsCard(cardColor) {
             Column {
@@ -261,13 +263,13 @@ fun NotificationSettingsScreenContent(
                         Spacer(modifier = Modifier.width(16.dp))
                         Column {
                             Text(
-                                text = "Quiet Hours",
+                                text = localeContext.getString(R.string.quiet_hours),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = headingColor
                             )
                             Text(
-                                text = "Mute non-critical alerts",
+                                text = localeContext.getString(R.string.quiet_hours_desc),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = subtextColor
                             )
@@ -286,14 +288,14 @@ fun NotificationSettingsScreenContent(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         TimeSelector(
-                            label = "From",
+                            label = localeContext.getString(R.string.from_label),
                             time = quietHoursStart,
                             onClick = { showStartTimePicker = true },
                             color = headingColor,
                             subColor = subtextColor
                         )
                         TimeSelector(
-                            label = "To",
+                            label = localeContext.getString(R.string.to_label),
                             time = quietHoursEnd,
                             onClick = { showEndTimePicker = true },
                             color = headingColor,
@@ -350,6 +352,7 @@ fun TimePickerDialog(
     val containerColor = if (isDark) ColorCharcoal else ColorPaper
     val contentColor = if (isDark) ColorPaper else ColorCharcoal
 
+    val localeContext = com.example.emergencycommunicationsystem.util.getLocaleContext()
     AlertDialog(
         onDismissRequest = onDismissRequest,
         containerColor = containerColor,
@@ -360,12 +363,12 @@ fun TimePickerDialog(
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(state) }) {
-                Text("OK", color = ColorSuccessGreen)
+                Text(localeContext.getString(R.string.ok_button), color = ColorSuccessGreen)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismissRequest) {
-                Text("Cancel", color = ColorSlate)
+                Text(localeContext.getString(R.string.cancel), color = ColorSlate)
             }
         }
     )

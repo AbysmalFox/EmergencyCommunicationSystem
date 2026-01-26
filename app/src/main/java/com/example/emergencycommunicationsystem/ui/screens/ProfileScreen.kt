@@ -89,7 +89,7 @@ fun ProfileScreen(
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
             title = { Text(localeContext.getString(R.string.logout)) },
-            text = { Text("Are you sure you want to log out?") },
+            text = { Text(localeContext.getString(R.string.logout_message)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -103,7 +103,7 @@ fun ProfileScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("Cancel")
+                    Text(localeContext.getString(R.string.cancel))
                 }
             }
         )
@@ -136,7 +136,7 @@ fun ProfileScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // B. Settings List (Grouped)
-            SettingsGroupHeader(text = "PREFERENCES")
+            SettingsGroupHeader(text = localeContext.getString(R.string.preferences))
             
             SettingsItem(
                 text = localeContext.getString(R.string.receive_notifications),
@@ -147,7 +147,7 @@ fun ProfileScreen(
                              if (isLoggedIn) {
                                  showNotificationSettings = true 
                              } else {
-                                 Toast.makeText(context, "Please log in", Toast.LENGTH_SHORT).show()
+                                 Toast.makeText(context, localeContext.getString(R.string.please_login_to_send_message), Toast.LENGTH_SHORT).show()
                              }
                         },
                         colors = SwitchDefaults.colors(
@@ -159,20 +159,20 @@ fun ProfileScreen(
                 },
                 onClick = { 
                     if (isLoggedIn) showNotificationSettings = true 
-                    else Toast.makeText(context, "Please log in", Toast.LENGTH_SHORT).show()
+                    else Toast.makeText(context, localeContext.getString(R.string.please_login_to_send_message), Toast.LENGTH_SHORT).show()
                 }
             )
 
             SettingsItem(
                 text = localeContext.getString(R.string.language_preference),
                 valueText = when(currentLanguage) {
-                    "fil", "tl" -> "Tagalog"
-                    "es" -> "Español" 
-                    "ceb" -> "Cebuano"
-                    "war" -> "Waray"
-                    "ilo" -> "Ilocano"
-                    "bcl" -> "Bicolano"
-                    else -> "English"
+                    "fil", "tl" -> localeContext.getString(R.string.language_filipino)
+                    "es" -> localeContext.getString(R.string.language_spanish)
+                    "ceb" -> localeContext.getString(R.string.language_cebuano)
+                    "war" -> localeContext.getString(R.string.language_waray)
+                    "ilo" -> localeContext.getString(R.string.language_ilocano)
+                    "bcl" -> localeContext.getString(R.string.language_bicolano)
+                    else -> localeContext.getString(R.string.language_english)
                 }, 
                 onClick = onLanguageSettingsClick
             )
@@ -180,7 +180,7 @@ fun ProfileScreen(
             // Embedded Theme Selector
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Appearance",
+                text = localeContext.getString(R.string.appearance),
                 style = MaterialTheme.typography.titleMedium,
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
@@ -193,21 +193,21 @@ fun ProfileScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 ThemeSelectionCard(
-                    text = "System",
+                    text = localeContext.getString(R.string.system_theme),
                     selected = currentTheme == "system",
                     icon = AppIcons.Settings,
                     onClick = { onThemeChange("system") },
                     modifier = Modifier.weight(1f)
                 )
                 ThemeSelectionCard(
-                    text = "Light",
+                    text = localeContext.getString(R.string.light_theme),
                     selected = currentTheme == "light",
                     icon = AppIcons.LightMode, 
                     onClick = { onThemeChange("light") },
                     modifier = Modifier.weight(1f)
                 )
                 ThemeSelectionCard(
-                    text = "Dark",
+                    text = localeContext.getString(R.string.dark_theme),
                     selected = currentTheme == "dark",
                     icon = AppIcons.DarkMode,
                     onClick = { onThemeChange("dark") },
@@ -218,10 +218,10 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            SettingsGroupHeader(text = "ACCESSIBILITY")
+            SettingsGroupHeader(text = localeContext.getString(R.string.accessibility))
 
             SettingsItem(
-                text = "Floating Magnifier",
+                text = localeContext.getString(R.string.floating_magnifier),
                 trailingContent = {
                     Switch(
                         checked = isMagnifierEnabled,
@@ -244,22 +244,22 @@ fun ProfileScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             if (isLoggedIn) {
-                SettingsGroupHeader(text = "HISTORY")
+                SettingsGroupHeader(text = localeContext.getString(R.string.history_title))
                 SettingsItem(
-                    text = "Report History",
+                    text = localeContext.getString(R.string.report_history_label),
                     onClick = onMyReportsClick
                 )
                 SettingsItem(
-                    text = "Call History",
+                    text = localeContext.getString(R.string.call_history_label),
                     onClick = onCallHistoryClick
                 )
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            SettingsGroupHeader(text = "SECURITY")
+            SettingsGroupHeader(text = localeContext.getString(R.string.security))
 
             SettingsItem(
-                text = "Change Password",
+                text = localeContext.getString(R.string.change_password),
                 onClick = { Toast.makeText(context, "Change Password clicked", Toast.LENGTH_SHORT).show() }
             )
 
@@ -269,7 +269,7 @@ fun ProfileScreen(
             )
 
             SettingsItem(
-                text = "Terms of Service",
+                text = localeContext.getString(R.string.terms_of_service),
                 onClick = onAboutAppClick 
             )
 
@@ -367,6 +367,7 @@ fun EditProfileSheet(
     onSave: (String, String, String) -> Unit,
     onCancel: () -> Unit
 ) {
+    val localeContext = getLocaleContext()
     var name by remember { mutableStateOf(currentName) }
     var email by remember { mutableStateOf(currentEmail) }
     var phone by remember { mutableStateOf(currentPhone) }
@@ -378,7 +379,7 @@ fun EditProfileSheet(
             .padding(bottom = 32.dp)
     ) {
         Text(
-            text = "Edit Profile",
+            text = localeContext.getString(R.string.edit_profile),
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 24.dp)
@@ -387,7 +388,7 @@ fun EditProfileSheet(
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
-            label = { Text("Full Name") },
+            label = { Text(localeContext.getString(R.string.full_name)) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp)
         )
@@ -397,7 +398,7 @@ fun EditProfileSheet(
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("Email Address") },
+            label = { Text(localeContext.getString(R.string.email_address)) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
@@ -408,7 +409,7 @@ fun EditProfileSheet(
         OutlinedTextField(
             value = phone,
             onValueChange = { phone = it },
-            label = { Text("Phone Number") },
+            label = { Text(localeContext.getString(R.string.phone_number)) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
@@ -425,7 +426,7 @@ fun EditProfileSheet(
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Cancel")
+                Text(localeContext.getString(R.string.cancel))
             }
             Button(
                 onClick = { onSave(name, email, phone) },
@@ -433,7 +434,7 @@ fun EditProfileSheet(
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
             ) {
-                Text("Save Changes")
+                Text(localeContext.getString(R.string.save_changes))
             }
         }
     }
@@ -512,6 +513,7 @@ fun ProfileHeader(
     email: String,
     onEditClick: () -> Unit
 ) {
+    val localeContext = getLocaleContext()
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -577,13 +579,14 @@ fun ProfileHeader(
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp)
         ) {
-            Text("Edit Profile", fontWeight = FontWeight.Bold)
+            Text(localeContext.getString(R.string.edit_profile), fontWeight = FontWeight.Bold)
         }
     }
 }
 
 @Composable
 fun AnonymousHeader(onLoginClick: () -> Unit, onSignUpClick: () -> Unit) {
+    val localeContext = getLocaleContext()
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -606,7 +609,7 @@ fun AnonymousHeader(onLoginClick: () -> Unit, onSignUpClick: () -> Unit) {
         }
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Anonymous User",
+            text = localeContext.getString(R.string.anonymous_user),
             fontSize = 24.sp,
             fontWeight = FontWeight.ExtraBold,
             color = Color.White
@@ -619,7 +622,7 @@ fun AnonymousHeader(onLoginClick: () -> Unit, onSignUpClick: () -> Unit) {
                 colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = MaterialTheme.colorScheme.background),
                 modifier = Modifier.height(48.dp).weight(1f).padding(start = 24.dp)
             ) {
-                Text("Login", fontWeight = FontWeight.ExtraBold)
+                Text(localeContext.getString(R.string.login), fontWeight = FontWeight.ExtraBold)
             }
             OutlinedButton(
                 onClick = onSignUpClick, 
@@ -628,7 +631,7 @@ fun AnonymousHeader(onLoginClick: () -> Unit, onSignUpClick: () -> Unit) {
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
                 modifier = Modifier.height(48.dp).weight(1f).padding(end = 24.dp)
             ) {
-                Text("Sign Up", fontWeight = FontWeight.ExtraBold)
+                Text(localeContext.getString(R.string.signup), fontWeight = FontWeight.ExtraBold)
             }
         }
     }

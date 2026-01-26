@@ -124,6 +124,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.emergencycommunicationsystem.util.WeatherIconUtils
 import com.example.emergencycommunicationsystem.util.getLocaleContext
+import com.example.emergencycommunicationsystem.util.localizedStringResource
 import com.example.emergencycommunicationsystem.util.TranslationService
 import com.example.emergencycommunicationsystem.data.UserPrefs
 import com.example.emergencycommunicationsystem.data.models.WeatherState
@@ -347,7 +348,7 @@ fun EmergencyCallButton(onClick: () -> Unit) {
                         }
                 ) {
                     Text(
-                        text = "SLIDE TO GO TO\nEMERGENCY CALL",
+                        text = localizedStringResource(R.string.slide_to_call),
                         color = Color.White.copy(alpha = 0.9f),
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp,

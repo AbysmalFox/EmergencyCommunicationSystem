@@ -56,7 +56,7 @@ fun LanguageSettingsScreen(
         "fil" to context.getString(R.string.language_filipino),
         "es" to context.getString(R.string.language_spanish),
         "bcl" to context.getString(R.string.language_bicolano),
-        "ceb" to context.getString(R.string.language_bisaya),
+        "ceb" to context.getString(R.string.language_cebuano),
         "war" to context.getString(R.string.language_waray),
         "ilo" to context.getString(R.string.language_ilocano)
     )

@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.data.IncidentReport
 import com.example.emergencycommunicationsystem.data.repository.IncidentRepository
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
@@ -31,6 +32,7 @@ fun MyReportsScreen(
     userId: Int,
     onBackPressed: () -> Unit
 ) {
+    val localeContext = com.example.emergencycommunicationsystem.util.getLocaleContext()
     val repository = IncidentRepository()
     val viewModel: MyReportsViewModel = viewModel(factory = MyReportsViewModelFactory(repository))
     
@@ -43,10 +45,10 @@ fun MyReportsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("My Reports", fontWeight = FontWeight.Bold) },
+                title = { Text(localeContext.getString(R.string.my_reports_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
-                        Icon(AppIcons.ArrowBack, contentDescription = "Back")
+                        Icon(AppIcons.ArrowBack, contentDescription = localeContext.getString(R.string.language_settings_back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -70,7 +72,7 @@ fun MyReportsScreen(
                     ) {
                         Text("Error: ${state.message}", color = MaterialTheme.colorScheme.error)
                         Button(onClick = { viewModel.fetchUserReports(userId) }) {
-                            Text("Retry")
+                            Text(localeContext.getString(R.string.retry))
                         }
                     }
                 }
@@ -78,7 +80,7 @@ fun MyReportsScreen(
                     val reports = state.data ?: emptyList()
                     if (reports.isEmpty()) {
                         Text(
-                            "No reports found.",
+                            localeContext.getString(R.string.my_reports_empty),
                             modifier = Modifier.align(Alignment.Center),
                             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                         )
