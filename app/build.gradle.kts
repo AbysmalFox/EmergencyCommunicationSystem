@@ -31,17 +31,21 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
-        // Google OAuth Credentials from local.properties or environment variables
-        // These will be available in BuildConfig
+        // Google OAuth Credentials from local.properties (NOT hardcoded)
         buildConfigField(
             "String",
-            "GOOGLE_CLIENT_ID",
-            "\"${getLocalProperty("GOOGLE_CLIENT_ID", "1054819730704-dp3pmtvb6kmv3qs0nb17o7bun0qo3n6a.apps.googleusercontent.com")}\""
+            "GOOGLE_WEB_CLIENT_ID",
+            "\"${getLocalProperty("GOOGLE_WEB_CLIENT_ID", "YOUR_CLIENT_ID_PLACEHOLDER")}\""
         )
         buildConfigField(
             "String",
-            "GOOGLE_CLIENT_SECRET",
-            "\"${getLocalProperty("GOOGLE_CLIENT_SECRET", "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")}\""
+            "GOOGLE_WEB_CLIENT_SECRET",
+            "\"${getLocalProperty("GOOGLE_WEB_CLIENT_SECRET", "YOUR_SECRET_PLACEHOLDER")}\""
+        )
+        buildConfigField(
+            "String",
+            "GOOGLE_ANDROID_CLIENT_ID",
+            "\"${getLocalProperty("GOOGLE_ANDROID_CLIENT_ID", "YOUR_ANDROID_ID_PLACEHOLDER")}\""
         )
         buildConfigField(
             "String",
@@ -101,11 +105,6 @@ dependencies {
     // Compose Material Icons
     implementation("androidx.compose.material:material-icons-extended:1.5.1")
     
-    // Tabler Icons - libraries not resolving
-    // TODO: Find working Tabler icons library or use manual SVG conversion
-    // Attempted: br.com.devsrsouza.compose.icons:tabler-icons:1.1.0 (not available)
-    // Attempted: com.woowla.compose.icon.collections:tabler-android:3.33.0 (not available)
-
     // Coil for Compose
     implementation("io.coil-kt:coil-compose:2.4.0")
     implementation("io.coil-kt:coil-gif:2.4.0")
@@ -123,14 +122,9 @@ dependencies {
     // Google Sign-In
     implementation("com.google.android.gms:play-services-auth:21.0.0")
     
-    // Google ML Kit Translation (Free, on-device translation)
-    // Note: Version 17.0.2 may have 16KB page size compatibility issues
-    // This is a known issue with ML Kit's native library that Google needs to fix
+    // Google ML Kit Translation
     implementation("com.google.mlkit:translate:17.0.2")
     
-    // Note: Gemini API is called via HTTP (OkHttp) - no SDK dependency needed
-    // OkHttp is already included via Retrofit dependency
-
     // Compose ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
 
@@ -146,10 +140,9 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
-    // Coroutines support for Google Play Services (for ML Kit Tasks)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
 
-    // OSMDroid for OpenStreetMap
+    // OSMDroid for OpenStreetMap (Using this instead of Tangram)
     implementation("org.osmdroid:osmdroid-android:6.1.14")
 
     // Testing Dependencies
