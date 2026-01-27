@@ -85,44 +85,13 @@ fun LoginScreen(
 
     
 
-    // Google Sign-In launcher with enhanced error handling for debugging
-
+    // Google Sign-In launcher
     val googleSignInLauncher = rememberLauncherForActivityResult(
-
         contract = ActivityResultContracts.StartActivityForResult()
-
     ) { result ->
-
-        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-
-        try {
-
-            // This will throw an exception if the sign-in failed
-
-            task.getResult(ApiException::class.java)
-
-            viewModel.handleGoogleSignInResult(result.data)
-
-        } catch (e: ApiException) {
-
-            // This will tell you the ACTUAL error code
-
-            // Code 10 = Developer Error (SHA-1 or Package Name mismatch)
-
-            // Code 12500 = Configuration Error
-
-            errorMessage = "Google Error (${e.statusCode}): ${e.statusMessage ?: "Check SHA-1 in Console"}"
-
-            android.util.Log.e("GoogleSignIn", "Status code: ${e.statusCode}")
-
-        } catch (e: Exception) {
-
-            errorMessage = "Google Sign-In failed: ${e.localizedMessage}"
-
-            android.util.Log.e("GoogleSignIn", "Exception", e)
-
-        }
-
+        // Pass the intent data directly to the ViewModel to handle
+        // The ViewModel uses GoogleSignInHelper to extract the account and handle errors
+        viewModel.handleGoogleSignInResult(result.data)
     }
 
 
