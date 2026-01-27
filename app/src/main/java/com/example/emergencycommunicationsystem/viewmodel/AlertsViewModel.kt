@@ -9,6 +9,8 @@ import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.data.repository.AlertsRepository
 import com.example.emergencycommunicationsystem.util.LocationUtils
 import com.example.emergencycommunicationsystem.util.Resource
+import com.example.emergencycommunicationsystem.data.UserPrefs
+import com.example.emergencycommunicationsystem.util.TranslationService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -39,18 +41,30 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
     fun loadAlerts() {
         viewModelScope.launch {
             val userId = AuthManager.getUserId().takeIf { it > 0 }
-            repository.getAlerts(userId).collect { resource ->
+            val context = getApplication<Application>().applicationContext
+            
+            combine(
+                repository.getAlerts(userId),
+                UserPrefs.getLanguage(context)
+            ) { resource, language ->
+                Pair(resource, language)
+            }.collect { (resource, language) ->
                 when (resource) {
                     is Resource.Success -> {
                         val location = _userLocation.value
                         val alertsWithDistance = withContext(Dispatchers.Default) {
                             resource.data.map { alert ->
-                                val distance = if (location != null && alert.latitude != null && alert.longitude != null) {
-                                    LocationUtils.calculateDistance(location.first, location.second, alert.latitude, alert.longitude)
+                                // Translate Alert Content
+                                val translatedTitle = TranslationService.translate(alert.title ?: "", language)
+                                val translatedContent = TranslationService.translate(alert.content ?: "", language)
+                                val translatedAlert = alert.copy(title = translatedTitle, content = translatedContent)
+                                
+                                val distance = if (location != null && translatedAlert.latitude != null && translatedAlert.longitude != null) {
+                                    LocationUtils.calculateDistance(location.first, location.second, translatedAlert.latitude, translatedAlert.longitude)
                                 } else {
                                     null
                                 }
-                                AlertWithDistance(alert, distance)
+                                AlertWithDistance(translatedAlert, distance)
                             }
                         }
                         _uiState.value = Resource.Success(alertsWithDistance)

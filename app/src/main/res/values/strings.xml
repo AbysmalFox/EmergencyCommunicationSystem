@@ -196,4 +196,12 @@
     <string name="type_message">Type a message&#8230;</string>
     <string name="chat_title">Chat</string>
     <string name="send_button">Send</string>
+    <string name="weather_sunny">Sunny</string>
+    <string name="weather_clear">Clear</string>
+    <string name="weather_cloudy">Cloudy</string>
+    <string name="weather_rainy">Rainy</string>
+    <string name="weather_drizzle">Drizzle</string>
+    <string name="weather_thunderstorm">Thunderstorm</string>
+    <string name="weather_snow">Snow</string>
+    <string name="weather_mist">Mist</string>
 </resources>

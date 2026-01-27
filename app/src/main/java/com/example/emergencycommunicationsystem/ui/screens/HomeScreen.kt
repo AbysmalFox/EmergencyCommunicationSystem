@@ -895,21 +895,43 @@ fun CompactWeatherCard(
                     
                     Spacer(modifier = Modifier.width(12.dp))
                     
-                    Box(
-                        modifier = Modifier
-                            .size(64.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color.Black),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(WeatherIconUtils.getWeatherAnimation(weatherState.condition))
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = weatherState.condition,
-                            modifier = Modifier.size(54.dp),
-                            contentScale = ContentScale.Fit
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.Black),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(WeatherIconUtils.getWeatherAnimation(weatherState.condition))
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = weatherState.condition,
+                                modifier = Modifier.size(54.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(4.dp))
+                        
+                        val conditionText = when (weatherState.condition.lowercase()) {
+                            "clear" -> localizedStringResource(R.string.weather_sunny)
+                            "clouds" -> localizedStringResource(R.string.weather_cloudy)
+                            "rain" -> localizedStringResource(R.string.weather_rainy)
+                            "drizzle" -> localizedStringResource(R.string.weather_drizzle)
+                            "thunderstorm" -> localizedStringResource(R.string.weather_thunderstorm)
+                            "snow" -> localizedStringResource(R.string.weather_snow)
+                            "mist", "smoke", "haze", "dust", "fog", "sand", "ash", "squall", "tornado" -> localizedStringResource(R.string.weather_mist)
+                            else -> weatherState.condition
+                        }
+
+                        Text(
+                            text = conditionText,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = primaryColor
                         )
                     }
                 }

@@ -45,6 +45,14 @@ object TranslationService {
             LogFilter.d(TAG, "Translation cache hit for: ${text.take(20)}...")
             return@withContext it
         }
+
+        // Check Offline Emergency Phrasebook (Fallback/Optimization)
+        val offlineTranslation = EmergencyPhrasebook.getTranslation(text, targetLanguage)
+        if (offlineTranslation != null) {
+            LogFilter.d(TAG, "Offline phrasebook hit for: ${text.take(20)}...")
+            translationCache[cacheKey] = offlineTranslation
+            return@withContext offlineTranslation
+        }
         
         try {
             // Get or create translator
