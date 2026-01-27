@@ -55,7 +55,7 @@ android {
         buildConfigField(
             "String",
             "OPENWEATHER_API_KEY",
-            "\"${getLocalProperty("OPENWEATHER_API_KEY", "de9f8eb51584955d6d6fe607c9d81c84")}\""
+            "\"${getLocalProperty("OPENWEATHER_API_KEY", "YOUR_OPENWEATHER_API_KEY_PLACEHOLDER")}\""
         )
     }
 

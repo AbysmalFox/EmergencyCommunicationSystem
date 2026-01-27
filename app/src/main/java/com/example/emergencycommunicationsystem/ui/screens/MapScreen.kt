@@ -83,9 +83,12 @@ fun MapScreen() {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val alertsViewModel: AlertsViewModel = viewModel()
+    val mapViewModel: com.example.emergencycommunicationsystem.viewmodel.MapViewModel = viewModel()
+    
     val alertsState by alertsViewModel.uiState.collectAsState()
     val currentLanguage by com.example.emergencycommunicationsystem.data.UserPrefs.getLanguage(context).collectAsState(initial = "en")
     val localeContext = com.example.emergencycommunicationsystem.util.getLocaleContext()
+    val userLocation by mapViewModel.userLocation.collectAsState()
 
     // State to hold MapView and Overlay for interaction
     var mapView by remember { mutableStateOf<MapView?>(null) }
@@ -93,17 +96,16 @@ fun MapScreen() {
     var currentRoutePolyline by remember { mutableStateOf<Polyline?>(null) }
     var routeDestination by remember { mutableStateOf<SafeZone?>(null) }
     var isCalculatingRoute by remember { mutableStateOf(false) }
+    var isCameraLocked by remember { mutableStateOf(true) } // Default to locked
     
     // Map Filters State
     var showAlerts by remember { mutableStateOf(true) }
     var showHospitals by remember { mutableStateOf(true) }
     var showEvacuationCenters by remember { mutableStateOf(true) }
     
-    // Navigation Manager for real-time navigation
-    val navigationManager = remember {
-        NavigationManager(CoroutineScope(Dispatchers.Main))
-    }
-    val navigationState by navigationManager.navigationState.collectAsState()
+    // Navigation Manager from ViewModel
+    val navigationManager = mapViewModel.navigationManager
+    val navigationState by mapViewModel.navigationState.collectAsState()
 
     // 1. Handle Lifecycle (Critical for osmdroid location updates)
     DisposableEffect(lifecycleOwner) {
@@ -131,13 +133,43 @@ fun MapScreen() {
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { granted ->
             hasLocationPermission = granted
-            if (granted) locationOverlay?.enableMyLocation()
+            if (granted) {
+                locationOverlay?.enableMyLocation()
+                mapViewModel.startLocationUpdates()
+            }
         }
     )
     LaunchedEffect(Unit) {
         if (!hasLocationPermission) {
             launcher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        } else {
+            mapViewModel.startLocationUpdates()
         }
+    }
+
+    // LaunchedEffect to observe userLocation changes and update route polyline
+    LaunchedEffect(userLocation) {
+        val currentUserLocation = userLocation ?: return@LaunchedEffect
+        val selectedDestination = routeDestination ?: return@LaunchedEffect
+        
+        // Remove old polyline to prevent memory leaks and visual ghosting
+        currentRoutePolyline?.let { oldPolyline ->
+            mapView?.overlays?.remove(oldPolyline)
+        }
+        
+        // Create new polyline with updated location
+        val updatedPolyline = fallbackToStraightLine(
+            map = mapView ?: return@LaunchedEffect,
+            userLocation = currentUserLocation,
+            destination = selectedDestination,
+            context = context,
+            showToast = false
+        )
+        
+        // Add the new polyline to the map
+        mapView?.overlays?.add(updatedPolyline)
+        currentRoutePolyline = updatedPolyline
+        mapView?.invalidate()
     }
 
     val isDarkMode = ThemeManager.isDarkMode()
@@ -379,7 +411,8 @@ fun MapScreen() {
                         }
                     )
                 } else {
-                    locationOverlay?.myLocation?.let { userLoc ->
+                    val currentUserLocation = userLocation ?: locationOverlay?.myLocation
+                    currentUserLocation?.let { userLoc ->
                         val distance = LocationUtils.calculateDistance(
                             userLoc.latitude, userLoc.longitude,
                             destination.latitude, destination.longitude
@@ -414,120 +447,128 @@ fun MapScreen() {
             onClick = {
                 val overlay = locationOverlay
                 val map = mapView
-                if (overlay != null && map != null) {
-                    if (overlay.myLocation != null) {
-                        val userLocation = overlay.myLocation
-                        val nearestEvac = findNearestEvacuationCenter(
-                            userLat = userLocation.latitude,
-                            userLon = userLocation.longitude
-                        )
+                // Prioritize ViewModel location, fallback to Overlay location
+                val currentUserLocation = userLocation ?: overlay?.myLocation
+                
+                if (map != null && currentUserLocation != null) {
+                    val nearestEvac = findNearestEvacuationCenter(
+                        userLat = currentUserLocation.latitude,
+                        userLon = currentUserLocation.longitude
+                    )
+                    
+                    if (nearestEvac != null) {
+                        routeDestination = null
+                        isCalculatingRoute = true
+                        currentRoutePolyline?.let { map.overlays.remove(it) }
+                        currentRoutePolyline = null
+                        navigationManager.stopNavigation()
                         
-                        if (nearestEvac != null) {
-                            routeDestination = null
-                            isCalculatingRoute = true
-                            currentRoutePolyline?.let { map.overlays.remove(it) }
-                            currentRoutePolyline = null
-                            navigationManager.stopNavigation()
+                        CoroutineScope(Dispatchers.Main).launch {
+                            val loadingMsg = localeContext.getString(R.string.map_calculating_route, nearestEvac.name)
+                            Toast.makeText(context, loadingMsg, Toast.LENGTH_SHORT).show()
                             
-                            CoroutineScope(Dispatchers.Main).launch {
-                                val loadingMsg = localeContext.getString(R.string.map_calculating_route, nearestEvac.name)
-                                Toast.makeText(context, loadingMsg, Toast.LENGTH_SHORT).show()
-                                
-                                val result = RoutingService.getRoute(
-                                    originLat = userLocation.latitude,
-                                    originLon = userLocation.longitude,
-                                    destLat = nearestEvac.latitude,
-                                    destLon = nearestEvac.longitude
-                                )
-                                
-                                result.onSuccess { routeResponse ->
-                                    if (routeResponse.routes.isNotEmpty()) {
-                                        val route = routeResponse.routes[0]
-                                        val routeGeometry = try {
-                                            val geometryStr = when (val geom = route.geometry) {
-                                                is String -> geom
-                                                is Map<*, *> -> com.google.gson.Gson().toJson(geom)
-                                                else -> null
-                                            }
-                                            if (geometryStr != null) RoutingService.decodeGeometry(geometryStr)
-                                            else decodeStepGeometries(route)
-                                        } catch (e: Exception) { emptyList() }
+                            val result = RoutingService.getRoute(
+                                originLat = currentUserLocation.latitude,
+                                originLon = currentUserLocation.longitude,
+                                destLat = nearestEvac.latitude,
+                                destLon = nearestEvac.longitude
+                            )
+                            
+                            result.onSuccess { routeResponse ->
+                                if (routeResponse.routes.isNotEmpty()) {
+                                    val route = routeResponse.routes[0]
+                                    val routeGeometry = try {
+                                        val geometryStr = when (val geom = route.geometry) {
+                                            is String -> geom
+                                            is Map<*, *> -> com.google.gson.Gson().toJson(geom)
+                                            else -> null
+                                        }
+                                        if (geometryStr != null) RoutingService.decodeGeometry(geometryStr)
+                                        else decodeStepGeometries(route)
+                                    } catch (e: Exception) { emptyList() }
+                                    
+                                    if (routeGeometry.isNotEmpty()) {
+                                        val routePolyline = Polyline().apply {
+                                            setPoints(routeGeometry)
+                                            color = Color(0xFFFF9800).toArgb()
+                                            width = 14.0f
+                                            isGeodesic = false
+                                        }
+                                        map.overlays.add(routePolyline)
+                                        currentRoutePolyline = routePolyline
                                         
-                                        if (routeGeometry.isNotEmpty()) {
-                                            val routePolyline = Polyline().apply {
-                                                setPoints(routeGeometry)
-                                                color = Color(0xFFFF9800).toArgb()
-                                                width = 14.0f
-                                                isGeodesic = false
-                                            }
-                                            map.overlays.add(routePolyline)
-                                            currentRoutePolyline = routePolyline
-                                            
-                                            navigationManager.startNavigation(
-                                                originLat = userLocation.latitude,
-                                                originLon = userLocation.longitude,
-                                                destLat = nearestEvac.latitude,
-                                                destLon = nearestEvac.longitude,
-                                                onSuccess = {
-                                                    routeDestination = nearestEvac
-                                                    isCalculatingRoute = false
-                                                },
-                                                onError = { error ->
-                                                    routeDestination = nearestEvac
-                                                    isCalculatingRoute = false
-                                                    CoroutineScope(Dispatchers.Main).launch {
-                                                        val errorPrefix = localeContext.getString(R.string.map_navigation_error)
-                                                        Toast.makeText(context, "$errorPrefix: $error", Toast.LENGTH_LONG).show()
-                                                    }
+                                        navigationManager.startNavigation(
+                                            originLat = currentUserLocation.latitude,
+                                            originLon = currentUserLocation.longitude,
+                                            destLat = nearestEvac.latitude,
+                                            destLon = nearestEvac.longitude,
+                                            onSuccess = {
+                                                routeDestination = nearestEvac
+                                                isCalculatingRoute = false
+                                            },
+                                            onError = { error ->
+                                                routeDestination = nearestEvac
+                                                isCalculatingRoute = false
+                                                CoroutineScope(Dispatchers.Main).launch {
+                                                    val errorPrefix = localeContext.getString(R.string.map_navigation_error)
+                                                    Toast.makeText(context, "$errorPrefix: $error", Toast.LENGTH_LONG).show()
                                                 }
-                                            )
-                                            
-                                            val allPoints = routeGeometry + GeoPoint(userLocation.latitude, userLocation.longitude)
-                                            val boundingBox = BoundingBox(allPoints.maxOf { it.latitude }, allPoints.maxOf { it.longitude }, allPoints.minOf { it.latitude }, allPoints.minOf { it.longitude })
-                                            map.post { map.zoomToBoundingBox(boundingBox, true, 50) }
-                                        } else {
-                                            val routePolyline = Polyline().apply {
-                                                setPoints(listOf(GeoPoint(userLocation.latitude, userLocation.longitude), GeoPoint(nearestEvac.latitude, nearestEvac.longitude)))
-                                                color = Color(0xFFFF9800).toArgb()
-                                                width = 12.0f
-                                                isGeodesic = true
                                             }
-                                            map.overlays.add(routePolyline)
-                                            currentRoutePolyline = routePolyline
-                                            routeDestination = nearestEvac
-                                            isCalculatingRoute = false
-                                            map.controller.animateTo(GeoPoint(nearestEvac.latitude, nearestEvac.longitude))
-                                            map.controller.setZoom(15.0)
+                                        )
+                                        
+                                        val allPoints = routeGeometry + GeoPoint(currentUserLocation.latitude, currentUserLocation.longitude)
+                                        val boundingBox = BoundingBox(allPoints.maxOf { it.latitude }, allPoints.maxOf { it.longitude }, allPoints.minOf { it.latitude }, allPoints.minOf { it.longitude })
+                                        map.post { map.zoomToBoundingBox(boundingBox, true, 50) }
+                                    } else {
+                                        val routePolyline = Polyline().apply {
+                                            setPoints(listOf(GeoPoint(currentUserLocation.latitude, currentUserLocation.longitude), GeoPoint(nearestEvac.latitude, nearestEvac.longitude)))
+                                            color = Color(0xFFFF9800).toArgb()
+                                            width = 12.0f
+                                            isGeodesic = true
                                         }
-                                        map.invalidate()
+                                        map.overlays.add(routePolyline)
+                                        currentRoutePolyline = routePolyline
+                                        routeDestination = nearestEvac
+                                        isCalculatingRoute = false
+                                        map.controller.animateTo(GeoPoint(nearestEvac.latitude, nearestEvac.longitude))
+                                        map.controller.setZoom(15.0)
                                     }
-                                }.onFailure { error ->
-                                    val errorMsg = error.message ?: ""
-                                    CoroutineScope(Dispatchers.Main).launch {
-                                        val translatedError = if (errorMsg.contains("No internet")) {
-                                            localeContext.getString(R.string.map_no_internet)
-                                        } else {
-                                            localeContext.getString(R.string.map_routing_unavailable)
-                                        }
-                                        Toast.makeText(context, translatedError, Toast.LENGTH_LONG).show()
-                                    }
-                                    val fallbackPolyline = fallbackToStraightLine(map, userLocation, nearestEvac, localeContext, showToast = false)
-                                    currentRoutePolyline = fallbackPolyline
-                                    routeDestination = nearestEvac
-                                    isCalculatingRoute = false
+                                    map.invalidate()
                                 }
-                            }
-                        } else {
-                            CoroutineScope(Dispatchers.Main).launch {
-                                val noEvacMsg = localeContext.getString(R.string.map_no_evac_found)
-                                Toast.makeText(localeContext, noEvacMsg, Toast.LENGTH_SHORT).show()
+                            }.onFailure { error ->
+                                val errorMsg = error.message ?: ""
+                                CoroutineScope(Dispatchers.Main).launch {
+                                    val translatedError = if (errorMsg.contains("No internet")) {
+                                        localeContext.getString(R.string.map_no_internet)
+                                    } else {
+                                        localeContext.getString(R.string.map_routing_unavailable)
+                                    }
+                                    Toast.makeText(context, translatedError, Toast.LENGTH_LONG).show()
+                                }
+                                val fallbackPolyline = fallbackToStraightLine(map, currentUserLocation, nearestEvac, localeContext, showToast = false)
+                                map.overlays.add(fallbackPolyline)
+                                currentRoutePolyline = fallbackPolyline
+                                routeDestination = nearestEvac
+                                
+                                // Animate camera to destination
+                                val evacPoint = org.osmdroid.util.GeoPoint(nearestEvac.latitude, nearestEvac.longitude)
+                                map.controller.animateTo(evacPoint)
+                                map.controller.setZoom(15.0)
+                                map.invalidate()
+                                
+                                isCalculatingRoute = false
                             }
                         }
                     } else {
                         CoroutineScope(Dispatchers.Main).launch {
-                            val locNotAvailMsg = localeContext.getString(R.string.map_loc_not_available)
-                            Toast.makeText(localeContext, locNotAvailMsg, Toast.LENGTH_SHORT).show()
+                            val noEvacMsg = localeContext.getString(R.string.map_no_evac_found)
+                            Toast.makeText(localeContext, noEvacMsg, Toast.LENGTH_SHORT).show()
                         }
+                    }
+                } else {
+                    CoroutineScope(Dispatchers.Main).launch {
+                        val locNotAvailMsg = localeContext.getString(R.string.map_loc_not_available)
+                        Toast.makeText(localeContext, locNotAvailMsg, Toast.LENGTH_SHORT).show()
                     }
                 }
             },
@@ -542,43 +583,93 @@ fun MapScreen() {
             )
         }
         
-        // 4. "My Location" Button
+        // 4. "My Location" / Recenter Button
         FloatingActionButton(
             onClick = {
                 val overlay = locationOverlay
                 val map = mapView
-                if (overlay != null && map != null && overlay.myLocation != null) {
-                    map.controller.animateTo(overlay.myLocation)
-                    map.controller.setZoom(18.0)
+                
+                // Toggle lock state
+                isCameraLocked = !isCameraLocked
+                
+                if (isCameraLocked) {
+                    if (userLocation != null) {
+                        map?.controller?.animateTo(userLocation)
+                    } else if (overlay?.myLocation != null) {
+                        map?.controller?.animateTo(overlay.myLocation)
+                    }
+                    map?.controller?.setZoom(18.0)
                 }
             },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 130.dp)
+                .padding(end = 16.dp, bottom = 130.dp),
+            containerColor = if (isCameraLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
         ) {
-            Icon(AppIcons.MyLocation, contentDescription = null)
+            Icon(
+                AppIcons.MyLocation, 
+                contentDescription = if (isCameraLocked) "Unlock Camera" else "Center on Location",
+                tint = if (isCameraLocked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+            )
         }
         
-        // Real-time location tracking
-        LaunchedEffect(navigationState.isNavigating, locationOverlay) {
-            if (navigationState.isNavigating && locationOverlay != null) {
-                var lastLocation: org.osmdroid.util.GeoPoint? = null
-                while (navigationState.isNavigating) {
-                    locationOverlay?.myLocation?.let { location ->
-                        val shouldUpdate = lastLocation == null || 
-                            LocationUtils.calculateDistance(
-                                lastLocation!!.latitude, lastLocation!!.longitude,
-                                location.latitude, location.longitude
-                            ) * 1000 > 10.0
+        // Camera Lock Logic
+        LaunchedEffect(userLocation, isCameraLocked) {
+            if (isCameraLocked && userLocation != null && mapView != null) {
+                mapView?.controller?.animateTo(userLocation)
+            }
+        }
+
+        // Real-time Dynamic Polyline Update
+        LaunchedEffect(userLocation, navigationState.isNavigating, currentRoutePolyline) {
+            if (navigationState.isNavigating && userLocation != null && currentRoutePolyline != null) {
+                val currentPos = userLocation!!
+                val routeGeom = navigationState.routeGeometry
+                
+                if (routeGeom.isNotEmpty()) {
+                    // Update polyline to start from current location
+                    // We simply connect current location to the remaining route
+                    // Ideally, we find the closest point, but connecting to the start of the remaining geometry (or slightly ahead) works visually
+                    
+                    // Simple approach: [Current Pos] + [Route Geometry]
+                    // Better approach: Slice route geometry? 
+                    // Since NavigationManager doesn't expose "current geometry index", we'll just update the start point 
+                    // or if it's a straight line (fallback), update the start.
+                    
+                    // If it's a straight line (size 2), just update start
+                    if (currentRoutePolyline?.points?.size == 2 && routeGeom.isEmpty()) { // Fallback case
+                         routeDestination?.let { dest ->
+                             currentRoutePolyline?.setPoints(listOf(currentPos, GeoPoint(dest.latitude, dest.longitude)))
+                         }
+                    } else {
+                        // For complex routes, we really should slice it, but without index it's hard.
+                        // User request: "Shrinking Line". 
+                        // Let's rely on NavigationManager's instruction updates for text, 
+                        // and for the line, we can try to find the closest point index here.
                         
-                        if (shouldUpdate) {
-                            kotlinx.coroutines.withContext(Dispatchers.Default) {
-                                navigationManager.updateLocation(location.latitude, location.longitude)
+                        val closestPoint = routeGeom.minByOrNull { point -> 
+                            val dLat = point.latitude - currentPos.latitude
+                            val dLon = point.longitude - currentPos.longitude
+                            dLat * dLat + dLon * dLon // Euclidean distance squared is enough for comparison
+                        }
+                        
+                        closestPoint?.let { closest ->
+                            val index = routeGeom.indexOf(closest)
+                            if (index != -1 && index < routeGeom.size) {
+                                val newPoints = mutableListOf<GeoPoint>()
+                                newPoints.add(currentPos)
+                                newPoints.addAll(routeGeom.subList(index, routeGeom.size))
+                                currentRoutePolyline?.setPoints(newPoints)
                             }
-                            lastLocation = location
                         }
                     }
-                    delay(3000)
+                    mapView?.invalidate()
+                } else {
+                     // Fallback for straight line or if geometry missing
+                     routeDestination?.let { dest ->
+                         currentRoutePolyline?.setPoints(listOf(currentPos, GeoPoint(dest.latitude, dest.longitude)))
+                         mapView?.invalidate()
+                     }
                 }
             }
         }
@@ -1088,12 +1179,9 @@ private fun fallbackToStraightLine(
         width = 12.0f
         isGeodesic = true
     }
-    map.overlays.add(routePolyline)
     
-    val evacPoint = org.osmdroid.util.GeoPoint(destination.latitude, destination.longitude)
-    map.controller.animateTo(evacPoint)
-    map.controller.setZoom(15.0)
-    map.invalidate()
+    // Note: The polyline is NOT added to the map here to prevent memory leaks
+    // The caller is responsible for adding it to map.overlays
     
     if (showToast) {
         android.widget.Toast.makeText(
