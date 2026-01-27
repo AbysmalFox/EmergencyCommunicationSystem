@@ -878,6 +878,14 @@ fun CompactWeatherCard(
                             }
                         }
                     }
+
+                    Text(
+                        text = "${weatherState.temperature.substringBefore(".")}°C",
+                        fontSize = 36.sp,
+                        fontWeight = FontWeight.Black,
+                        color = primaryColor
+                    )
+
                     Text(
                         text = weatherState.location,
                         fontSize = 11.sp,
@@ -885,55 +893,44 @@ fun CompactWeatherCard(
                     )
                 }
                 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "${weatherState.temperature.substringBefore(".")}°C",
-                        fontSize = 36.sp,
-                        fontWeight = FontWeight.Black,
-                        color = primaryColor
-                    )
-                    
-                    Spacer(modifier = Modifier.width(12.dp))
-                    
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(Color.Black),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data(WeatherIconUtils.getWeatherAnimation(weatherState.condition))
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = weatherState.condition,
-                                modifier = Modifier.size(54.dp),
-                                contentScale = ContentScale.Fit
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.height(4.dp))
-                        
-                        val conditionText = when (weatherState.condition.lowercase()) {
-                            "clear" -> localizedStringResource(R.string.weather_sunny)
-                            "clouds" -> localizedStringResource(R.string.weather_cloudy)
-                            "rain" -> localizedStringResource(R.string.weather_rainy)
-                            "drizzle" -> localizedStringResource(R.string.weather_drizzle)
-                            "thunderstorm" -> localizedStringResource(R.string.weather_thunderstorm)
-                            "snow" -> localizedStringResource(R.string.weather_snow)
-                            "mist", "smoke", "haze", "dust", "fog", "sand", "ash", "squall", "tornado" -> localizedStringResource(R.string.weather_mist)
-                            else -> weatherState.condition
-                        }
-
-                        Text(
-                            text = conditionText,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = primaryColor
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color.Black),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(WeatherIconUtils.getWeatherAnimation(weatherState.condition))
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = weatherState.condition,
+                            modifier = Modifier.size(54.dp),
+                            contentScale = ContentScale.Fit
                         )
                     }
+                    
+                    Spacer(modifier = Modifier.height(4.dp))
+                    
+                    val conditionText = when (weatherState.condition.lowercase()) {
+                        "clear" -> localizedStringResource(R.string.weather_sunny)
+                        "clouds" -> localizedStringResource(R.string.weather_cloudy)
+                        "rain" -> localizedStringResource(R.string.weather_rainy)
+                        "drizzle" -> localizedStringResource(R.string.weather_drizzle)
+                        "thunderstorm" -> localizedStringResource(R.string.weather_thunderstorm)
+                        "snow" -> localizedStringResource(R.string.weather_snow)
+                        "mist", "smoke", "haze", "dust", "fog", "sand", "ash", "squall", "tornado" -> localizedStringResource(R.string.weather_mist)
+                        else -> weatherState.condition
+                    }
+
+                    Text(
+                        text = conditionText,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = primaryColor
+                    )
                 }
             }
             
