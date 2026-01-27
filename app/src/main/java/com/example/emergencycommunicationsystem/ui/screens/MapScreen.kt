@@ -61,6 +61,8 @@ import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.data.models.SafeZone
 import com.example.emergencycommunicationsystem.data.models.SafeZoneType
 import com.example.emergencycommunicationsystem.ui.theme.ThemeManager
+import com.example.emergencycommunicationsystem.ui.theme.BrandTealAccent
+import com.example.emergencycommunicationsystem.ui.theme.BrandDeepTeal
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
@@ -91,6 +93,11 @@ fun MapScreen() {
     var currentRoutePolyline by remember { mutableStateOf<Polyline?>(null) }
     var routeDestination by remember { mutableStateOf<SafeZone?>(null) }
     var isCalculatingRoute by remember { mutableStateOf(false) }
+    
+    // Map Filters State
+    var showAlerts by remember { mutableStateOf(true) }
+    var showHospitals by remember { mutableStateOf(true) }
+    var showEvacuationCenters by remember { mutableStateOf(true) }
     
     // Navigation Manager for real-time navigation
     val navigationManager = remember {
@@ -194,11 +201,98 @@ fun MapScreen() {
                     overlay.enableMyLocation()
                     overlays.add(overlay)
                     locationOverlay = overlay
-                    
-                    // Add Safe Zones (Hospitals and Evacuation Centers)
-                    val safeZones = getQuezonCitySafeZones()
-                    safeZones.forEach { safeZone ->
-                        val marker = Marker(this).apply {
+                }
+            }
+        )
+        
+        // Load alerts when screen is displayed
+        LaunchedEffect(Unit) {
+            alertsViewModel.loadAlerts()
+        }
+        
+        // Track previous alerts to avoid unnecessary marker updates
+        var previousAlertIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
+        
+        // Update alert markers when alerts state changes
+        LaunchedEffect(alertsState, currentLanguage, isDarkMode, showAlerts) {
+            mapView?.let { mapView ->
+                when (val state = alertsState) {
+                    is com.example.emergencycommunicationsystem.util.Resource.Success -> {
+                        val allAlerts = state.data.map { it.alert }.filter { it.latitude != null && it.longitude != null }
+                        val currentAlerts = if (showAlerts) allAlerts else emptyList()
+                        val currentAlertIds = currentAlerts.map { it.id }.toSet()
+                        
+                        // Always clean up if toggled off or changed
+                        val markersToRemove = mapView.overlays
+                            .filterIsInstance<Marker>()
+                            .filter { marker ->
+                                marker.title?.contains("Alert") == true || marker.title?.contains("Alerto") == true
+                            }
+                            .toList()
+                        markersToRemove.forEach { mapView.overlays.remove(it) }
+
+                        // Re-add only if supposed to show
+                        if (showAlerts) {
+                            currentAlerts.forEach { alert ->
+                                val marker = Marker(mapView).apply {
+                                    position = GeoPoint(alert.latitude!!, alert.longitude!!)
+                                    
+                                    val alertColor = com.example.emergencycommunicationsystem.util.getStaticColorForCategory(alert, isDarkMode)
+                                    
+                                    CoroutineScope(Dispatchers.Main).launch {
+                                        val translatedAlertLabel = localeContext.getString(R.string.map_alert)
+                                        
+                                        val translatedTitle = if (currentLanguage != "en" && alert.title != null) {
+                                            com.example.emergencycommunicationsystem.util.TranslationService.translate(alert.title, currentLanguage)
+                                        } else alert.title ?: localeContext.getString(R.string.no_title)
+                                        
+                                        title = "🚨 $translatedAlertLabel: $translatedTitle"
+                                        
+                                        val snippetText = alert.location ?: alert.content ?: localeContext.getString(R.string.community_alerts_will_appear_here)
+                                        snippet = if (currentLanguage != "en") {
+                                            com.example.emergencycommunicationsystem.util.TranslationService.translate(snippetText, currentLanguage)
+                                        } else snippetText
+                                    }
+                                    
+                                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                                    icon = createAlertMarkerIcon(mapView.context, alertColor.toArgb())
+                                }
+                                mapView.overlays.add(marker)
+                            }
+                        }
+                        mapView.invalidate()
+                        previousAlertIds = currentAlertIds
+                    }
+                    else -> {}
+                }
+            }
+        }
+
+        // Manage Safe Zone Markers (Hospitals & Evacuation Centers)
+        LaunchedEffect(showHospitals, showEvacuationCenters, currentLanguage, isDarkMode) {
+            mapView?.let { map ->
+                // Remove existing safe zone markers
+                val markersToRemove = map.overlays
+                    .filterIsInstance<Marker>()
+                    .filter { marker -> 
+                        // Identify safe zone markers by their title/content conventions
+                        val title = marker.title ?: ""
+                        title.contains("Hospital") || title.contains("Evacuation") || 
+                        title.contains("🏥") || title.contains("🛟")
+                    }
+                    .toList()
+                markersToRemove.forEach { map.overlays.remove(it) }
+
+                val safeZones = getQuezonCitySafeZones()
+                
+                safeZones.forEach { safeZone ->
+                    val shouldShow = when(safeZone.type) {
+                        SafeZoneType.HOSPITAL -> showHospitals
+                        SafeZoneType.EVACUATION_CENTER -> showEvacuationCenters
+                    }
+
+                    if (shouldShow) {
+                        val marker = Marker(map).apply {
                             position = GeoPoint(safeZone.latitude, safeZone.longitude)
                             
                             // Apply dynamic translation to safe zone info
@@ -237,71 +331,12 @@ fun MapScreen() {
                             }
                             
                             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                            icon = createSafeZoneMarkerIcon(ctx, safeZone.type)
+                            icon = createSafeZoneMarkerIcon(map.context, safeZone.type)
                         }
-                        overlays.add(marker)
+                        map.overlays.add(marker)
                     }
                 }
-            }
-        )
-        
-        // Load alerts when screen is displayed
-        LaunchedEffect(Unit) {
-            alertsViewModel.loadAlerts()
-        }
-        
-        // Track previous alerts to avoid unnecessary marker updates
-        var previousAlertIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
-        
-        // Update alert markers when alerts state changes
-        LaunchedEffect(alertsState, currentLanguage, isDarkMode) {
-            mapView?.let { mapView ->
-                when (val state = alertsState) {
-                    is com.example.emergencycommunicationsystem.util.Resource.Success -> {
-                        val currentAlerts = state.data.map { it.alert }.filter { it.latitude != null && it.longitude != null }
-                        val currentAlertIds = currentAlerts.map { it.id }.toSet()
-                        
-                        if (currentAlertIds != previousAlertIds) {
-                            val markersToRemove = mapView.overlays
-                                .filterIsInstance<Marker>()
-                                .filter { marker ->
-                                    marker.title?.contains("Alert") == true || marker.title?.contains("Alerto") == true
-                                }
-                                .toList()
-                            markersToRemove.forEach { mapView.overlays.remove(it) }
-                            
-                            currentAlerts.forEach { alert ->
-                                val marker = Marker(mapView).apply {
-                                    position = GeoPoint(alert.latitude!!, alert.longitude!!)
-                                    
-                                    val alertColor = com.example.emergencycommunicationsystem.util.getStaticColorForCategory(alert, isDarkMode)
-                                    
-                                    CoroutineScope(Dispatchers.Main).launch {
-                                        val translatedAlertLabel = localeContext.getString(R.string.map_alert)
-                                        
-                                        val translatedTitle = if (currentLanguage != "en" && alert.title != null) {
-                                            com.example.emergencycommunicationsystem.util.TranslationService.translate(alert.title, currentLanguage)
-                                        } else alert.title ?: localeContext.getString(R.string.no_title)
-                                        
-                                        title = "🚨 $translatedAlertLabel: $translatedTitle"
-                                        
-                                        val snippetText = alert.location ?: alert.content ?: localeContext.getString(R.string.community_alerts_will_appear_here)
-                                        snippet = if (currentLanguage != "en") {
-                                            com.example.emergencycommunicationsystem.util.TranslationService.translate(snippetText, currentLanguage)
-                                        } else snippetText
-                                    }
-                                    
-                                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                                    icon = createAlertMarkerIcon(mapView.context, alertColor.toArgb())
-                                }
-                                mapView.overlays.add(marker)
-                            }
-                            mapView.invalidate()
-                            previousAlertIds = currentAlertIds
-                        }
-                    }
-                    else -> {}
-                }
+                map.invalidate()
             }
         }
 
@@ -310,8 +345,14 @@ fun MapScreen() {
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(top = 16.dp, end = 16.dp)
-                .widthIn(max = 130.dp),
-            currentLanguage = currentLanguage
+                .widthIn(max = 160.dp), // Increased width for switches
+            currentLanguage = currentLanguage,
+            showAlerts = showAlerts,
+            onShowAlertsChange = { showAlerts = it },
+            showHospitals = showHospitals,
+            onShowHospitalsChange = { showHospitals = it },
+            showEvacuationCenters = showEvacuationCenters,
+            onShowEvacuationCentersChange = { showEvacuationCenters = it }
         )
 
         // 5. Navigation Card or Directions Card (Overlays Legend at TopEnd)
@@ -548,7 +589,16 @@ fun MapScreen() {
  * Map Legend component
  */
 @Composable
-fun MapLegend(modifier: Modifier = Modifier, currentLanguage: String = "en") {
+fun MapLegend(
+    modifier: Modifier = Modifier, 
+    currentLanguage: String = "en",
+    showAlerts: Boolean = true,
+    onShowAlertsChange: (Boolean) -> Unit = {},
+    showHospitals: Boolean = true,
+    onShowHospitalsChange: (Boolean) -> Unit = {},
+    showEvacuationCenters: Boolean = true,
+    onShowEvacuationCentersChange: (Boolean) -> Unit = {}
+) {
     val isDarkMode = ThemeManager.isDarkMode()
     val backgroundColor = if (isDarkMode) Color(0xFF1E1E1E).copy(alpha = 0.95f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
     val contentColor = if (isDarkMode) Color.White else MaterialTheme.colorScheme.onSurface
@@ -566,15 +616,15 @@ fun MapLegend(modifier: Modifier = Modifier, currentLanguage: String = "en") {
         shadowElevation = 4.dp
     ) {
         Column(
-            modifier = Modifier.padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            modifier = Modifier.padding(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
                 text = translatedLegend,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
                 color = contentColor,
-                modifier = Modifier.padding(bottom = 2.dp)
+                modifier = Modifier.padding(bottom = 2.dp, start = 4.dp)
             )
             
             HorizontalDivider(
@@ -583,9 +633,31 @@ fun MapLegend(modifier: Modifier = Modifier, currentLanguage: String = "en") {
                 color = contentColor.copy(alpha = 0.3f)
             )
             
-            LegendItem(color = Color.Red, label = translatedAlert, textColor = contentColor, isCircle = false, isPin = true)
-            LegendItem(color = Color(0xFF4CAF50), label = translatedHospital, textColor = contentColor, isCircle = false)
-            LegendItem(color = Color(0xFF2196F3), label = translatedEvac, textColor = contentColor, isCircle = false)
+            LegendItem(
+                color = Color.Red, 
+                label = translatedAlert, 
+                textColor = contentColor, 
+                isCircle = false, 
+                isPin = true,
+                isChecked = showAlerts,
+                onToggle = onShowAlertsChange
+            )
+            LegendItem(
+                color = Color(0xFF4CAF50), 
+                label = translatedHospital, 
+                textColor = contentColor, 
+                isCircle = false,
+                isChecked = showHospitals,
+                onToggle = onShowHospitalsChange
+            )
+            LegendItem(
+                color = Color(0xFF2196F3), 
+                label = translatedEvac, 
+                textColor = contentColor, 
+                isCircle = false,
+                isChecked = showEvacuationCenters,
+                onToggle = onShowEvacuationCentersChange
+            )
         }
     }
 }
@@ -596,15 +668,33 @@ fun LegendItem(
     label: String, 
     textColor: Color, 
     isCircle: Boolean = true,
-    isPin: Boolean = false
+    isPin: Boolean = false,
+    isChecked: Boolean = true,
+    onToggle: (Boolean) -> Unit = {}
 ) {
+    val isDarkMode = ThemeManager.isDarkMode()
+    
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onToggle(!isChecked) }
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        Checkbox(
+            checked = isChecked,
+            onCheckedChange = null, // Handled by Row click
+            modifier = Modifier.size(20.dp),
+            colors = CheckboxDefaults.colors(
+                checkedColor = if (isDarkMode) MaterialTheme.colorScheme.primary else BrandTealAccent,
+                uncheckedColor = textColor.copy(alpha = 0.6f),
+                checkmarkColor = if (isDarkMode) MaterialTheme.colorScheme.onPrimary else Color.White
+            )
+        )
+
         val shape = when {
-            isPin -> RoundedCornerShape(topStart = 50.dp, topEnd = 50.dp, bottomStart = 50.dp, bottomEnd = 2.dp) // Simulated Pin
+            isPin -> RoundedCornerShape(2.dp) // For Diamond rotation
             isCircle -> CircleShape
             else -> RoundedCornerShape(4.dp) // Square for Safe Zones
         }
@@ -612,15 +702,15 @@ fun LegendItem(
         Box(
             modifier = Modifier
                 .size(12.dp)
-                .rotate(if (isPin) 45f else 0f) // Rotate pin simulation
-                .background(color, shape)
-                .border(1.dp, textColor.copy(alpha = 0.5f), shape)
+                .rotate(if (isPin) 45f else 0f) // Diamond shape in legend
+                .background(if (isChecked) color else color.copy(alpha = 0.4f), shape)
+                .border(1.dp, if (isChecked) textColor.copy(alpha = 0.5f) else textColor.copy(alpha = 0.2f), shape)
         )
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Medium,
-            color = textColor,
+            color = if (isChecked) textColor else textColor.copy(alpha = 0.5f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -803,8 +893,7 @@ fun NavigationCard(
 }
 
 /**
- * Creates a colored marker icon for alerts.
- * Visuals: Teardrop Pin shape with dynamic color and contrast border.
+ * Creates a diamond-shaped marker icon for alerts with an exclamation mark.
  */
 private fun createAlertMarkerIcon(context: android.content.Context, colorInt: Int): android.graphics.drawable.Drawable {
     val size = 64
@@ -820,36 +909,17 @@ private fun createAlertMarkerIcon(context: android.content.Context, colorInt: In
     val strokePaint = android.graphics.Paint().apply {
         color = Color.White.toArgb()
         style = android.graphics.Paint.Style.STROKE
-        strokeWidth = 3f
+        strokeWidth = 4f
         isAntiAlias = true
     }
 
-    val outerStrokePaint = android.graphics.Paint().apply {
-        color = Color.Black.toArgb()
-        alpha = 100
-        style = android.graphics.Paint.Style.STROKE
-        strokeWidth = 1f
-        isAntiAlias = true
-    }
-    
-    // Draw Teardrop Pin Shape
+    // Draw Diamond Shape
     val path = android.graphics.Path()
-    val centerX = size / 2f
-    val topY = size * 0.1f
-    val bottomY = size * 0.9f
-    val radius = size * 0.3f
-    
-    // Circle top
-    path.addCircle(centerX, topY + radius, radius, android.graphics.Path.Direction.CW)
-    
-    // Triangle bottom
-    val trianglePath = android.graphics.Path()
-    trianglePath.moveTo(centerX - radius, topY + radius + (radius * 0.5f))
-    trianglePath.lineTo(centerX + radius, topY + radius + (radius * 0.5f))
-    trianglePath.lineTo(centerX, bottomY)
-    trianglePath.close()
-    
-    path.op(trianglePath, android.graphics.Path.Op.UNION)
+    path.moveTo(size / 2f, 4f) // Top
+    path.lineTo(size - 4f, size / 2f) // Right
+    path.lineTo(size / 2f, size - 4f) // Bottom
+    path.lineTo(4f, size / 2f) // Left
+    path.close()
     
     // Draw Shadow
     canvas.drawPath(path, android.graphics.Paint().apply {
@@ -860,16 +930,21 @@ private fun createAlertMarkerIcon(context: android.content.Context, colorInt: In
     
     canvas.drawPath(path, paint)
     canvas.drawPath(path, strokePaint)
-    canvas.drawPath(path, outerStrokePaint)
     
-    // Add white dot in center for focus
-    val dotPaint = android.graphics.Paint().apply {
+    // Draw "!" in center
+    val textPaint = android.graphics.Paint().apply {
         color = Color.White.toArgb()
-        alpha = 180
-        style = android.graphics.Paint.Style.FILL
+        textSize = 34f
+        textAlign = android.graphics.Paint.Align.CENTER
         isAntiAlias = true
+        typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
     }
-    canvas.drawCircle(centerX, topY + radius, radius / 3f, dotPaint)
+    
+    val centerX = size / 2f
+    val centerY = size / 2f
+    val textY = centerY - ((textPaint.descent() + textPaint.ascent()) / 2)
+    
+    canvas.drawText("!", centerX, textY, textPaint)
     
     return BitmapDrawable(context.resources, bitmap)
 }
