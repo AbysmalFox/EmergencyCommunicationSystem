@@ -11,46 +11,20 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,12 +41,7 @@ import com.example.emergencycommunicationsystem.data.UserPrefs
 import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import com.example.emergencycommunicationsystem.ui.theme.*
-import com.example.emergencycommunicationsystem.util.Resource
-import com.example.emergencycommunicationsystem.util.TranslationService
-import com.example.emergencycommunicationsystem.util.getLocaleContext
-import com.example.emergencycommunicationsystem.util.getIconForCategory
-import com.example.emergencycommunicationsystem.util.getColorForCategory
-import com.example.emergencycommunicationsystem.util.getCategoryDisplayName
+import com.example.emergencycommunicationsystem.util.*
 import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
 import java.util.Locale
 
@@ -104,19 +73,17 @@ fun CategoryIcon(
 fun AlertItem(
     alert: Alert,
     currentLanguage: String = "en",
+    onAcknowledge: (Int) -> Unit,
     onMessageClick: (id: String, title: String) -> Unit
 ) {
     val localeContext = getLocaleContext()
     val categoryColor = getColorForCategory(alert)
 
-    // Dynamic translation for "Ask our Chatbot" button
     val defaultMessage = "Ask our Chatbot"
     val resourceMessage = localeContext.getString(R.string.ask_chatbot)
     var buttonText by remember { mutableStateOf(resourceMessage) }
 
     LaunchedEffect(currentLanguage, resourceMessage) {
-        // If current language is not English, but the resource string is still the English default,
-        // it means we don't have a static translation for this language. Use TranslationService.
         if (currentLanguage != "en" && resourceMessage == defaultMessage) {
             buttonText = TranslationService.translate(defaultMessage, currentLanguage)
         } else {
@@ -198,6 +165,32 @@ fun AlertItem(
             }
             
             Spacer(modifier = Modifier.height(12.dp))
+            
+            // Acknowledge Section
+            if (alert.severity == "High" && !alert.isAcknowledged) {
+                Button(
+                    onClick = { onAcknowledge(alert.id) },
+                    modifier = Modifier.fillMaxWidth().height(36.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = StatusDanger),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("I RECEIVED THIS ALERT", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            } else if (alert.isAcknowledged) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Check, contentDescription = null, tint = StatusSafe, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Acknowledged", color = StatusSafe, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -270,7 +263,10 @@ fun AlertItemLine(
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        if (alert.isAcknowledged) {
+            Icon(Icons.Default.Check, contentDescription = null, tint = StatusSafe, modifier = Modifier.size(14.dp))
+            Spacer(modifier = Modifier.width(4.dp))
+        }
         Text(
             text = alert.timestamp?.substringAfter(" ")?.substringBeforeLast(":") ?: alert.timestamp ?: "",
             fontSize = 11.sp,
@@ -288,6 +284,7 @@ fun AlertsScreen(
 ) {
     val localeContext = getLocaleContext()
     val state by viewModel.uiState.collectAsState()
+    val activePoll by viewModel.activePoll.collectAsState()
     val isRefreshing = state is Resource.Loading
     var isCompactMode by remember { mutableStateOf(false) }
     val currentLanguage by UserPrefs.getLanguage(LocalContext.current).collectAsState(initial = "en")
@@ -296,6 +293,30 @@ fun AlertsScreen(
         refreshing = isRefreshing, 
         onRefresh = { viewModel.loadAlerts() }
     )
+
+    // Safety Poll Dialog
+    activePoll?.let { poll ->
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissPoll() },
+            title = { Text(poll.title, fontWeight = FontWeight.Bold) },
+            text = { Text(poll.description) },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.respondToPoll(poll.id, "safe") },
+                    colors = ButtonDefaults.buttonColors(containerColor = StatusSafe)
+                ) {
+                    Text("I AM SAFE")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { viewModel.respondToPoll(poll.id, "help") }
+                ) {
+                    Text("I NEED HELP", color = StatusDanger)
+                }
+            }
+        )
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -360,7 +381,11 @@ fun AlertsScreen(
                                                 onMessageClick?.invoke(id, title)
                                             }
                                         } else {
-                                            AlertItem(alert = alert, currentLanguage = currentLanguage) { id, title ->
+                                            AlertItem(
+                                                alert = alert, 
+                                                currentLanguage = currentLanguage,
+                                                onAcknowledge = { viewModel.acknowledgeAlert(it) }
+                                            ) { id, title ->
                                                 onMessageClick?.invoke(id, title)
                                             }
                                         }

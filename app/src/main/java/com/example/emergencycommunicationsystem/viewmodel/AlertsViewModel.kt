@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.emergencycommunicationsystem.AuthManager
 import com.example.emergencycommunicationsystem.data.local.AppDatabase
 import com.example.emergencycommunicationsystem.data.models.Alert
+import com.example.emergencycommunicationsystem.data.models.Poll
 import com.example.emergencycommunicationsystem.data.repository.AlertsRepository
 import com.example.emergencycommunicationsystem.util.LocationUtils
 import com.example.emergencycommunicationsystem.util.Resource
@@ -27,6 +28,9 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
     private val _uiState = MutableStateFlow<Resource<List<AlertWithDistance>>>(Resource.Loading)
     val uiState: StateFlow<Resource<List<AlertWithDistance>>> = _uiState.asStateFlow()
 
+    private val _activePoll = MutableStateFlow<Poll?>(null)
+    val activePoll = _activePoll.asStateFlow()
+
     private val _userLocation = MutableStateFlow<Pair<Double, Double>?>(null)
 
     init {
@@ -36,6 +40,7 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
             application
         )
         loadAlerts()
+        checkActivePoll()
     }
 
     fun loadAlerts() {
@@ -43,28 +48,18 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
             val userId = AuthManager.getUserId().takeIf { it > 0 }
             val context = getApplication<Application>().applicationContext
             
-            combine(
-                repository.getAlerts(userId),
-                UserPrefs.getLanguage(context)
-            ) { resource, language ->
-                Pair(resource, language)
-            }.collect { (resource, language) ->
+            repository.getAlerts(userId).collect { resource ->
                 when (resource) {
                     is Resource.Success -> {
                         val location = _userLocation.value
                         val alertsWithDistance = withContext(Dispatchers.Default) {
                             resource.data.map { alert ->
-                                // Translate Alert Content
-                                val translatedTitle = TranslationService.translate(alert.title ?: "", language)
-                                val translatedContent = TranslationService.translate(alert.content ?: "", language)
-                                val translatedAlert = alert.copy(title = translatedTitle, content = translatedContent)
-                                
-                                val distance = if (location != null && translatedAlert.latitude != null && translatedAlert.longitude != null) {
-                                    LocationUtils.calculateDistance(location.first, location.second, translatedAlert.latitude, translatedAlert.longitude)
+                                val distance = if (location != null && alert.latitude != null && alert.longitude != null) {
+                                    LocationUtils.calculateDistance(location.first, location.second, alert.latitude, alert.longitude)
                                 } else {
                                     null
                                 }
-                                AlertWithDistance(translatedAlert, distance)
+                                AlertWithDistance(alert, distance)
                             }
                         }
                         _uiState.value = Resource.Success(alertsWithDistance)
@@ -76,9 +71,44 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun acknowledgeAlert(alertId: Int) {
+        viewModelScope.launch {
+            val userId = AuthManager.getUserId()
+            if (userId > 0) {
+                val success = repository.acknowledgeAlert(alertId, userId)
+                if (success) {
+                    loadAlerts() // Refresh list to update UI state
+                }
+            }
+        }
+    }
+
+    private fun checkActivePoll() {
+        viewModelScope.launch {
+            val userId = AuthManager.getUserId().takeIf { it > 0 }
+            val poll = repository.getActivePoll(userId)
+            _activePoll.value = poll
+        }
+    }
+
+    fun respondToPoll(pollId: Int, status: String) {
+        viewModelScope.launch {
+            val userId = AuthManager.getUserId()
+            if (userId > 0) {
+                val success = repository.respondToPoll(pollId, userId, status)
+                if (success) {
+                    _activePoll.value = null // Close the dialog
+                }
+            }
+        }
+    }
+
+    fun dismissPoll() {
+        _activePoll.value = null
+    }
+
     fun updateUserLocation(latitude: Double, longitude: Double) {
         _userLocation.value = Pair(latitude, longitude)
-        // Re-calculate distances when location changes
         viewModelScope.launch {
             val currentState = _uiState.value
             if (currentState is Resource.Success) {
