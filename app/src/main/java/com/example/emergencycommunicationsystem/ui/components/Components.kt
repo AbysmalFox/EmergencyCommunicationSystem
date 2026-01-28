@@ -124,6 +124,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -135,6 +136,7 @@ import com.example.emergencycommunicationsystem.util.WeatherIconUtils
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 import com.example.emergencycommunicationsystem.util.localizedStringResource
 import com.example.emergencycommunicationsystem.util.TranslationService
+import com.example.emergencycommunicationsystem.util.LocaleManager
 import com.example.emergencycommunicationsystem.data.UserPrefs
 import com.example.emergencycommunicationsystem.data.models.WeatherState
 import com.example.emergencycommunicationsystem.data.models.Alert
@@ -254,13 +256,13 @@ fun EmergencyCallButton(onClick: () -> Unit) {
     val density = LocalDensity.current
     val haptic = LocalHapticFeedback.current
     
-    // Theme and colors - Updated to match the 3 buttons palette
+    // Theme and colors
     val bgColor = MaterialTheme.colorScheme.background
     val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
     
-    // Track background now matches the surface color of the other action buttons
-    val trackBg = if (isDarkMode) MaterialTheme.colorScheme.surface else Color(0xFFF5F5F5)
-    val activeRed = Color(0xFFE02E2E) // Bright urgent red for the fill
+    // Track background matches the action buttons (Surface/White)
+    val trackBg = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+    val activeRed = Color(0xFFE02E2E) 
     val labelColor = MaterialTheme.colorScheme.onSurface
     val secondaryLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
 
@@ -307,6 +309,11 @@ fun EmergencyCallButton(onClick: () -> Unit) {
         
         val shape = RoundedCornerShape(100.dp) // Fully rounded capsule
 
+        // Handle Color: from white to red when dragged
+        val thumbBgColor = lerp(Color.White, activeRed, progress)
+        // Icon Tint: stand out against handle
+        val iconTint = if (progress > 0.5f) Color.White else activeRed
+
         // 1. The Track Container
         Box(
             modifier = Modifier
@@ -320,7 +327,7 @@ fun EmergencyCallButton(onClick: () -> Unit) {
                 .background(trackBg)
                 .border(
                     width = if (isDarkMode) 1.dp else 0.5.dp,
-                    color = if (isDarkMode) Color.Black.copy(alpha = 0.1f) else Color.LightGray.copy(alpha = 0.5f),
+                    color = if (isDarkMode) Color.Black.copy(alpha = 0.1f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
                     shape = shape
                 )
         ) {
@@ -333,7 +340,7 @@ fun EmergencyCallButton(onClick: () -> Unit) {
                         .drawBehind {
                             val fillWidth = swipeOffset.value + (thumbWidthPx / 2)
                             drawRect(
-                                color = activeRed,
+                                color = activeRed.copy(alpha = progress * 0.8f),
                                 size = Size(fillWidth, size.height)
                             )
                         }
@@ -342,6 +349,7 @@ fun EmergencyCallButton(onClick: () -> Unit) {
 
             // 3. Labels
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                // Main Slide Text
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
@@ -375,16 +383,15 @@ fun EmergencyCallButton(onClick: () -> Unit) {
                     }
                 }
                 
+                // Release to Cancel (Centered)
                 if (progress > 0.2f && !isCompleted) {
                     Text(
                         text = "RELEASE TO CANCEL",
                         color = secondaryLabelColor,
-                        fontWeight = FontWeight.Medium,
+                        fontWeight = FontWeight.Bold,
                         fontSize = 12.sp,
                         letterSpacing = 1.sp,
                         modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .padding(end = 32.dp)
                             .graphicsLayer {
                                 alpha = (progress - 0.2f).coerceIn(0f, 1f)
                             }
@@ -404,7 +411,8 @@ fun EmergencyCallButton(onClick: () -> Unit) {
                         spotColor = Color.Black.copy(alpha = 0.3f)
                     )
                     .clip(CircleShape)
-                    .background(Color.White)
+                    .background(thumbBgColor)
+                    .border(3.dp, Color.White, CircleShape) // Prominent White Border
                     .draggable(
                         orientation = Orientation.Horizontal,
                         state = rememberDraggableState { delta ->
@@ -439,7 +447,7 @@ fun EmergencyCallButton(onClick: () -> Unit) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_tabler_phone),
                     contentDescription = null,
-                    tint = if (isCompleted) activeRed else Color.Gray,
+                    tint = iconTint,
                     modifier = Modifier
                         .size(32.dp)
                         .graphicsLayer {
@@ -624,7 +632,7 @@ fun WeatherWidget(state: WeatherState, onRetry: () -> Unit = {}) {
         }
         is WeatherState.Success -> {
             // Sage Green & Teal Gradient Palette
-            val deepSage = Color(0xFF5D7A70)
+            val deepSage = Color(0xFF8DA399) 
             val teal = Color(0xFF4B8B8B)
             val gradient = Brush.verticalGradient(colors = listOf(deepSage, teal))
 
@@ -636,8 +644,8 @@ fun WeatherWidget(state: WeatherState, onRetry: () -> Unit = {}) {
                     .background(gradient)
                     .background(Color.White.copy(alpha = 0.05f)) // Glass overlay
                     .border(
-                        width = 1.dp,
-                        color = Color.White.copy(alpha = 0.3f),
+                        width = 1.5.dp, 
+                        color = Color.White,
                         shape = shape
                     )
                     .padding(24.dp)
@@ -651,19 +659,27 @@ fun WeatherWidget(state: WeatherState, onRetry: () -> Unit = {}) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        // Floating 3D Cloud (No Background)
-                        AsyncImage(
-                            model = WeatherIconUtils.getWeatherAnimation(state.condition),
-                            contentDescription = state.condition,
-                            modifier = Modifier.size(110.dp),
-                            contentScale = ContentScale.Fit
-                        )
+                        // Floating 3D Cloud with Greenish Circle
+                        Box(
+                            modifier = Modifier
+                                .size(110.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF5D7A70).copy(alpha = 0.3f)), // Greenish theme
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AsyncImage(
+                                model = WeatherIconUtils.getWeatherAnimation(state.condition),
+                                contentDescription = state.condition,
+                                modifier = Modifier.size(90.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
                         
                         Spacer(modifier = Modifier.width(8.dp))
 
                         // Large Temperature Typography
                         Text(
-                            text = "${state.temperature.substringBefore(".")}°",
+                            text = "${state.temperature.substringBefore(".")}°C",
                             fontSize = 80.sp,
                             fontWeight = FontWeight.Light,
                             color = Color.White
