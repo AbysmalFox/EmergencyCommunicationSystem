@@ -103,7 +103,6 @@ import android.speech.tts.TextToSpeech
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Text
@@ -255,13 +254,16 @@ fun EmergencyCallButton(onClick: () -> Unit) {
     val density = LocalDensity.current
     val haptic = LocalHapticFeedback.current
     
-    // Theme and colors
-    // User requested: "slider track should be a solid dark charcoal gray"
-    val trackBg = Color(0xFF2B2D30) 
+    // Theme and colors - Updated to match the 3 buttons palette
+    val bgColor = MaterialTheme.colorScheme.background
+    val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
     
-    // Refined Palette for "Modern Minimal Emergency"
-    val activeRed = Color(0xFFE02E2E) // Bright, urgent red
-    
+    // Track background now matches the surface color of the other action buttons
+    val trackBg = if (isDarkMode) MaterialTheme.colorScheme.surface else Color(0xFFF5F5F5)
+    val activeRed = Color(0xFFE02E2E) // Bright urgent red for the fill
+    val labelColor = MaterialTheme.colorScheme.onSurface
+    val secondaryLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+
     // Swipe state
     val swipeOffset = remember { Animatable(0f) }
     val coroutineScope = rememberCoroutineScope()
@@ -282,8 +284,6 @@ fun EmergencyCallButton(onClick: () -> Unit) {
     )
 
     // Expand thumb on completion
-    // Base thumb size increased to 82.dp to cover the track height (which is ~84dp available)
-    // allowing a tiny margin but effectively hiding the background
     val thumbSize by animateDpAsState(
         targetValue = if (isCompleted) 200.dp else 82.dp, 
         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy),
@@ -299,11 +299,9 @@ fun EmergencyCallButton(onClick: () -> Unit) {
         val widthPx = with(density) { this@BoxWithConstraints.maxWidth.toPx() }
         val thumbWidth = 82.dp
         val thumbWidthPx = with(density) { thumbWidth.toPx() }
-        // Padding inside the track - set to 0 to allow full travel and clean start
         val padding = 0.dp 
         val paddingPx = with(density) { padding.toPx() }
         
-        // Max offset calculations
         val maxOffset = (widthPx - thumbWidthPx - (paddingPx * 2)).coerceAtLeast(0f)
         val progress = (swipeOffset.value / maxOffset).coerceIn(0f, 1f)
         
@@ -314,52 +312,48 @@ fun EmergencyCallButton(onClick: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .shadow(
-                    elevation = 4.dp,
+                    elevation = if (isDarkMode) 8.dp else 4.dp,
                     shape = shape,
-                    spotColor = Color.Black.copy(alpha = 0.2f)
+                    spotColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.2f)
                 )
                 .clip(shape)
                 .background(trackBg)
+                .border(
+                    width = if (isDarkMode) 1.dp else 0.5.dp,
+                    color = if (isDarkMode) Color.Black.copy(alpha = 0.1f) else Color.LightGray.copy(alpha = 0.5f),
+                    shape = shape
+                )
         ) {
             
-            // 2. The "Glowing Trail" (Active Background)
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .drawBehind {
-                        // Draw the active red trail that follows the thumb
-                        // Trail width is exactly up to the LEFT edge of the thumb (plus tiny overlap)
-                        // This prevents the "red halo" around the thumb and ensures it's 0 width initially
-                        val trailWidth = swipeOffset.value + paddingPx + (2 * density.density) // +2px overlap
-                        if (trailWidth > 0) {
+            // 2. The Progress Fill
+            if (swipeOffset.value > 0f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .drawBehind {
+                            val fillWidth = swipeOffset.value + (thumbWidthPx / 2)
                             drawRect(
-                                brush = Brush.horizontalGradient(
-                                    colors = listOf(activeRed.copy(alpha = 0.8f), activeRed),
-                                    startX = 0f,
-                                    endX = trailWidth
-                                ),
-                                size = Size(trailWidth, size.height)
+                                color = activeRed,
+                                size = Size(fillWidth, size.height)
                             )
                         }
-                    }
-            )
+                )
+            }
 
-            // 3. Labels (Underneath the thumb)
+            // 3. Labels
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                // "Slide to Emergency Call" Text
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
                     modifier = Modifier
-                        .offset(x = 24.dp) // Offset to clear the initial thumb position
+                        .offset(x = 24.dp)
                         .graphicsLayer {
-                            // Fade out as thumb moves over it
                             alpha = (1f - (progress * 4f)).coerceIn(0f, 1f)
                         }
                 ) {
                     Text(
                         text = localizedStringResource(R.string.slide_to_call),
-                        color = Color.White.copy(alpha = 0.9f),
+                        color = labelColor,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp,
                         letterSpacing = 1.2.sp,
@@ -367,12 +361,11 @@ fun EmergencyCallButton(onClick: () -> Unit) {
                         lineHeight = 16.sp
                     )
                     Spacer(modifier = Modifier.width(12.dp))
-                    // Animated Chevron Trail
                     Row {
                         repeat(3) { index ->
                             Text(
                                 text = "›",
-                                color = Color.White.copy(
+                                color = labelColor.copy(
                                     alpha = (chevronAlpha - (index * 0.2f)).coerceIn(0.1f, 1f)
                                 ),
                                 fontWeight = FontWeight.Bold,
@@ -382,11 +375,10 @@ fun EmergencyCallButton(onClick: () -> Unit) {
                     }
                 }
                 
-                // "Release to Cancel" hint (only visible when dragging but not complete)
                 if (progress > 0.2f && !isCompleted) {
                     Text(
                         text = "RELEASE TO CANCEL",
-                        color = Color.White.copy(alpha = 0.9f),
+                        color = secondaryLabelColor,
                         fontWeight = FontWeight.Medium,
                         fontSize = 12.sp,
                         letterSpacing = 1.sp,
@@ -405,7 +397,7 @@ fun EmergencyCallButton(onClick: () -> Unit) {
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .offset { IntOffset(swipeOffset.value.roundToInt() + paddingPx.toInt(), 0) }
-                    .size(thumbSize) // Animates size on completion
+                    .size(thumbSize)
                     .shadow(
                         elevation = 8.dp,
                         shape = CircleShape,
@@ -424,23 +416,18 @@ fun EmergencyCallButton(onClick: () -> Unit) {
                             }
                         },
                         onDragStopped = {
-                            if (swipeOffset.value >= maxOffset * 0.85f) { // High threshold for safety
-                                // TRIGGER ACTION
+                            if (swipeOffset.value >= maxOffset * 0.85f) {
                                 isCompleted = true
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                
-                                // Snap to end
                                 coroutineScope.launch {
                                     swipeOffset.animateTo(maxOffset, spring(stiffness = Spring.StiffnessMediumLow))
-                                    delay(200) // Wait for visual confirmation
+                                    delay(200)
                                     onClick()
-                                    // Reset state after action (if user comes back)
                                     delay(500)
                                     isCompleted = false
                                     swipeOffset.snapTo(0f)
                                 }
                             } else {
-                                // Snap back
                                 coroutineScope.launch {
                                     swipeOffset.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
                                 }
@@ -449,24 +436,20 @@ fun EmergencyCallButton(onClick: () -> Unit) {
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                // Thumb Icon
                 Icon(
                     painter = painterResource(id = R.drawable.ic_tabler_phone),
                     contentDescription = null,
-                    tint = activeRed,
+                    tint = if (isCompleted) activeRed else Color.Gray,
                     modifier = Modifier
-                        .size(32.dp) // Adjusted icon size
+                        .size(32.dp)
                         .graphicsLayer {
-                            // Rotate icon slightly as you drag
                             rotationZ = progress * 30f
-                            // Scale up on completion
                             val scale = if (isCompleted) 1.5f else 1f + (progress * 0.1f)
                             scaleX = scale
                             scaleY = scale
                         }
                 )
                 
-                // Spinner/Loading indicator if processing (optional, adding for "state change" feel)
                 if (isCompleted) {
                      Box(
                         modifier = Modifier
