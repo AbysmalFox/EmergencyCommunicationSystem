@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.location.Geocoder
 import android.location.Location
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.emergencycommunicationsystem.R
@@ -24,14 +26,13 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import retrofit2.HttpException
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-
 import com.example.emergencycommunicationsystem.util.LocaleManager
 
 class WeatherViewModel(application: Application) : AndroidViewModel(application) {
@@ -48,36 +49,58 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
         private set
 
     init {
-        if (apiKey == "YOUR_API_KEY" || apiKey.isBlank()) {
-            _weatherState.value = WeatherState.Error("API key is missing. Please add it in WeatherViewModel.")
+        if (isApiKeyMissing()) {
+            _weatherState.value = WeatherState.Error("API Key is missing. Please add your OpenWeather API key to local.properties.")
         }
     }
 
+    private fun isApiKeyMissing(): Boolean = apiKey.isBlank() || apiKey.contains("PLACEHOLDER") || apiKey == "null"
+
     @SuppressLint("MissingPermission")
     suspend fun requestLocationAndFetchWeather() {
-        if (_weatherState.value is WeatherState.Error && (apiKey == "YOUR_API_KEY" || apiKey.isBlank())) {
-            return 
-        }
+        if (isApiKeyMissing()) return
         
         val context = getApplication<Application>().applicationContext
-        
-        // If offline, try to load from cache immediately to provide instant feedback
+        val language = UserPrefs.getLanguage(context).first()
+
+        // 1. Internet Check
         if (!NetworkUtils.isNetworkAvailable(context)) {
-            loadWeatherFromCache()
+            if (loadWeatherFromCache()) return
+            _weatherState.value = WeatherState.Error("No internet connection available.")
             return
         }
 
         _weatherState.value = WeatherState.Loading 
+        
         try {
-            val location = getLocation()
-            val language = UserPrefs.getLanguage(context).first()
-            fetchWeatherByLocation(location.latitude, location.longitude, language)
-        } catch (_: Exception) {
-            // If location fails but we have cached data, show cache instead of error
-            if (!loadWeatherFromCache()) {
-                setLocationNotFound()
+            // 2. Try to get location with an 8-second timeout
+            val location = withTimeoutOrNull(8000L) {
+                if (hasLocationPermission()) {
+                    getLocation()
+                } else {
+                    null
+                }
             }
+            
+            // 3. Logic: If location found, use it. If not, use cache. If no cache, use Quezon City.
+            if (location != null) {
+                fetchWeatherByLocation(location.latitude, location.longitude, language)
+            } else if (!loadWeatherFromCache()) {
+                // Fallback to Quezon City coordinates (Ensures user sees weather even if GPS fails)
+                fetchWeatherByLocation(14.6760, 121.0437, language)
+            }
+        } catch (e: Exception) {
+            if (!loadWeatherFromCache()) {
+                _weatherState.value = WeatherState.Error("Failed to update weather: ${e.localizedMessage}")
+            }
+        } finally {
+            hasLoadedData = true
         }
+    }
+
+    private fun hasLocationPermission(): Boolean {
+        val context = getApplication<Application>().applicationContext
+        return ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
     }
 
     private suspend fun loadWeatherFromCache(): Boolean {
@@ -105,27 +128,27 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
     }
 
     @SuppressLint("MissingPermission")
-    private suspend fun getLocation(): Location {
+    private suspend fun getLocation(): Location? {
         return try {
-            suspendCancellableCoroutine<Location> { continuation ->
+            // Priority 1: Last Known (Fast)
+            val lastLoc = suspendCancellableCoroutine<Location?> { continuation ->
+                fusedLocationClient.lastLocation
+                    .addOnSuccessListener { continuation.resume(it) }
+                    .addOnFailureListener { continuation.resume(null) }
+            }
+            
+            if (lastLoc != null && (System.currentTimeMillis() - lastLoc.time) < 600000) return lastLoc
+
+            // Priority 2: Fresh fix (Balanced)
+            suspendCancellableCoroutine<Location?> { continuation ->
                 val cts = CancellationTokenSource()
                 fusedLocationClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, cts.token)
-                    .addOnSuccessListener { location ->
-                        if (location != null) continuation.resume(location)
-                        else continuation.resumeWithException(Exception("Current location is null"))
-                    }
-                    .addOnFailureListener { e -> continuation.resumeWithException(e) }
-                    .addOnCanceledListener { continuation.cancel() }
+                    .addOnSuccessListener { continuation.resume(it) }
+                    .addOnFailureListener { continuation.resume(null) }
+                    .addOnCanceledListener { continuation.resume(null) }
             }
-        } catch (_: Exception) {
-            suspendCancellableCoroutine<Location> { continuation ->
-                fusedLocationClient.lastLocation
-                    .addOnSuccessListener { location ->
-                        if (location != null) continuation.resume(location)
-                        else continuation.resumeWithException(Exception("Last location is null"))
-                    }
-                    .addOnFailureListener { e2 -> continuation.resumeWithException(e2) }
-            }
+        } catch (e: Exception) {
+            null
         }
     }
 
@@ -149,10 +172,7 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
 
             val iconCode = weatherResponse.weather.firstOrNull()?.icon ?: "01d"
             val condition = weatherResponse.weather.firstOrNull()?.main ?: "Clear"
-            val conditionId = weatherResponse.weather.firstOrNull()?.id ?: 800
-
-            val weatherAlert = generateWeatherAlert(conditionId)
-
+            
             val forecastInfo = forecastResponse?.list?.take(5)?.joinToString("; ") {
                 val time = SimpleDateFormat("ha", Locale.US).format(Date(it.dt * 1000L))
                 "$time: ${it.main.temp.toInt()}°C, ${it.weather.firstOrNull()?.main}"
@@ -170,12 +190,10 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
                     language = language,
                     forecastInfo = forecastInfo,
                     templateFallback = {
-                        // Create a locale-specific context for fallback strings
                         val locale = LocaleManager.getLocaleFromCode(language)
                         val config = android.content.res.Configuration(getApplication<Application>().resources.configuration)
                         config.setLocale(locale)
                         val localeContext = getApplication<Application>().createConfigurationContext(config)
-                        
                         getTemplateWeatherAdvice(localeContext, condition, weatherResponse.main.temp, weatherResponse.main.feelsLike, 
                             weatherResponse.main.humidity, weatherResponse.wind.speed, weatherResponse.visibility)
                     }
@@ -183,7 +201,7 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
             }
 
             val successState = WeatherState.Success(
-                location = "$locationName, PH",
+                location = if (locationName.contains("Quezon", ignoreCase = true)) "Quezon City, PH" else "$locationName, PH",
                 temperature = "${String.format(Locale.US, "%.1f", weatherResponse.main.temp)}°C",
                 condition = condition,
                 iconUrl = "https://openweathermap.org/img/wn/$iconCode@4x.png",
@@ -198,7 +216,6 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
                 isOffline = false
             )
 
-            // Save to Cache
             viewModelScope.launch(Dispatchers.IO) {
                 weatherDao.cacheWeather(WeatherEntity(
                     location = successState.location,
@@ -217,58 +234,25 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
 
             _weatherState.value = successState
         } catch (e: Exception) {
-            // Fallback to cache on any error
             if (!loadWeatherFromCache()) {
-                _weatherState.value = WeatherState.Error(e.message ?: "Failed to fetch weather")
+                val msg = when(e) {
+                    is IOException -> "Connection error. Check your internet."
+                    is HttpException -> if (e.code() == 401) "Invalid API Key. Update local.properties." else "Service unavailable (${e.code()})."
+                    else -> e.localizedMessage ?: "Failed to load weather."
+                }
+                _weatherState.value = WeatherState.Error(msg)
             }
-        } finally {
-            hasLoadedData = true
         }
     }
 
     suspend fun reloadWeather(language: String) {
-        val context = getApplication<Application>().applicationContext
         if (lastUsedLanguage != language) {
-            hasLoadedData = false // Reset to force refresh logic if needed elsewhere
+            hasLoadedData = false
             _weatherState.value = WeatherState.Loading
-            
-            try {
-                // Determine location again
-                val location = getLocation()
-                fetchWeatherByLocation(location.latitude, location.longitude, language)
-            } catch (e: Exception) {
-                // If location fails, try cache but we know language changed so cache might be mismatched.
-                // Best effort: load cache anyway if network failed
-                if (!loadWeatherFromCache()) {
-                     setLocationNotFound()
-                }
-            }
+            requestLocationAndFetchWeather()
         }
-    }
-
-    private fun setLocationPermissionDenied() {
-         _weatherState.value = WeatherState.Error("Permission denied. Enable location in settings.")
-         hasLoadedData = true
     }
     
-    private fun setLocationNotFound() {
-        _weatherState.value = WeatherState.Error("GPS signal lost. Ensure location is on.")
-        hasLoadedData = true
-    }
-
-    private fun generateWeatherAlert(conditionId: Int): String? {
-        return when (conditionId) {
-            in 200..232 -> "THUNDERSTORM ALERT: Seek shelter immediately."
-            in 502..504 -> "HEAVY RAIN WARNING: Potential flooding."
-            511 -> "FREEZING RAIN: Roads may be slippery."
-            in 601..622 -> "SNOW WARNING: Heavy snow expected."
-            781 -> "TORNADO ALERT: Seek underground shelter."
-            762 -> "VOLCANIC ASH: Wear masks and stay indoors."
-            771 -> "SQUALLS: Secure loose objects."
-            else -> null
-        }
-    }
-
     private fun getTemplateWeatherAdvice(context: android.content.Context, condition: String, temp: Double, feelsLike: Double, humidity: Int, windSpeed: Double, visibility: Int): String {
         val feelsLikeDescription = when {
             feelsLike > temp + 2 -> context.getString(R.string.weather_advice_feels_much_hotter)

@@ -47,6 +47,7 @@ import com.example.emergencycommunicationsystem.data.models.WeatherState
 import com.example.emergencycommunicationsystem.ui.components.SafeOverlay
 import com.example.emergencycommunicationsystem.ui.components.CompactAlertCard
 import com.example.emergencycommunicationsystem.ui.components.EmergencyCallButton
+import com.example.emergencycommunicationsystem.ui.components.WeatherWidget
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import com.example.emergencycommunicationsystem.ui.theme.StatusDanger
 import com.example.emergencycommunicationsystem.ui.theme.StatusSafe
@@ -252,12 +253,10 @@ fun HomeScreen(
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             // Weather Widget - Enhanced
-                            when (val state = weatherState) {
-                                is WeatherState.Success -> {
-                                    CompactWeatherCard(state, isDarkMode, ttsHelper, currentLanguage)
-                                }
-                                else -> {}
-                            }
+                            WeatherWidget(
+                                state = weatherState,
+                                onRetry = { scope.launch { weatherViewModel.requestLocationAndFetchWeather() } }
+                            )
                             
                             // Emergency Instructions - Enhanced
                             val alerts = (alertsState as? Resource.Success)?.data?.map { it.alert } ?: emptyList()
@@ -989,7 +988,7 @@ fun CompactWeatherCard(
                     ) {
                         Box {
                             Image(
-                                painter = painterResource(id = R.drawable.reporter),
+                                painter = painterResource(id = R.drawable.report),
                                 contentDescription = "AI Assistant",
                                 modifier = Modifier
                                     .size(50.dp)

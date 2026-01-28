@@ -10,6 +10,7 @@ package com.example.emergencycommunicationsystem.ui.components
 import android.content.Intent
 import androidx.core.net.toUri
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -54,6 +55,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.layout.offset
@@ -98,6 +100,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -614,7 +617,7 @@ fun ActionGridItem(
 
 
 @Composable
-fun WeatherWidget(state: WeatherState) {
+fun WeatherWidget(state: WeatherState, onRetry: () -> Unit = {}) {
     val shape = RoundedCornerShape(24.dp)
     when (state) {
         is WeatherState.Loading -> {
@@ -630,108 +633,92 @@ fun WeatherWidget(state: WeatherState) {
             }
         }
         is WeatherState.Success -> {
-            val bgColor = MaterialTheme.colorScheme.background
-            val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
-            
-            Column(
+            // Sage Green & Teal Gradient Palette
+            val deepSage = Color(0xFF5D7A70)
+            val teal = Color(0xFF4B8B8B)
+            val gradient = Brush.verticalGradient(colors = listOf(deepSage, teal))
+
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(
-                        elevation = if (isDarkMode) 8.dp else 6.dp,
-                        shape = shape,
-                        spotColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.1f),
-                        ambientColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.06f)
-                    )
+                    .shadow(elevation = 12.dp, shape = shape, spotColor = teal)
                     .clip(shape)
-                    .background(
-                        if (isDarkMode) {
-                            MaterialTheme.colorScheme.surface
-                        } else {
-                            Color.White
-                        }
-                    )
+                    .background(gradient)
+                    .background(Color.White.copy(alpha = 0.05f)) // Glass overlay
                     .border(
-                        width = if (isDarkMode) 1.dp else 0.5.dp,
-                        color = if (isDarkMode) {
-                            Color.Black.copy(alpha = 0.1f)
-                        } else {
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                        },
+                        width = 1.dp,
+                        color = Color.White.copy(alpha = 0.3f),
                         shape = shape
                     )
                     .padding(24.dp)
             ) {
-                Row(
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(90.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color.Black),
-                        contentAlignment = Alignment.Center
+                    // Top Section: Icon & Temperature centered
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
                     ) {
+                        // Floating 3D Cloud (No Background)
                         AsyncImage(
                             model = WeatherIconUtils.getWeatherAnimation(state.condition),
                             contentDescription = state.condition,
-                            modifier = Modifier.size(80.dp),
+                            modifier = Modifier.size(110.dp),
                             contentScale = ContentScale.Fit
                         )
-                    }
-                    Spacer(modifier = Modifier.width(20.dp))
-                    Column(
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Row {
-                            Text(
-                                text = state.temperature.substringBefore("."),
-                                fontSize = 72.sp,
-                                fontWeight = FontWeight.Light,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = ".${state.temperature.substringAfter(".").substringBefore("°")}°C",
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Light,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.padding(top = 12.dp)
-                            )
-                        }
+                        
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        // Large Temperature Typography
                         Text(
-                            text = state.condition,
-                            fontSize = 20.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                            text = "${state.temperature.substringBefore(".")}°",
+                            fontSize = 80.sp,
+                            fontWeight = FontWeight.Light,
+                            color = Color.White
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = AppIcons.Location,
-                                contentDescription = "Location",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = state.location,
-                                fontSize = 16.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
                     }
+
+                    // Condition & Location
+                    Text(
+                        text = state.condition,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White.copy(alpha = 0.95f)
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = AppIcons.Location,
+                            contentDescription = "Location",
+                            tint = Color.White.copy(alpha = 0.8f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = state.location,
+                            fontSize = 16.sp,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Metrics Row (Will need to update this component to use White tint separately or pass a color)
+                    WeatherDetailsRow(state, contentColor = Color.White)
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // AI Insight Pill
+                    WeatherAdvice(advice = state.advice)
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    HorizontalForecastWidget(state.forecastData, useWhiteText = true)
                 }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                WeatherDetailsRow(state)
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                WeatherAdvice(advice = state.advice)
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                HorizontalForecastWidget(state.forecastData)
             }
         }
         is WeatherState.Error -> {
@@ -746,11 +733,29 @@ fun WeatherWidget(state: WeatherState) {
                 ) {
                     val localeContext = getLocaleContext()
                     Icon(AppIcons.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.onError)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Weather Information Unavailable",
+                            color = MaterialTheme.colorScheme.onError,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = state.message,
+                            color = MaterialTheme.colorScheme.onError.copy(alpha = 0.9f),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        localeContext.getString(R.string.gps_signal_lost),
-                        color = MaterialTheme.colorScheme.onError,
-                    )
+                    androidx.compose.material3.TextButton(
+                        onClick = onRetry,
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onError),
+                        modifier = Modifier.background(MaterialTheme.colorScheme.onError.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+                    ) {
+                        Text("Retry", fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
@@ -758,7 +763,7 @@ fun WeatherWidget(state: WeatherState) {
 }
 
 @Composable
-fun WeatherDetailsRow(state: WeatherState.Success) {
+fun WeatherDetailsRow(state: WeatherState.Success, contentColor: Color = MaterialTheme.colorScheme.onSurface) {
     val localeContext = getLocaleContext()
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -767,46 +772,50 @@ fun WeatherDetailsRow(state: WeatherState.Success) {
         WeatherDetailItem(
             icon = AppIcons.Thermostat,
             label = localeContext.getString(R.string.feels_like),
-            value = state.feelsLike
+            value = state.feelsLike,
+            contentColor = contentColor
         )
         WeatherDetailItem(
             icon = AppIcons.Humidity,
             label = localeContext.getString(R.string.humidity),
-            value = state.humidity
+            value = state.humidity,
+            contentColor = contentColor
         )
         WeatherDetailItem(
             icon = AppIcons.Wind,
             label = localeContext.getString(R.string.wind),
-            value = state.windSpeed
+            value = state.windSpeed,
+            contentColor = contentColor
         )
         WeatherDetailItem(
             icon = AppIcons.Visibility,
             label = localeContext.getString(R.string.visibility),
-            value = state.visibility
+            value = state.visibility,
+            contentColor = contentColor
         )
     }
 }
 
 @Composable
-fun WeatherDetailItem(icon: ImageVector, label: String, value: String) {
+fun WeatherDetailItem(icon: ImageVector, label: String, value: String, contentColor: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(
             imageVector = icon,
             contentDescription = label,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(24.dp)
+            tint = contentColor,
+            modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = value,
             fontWeight = FontWeight.Bold,
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurface
+            fontSize = 13.sp,
+            color = contentColor
         )
         Text(
             text = label,
-            fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            fontSize = 11.sp,
+            color = contentColor.copy(alpha = 0.7f)
         )
     }
 }
@@ -814,21 +823,17 @@ fun WeatherDetailItem(icon: ImageVector, label: String, value: String) {
 @Composable
 fun WeatherAdvice(advice: String) {
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
     val currentLanguage by com.example.emergencycommunicationsystem.data.UserPrefs.getLanguage(context)
         .collectAsState(initial = "en")
     
-    // Translate the advice text
     var translatedAdvice by remember { mutableStateOf(advice) }
     
     LaunchedEffect(advice, currentLanguage) {
         if (currentLanguage != "en" && advice.isNotBlank()) {
-            coroutineScope.launch {
-                translatedAdvice = com.example.emergencycommunicationsystem.util.TranslationService.translate(
-                    advice,
-                    currentLanguage
-                )
-            }
+            translatedAdvice = com.example.emergencycommunicationsystem.util.TranslationService.translate(
+                advice,
+                currentLanguage
+            )
         } else {
             translatedAdvice = advice
         }
@@ -845,20 +850,40 @@ fun WeatherAdvice(advice: String) {
         }
     }
 
-    Row(verticalAlignment = Alignment.Top) {
-        Icon(
-            imageVector = AppIcons.Chat,
-            contentDescription = "Weather Advice",
-            tint = MaterialTheme.colorScheme.primary,
+    // UPDATED LAYOUT: AI Insight Pill
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize() // Automatically animate height changes
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color.White.copy(alpha = 0.15f))
+            .padding(12.dp),
+        verticalAlignment = Alignment.Top // Keep badge at top for long text
+    ) {
+        // "AI Insight" Badge
+        Box(
             modifier = Modifier
-                .padding(end = 12.dp, top = 4.dp)
-                .size(24.dp)
-        )
-        val localeContext = getLocaleContext()
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color.White)
+                .padding(horizontal = 10.dp, vertical = 4.dp)
+        ) {
+            Text(
+                text = "AI INSIGHT",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.5.sp,
+                color = Color(0xFF5D7A70) // Deep Sage
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
         Text(
-            text = displayedText.ifEmpty { localeContext.getString(R.string.weather_widget_message) },
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodyMedium
+            text = displayedText.ifEmpty { "Analysing weather data..." },
+            fontSize = 13.sp,
+            color = Color.White,
+            lineHeight = 18.sp,
+            modifier = Modifier.weight(1f) // Ensure it takes available space
         )
     }
 }
@@ -1129,7 +1154,7 @@ fun ForecastDay(
             modifier = Modifier
                 .size(44.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color.Black),
+                .background(Color.Transparent),
             contentAlignment = Alignment.Center
         ) {
             AsyncImage(
