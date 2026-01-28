@@ -256,7 +256,7 @@ fun EmergencyCallButton(onClick: () -> Unit) {
     val density = LocalDensity.current
     val haptic = LocalHapticFeedback.current
     
-    // Theme and colors
+    // Theme and colors - Updated to match the action buttons style
     val bgColor = MaterialTheme.colorScheme.background
     val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
     
@@ -265,6 +265,7 @@ fun EmergencyCallButton(onClick: () -> Unit) {
     val activeRed = Color(0xFFE02E2E) 
     val labelColor = MaterialTheme.colorScheme.onSurface
     val secondaryLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val vibrantLightGreen = Color(0xFF90EE90) // Soft, vibrant light green
 
     // Swipe state
     val swipeOffset = remember { Animatable(0f) }
@@ -309,10 +310,10 @@ fun EmergencyCallButton(onClick: () -> Unit) {
         
         val shape = RoundedCornerShape(100.dp) // Fully rounded capsule
 
-        // Handle Color: from white to red when dragged
-        val thumbBgColor = lerp(Color.White, activeRed, progress)
+        // Handle Color: from soft light green to red when dragged
+        val thumbBgColor = lerp(vibrantLightGreen, activeRed, progress)
         // Icon Tint: stand out against handle
-        val iconTint = if (progress > 0.5f) Color.White else activeRed
+        val iconTint = if (progress > 0.5f) Color.White else Color(0xFF2E5A2E) // Dark forest green tint for contrast when green
 
         // 1. The Track Container
         Box(
