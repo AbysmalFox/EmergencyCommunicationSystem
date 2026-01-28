@@ -99,6 +99,13 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
+import android.speech.tts.TextToSpeech
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Text
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
@@ -850,7 +857,24 @@ fun WeatherAdvice(advice: String) {
         }
     }
 
-    // UPDATED LAYOUT: AI Insight Pill
+    // TTS Logic
+    var tts by remember { mutableStateOf<TextToSpeech?>(null) }
+    var isSpeaking by remember { mutableStateOf(false) }
+
+    DisposableEffect(context) {
+        val ttsInstance = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                // Ready
+            }
+        }
+        tts = ttsInstance
+        onDispose {
+            ttsInstance.stop()
+            ttsInstance.shutdown()
+        }
+    }
+
+    // UPDATED LAYOUT: AI Reporter Pill
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -858,33 +882,60 @@ fun WeatherAdvice(advice: String) {
             .clip(RoundedCornerShape(20.dp))
             .background(Color.White.copy(alpha = 0.15f))
             .padding(12.dp),
-        verticalAlignment = Alignment.Top // Keep badge at top for long text
+        verticalAlignment = Alignment.Top // Keep avatar at top for long text
     ) {
-        // "AI Insight" Badge
-        Box(
+        // AI Reporter Avatar
+        Image(
+            painter = painterResource(id = R.drawable.report),
+            contentDescription = "AI Reporter",
             modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color.White)
-                .padding(horizontal = 10.dp, vertical = 4.dp)
-        ) {
-            Text(
-                text = "AI INSIGHT",
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.5.sp,
-                color = Color(0xFF5D7A70) // Deep Sage
-            )
-        }
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.2f)) // Subtle backing
+                .border(1.dp, Color.White.copy(alpha = 0.5f), CircleShape),
+            contentScale = ContentScale.Crop
+        )
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        Text(
-            text = displayedText.ifEmpty { "Analysing weather data..." },
-            fontSize = 13.sp,
-            color = Color.White,
-            lineHeight = 18.sp,
-            modifier = Modifier.weight(1f) // Ensure it takes available space
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "AI Reporter",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White.copy(alpha = 0.7f),
+                modifier = Modifier.padding(bottom = 2.dp)
+            )
+            Text(
+                text = displayedText.ifEmpty { "Analysing weather data..." },
+                fontSize = 13.sp,
+                color = Color.White,
+                lineHeight = 18.sp,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        // TTS Button
+        IconButton(
+            onClick = {
+                if (isSpeaking) {
+                    tts?.stop()
+                    isSpeaking = false
+                } else {
+                    tts?.speak(translatedAdvice, TextToSpeech.QUEUE_FLUSH, null, null)
+                    isSpeaking = true
+                }
+            },
+            modifier = Modifier
+                .size(24.dp)
+                .align(Alignment.Top)
+        ) {
+            Icon(
+                imageVector = if (isSpeaking) Icons.Filled.Stop else AppIcons.VolumeUp,
+                contentDescription = "Read Aloud",
+                tint = Color.White.copy(alpha = 0.8f)
+            )
+        }
     }
 }
 
