@@ -27,6 +27,8 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import com.example.emergencycommunicationsystem.R
+import com.example.emergencycommunicationsystem.ui.components.PulsingCircleOverlay
+import com.example.emergencycommunicationsystem.util.highKeywords
 import com.example.emergencycommunicationsystem.util.LocationUtils
 import kotlin.math.*
 import androidx.compose.runtime.DisposableEffect
@@ -284,6 +286,21 @@ fun MapScreen() {
                         // Re-add only if supposed to show
                         if (showAlerts) {
                             currentAlerts.forEach { alert ->
+                                // Check for high priority keywords to use pulsing overlay
+                                val isHighPriority = highKeywords.any { keyword -> 
+                                    alert.title?.contains(keyword, ignoreCase = true) == true || 
+                                    alert.content?.contains(keyword, ignoreCase = true) == true 
+                                }
+
+                                if (isHighPriority) {
+                                    // Add pulsing effect overlay UNDER the marker
+                                    val pulseOverlay = PulsingCircleOverlay(
+                                        center = GeoPoint(alert.latitude!!, alert.longitude!!),
+                                        color = com.example.emergencycommunicationsystem.util.getStaticColorForCategory(alert, isDarkMode).toArgb()
+                                    )
+                                    mapView.overlays.add(pulseOverlay)
+                                }
+
                                 val marker = Marker(mapView).apply {
                                     position = GeoPoint(alert.latitude!!, alert.longitude!!)
                                     
@@ -304,8 +321,14 @@ fun MapScreen() {
                                         } else snippetText
                                     }
                                     
-                                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                                    icon = createAlertMarkerIcon(mapView.context, alertColor.toArgb())
+                                    // Use new Core Dot icon for high priority, else standard
+                                    if (isHighPriority) {
+                                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                                        icon = createPulseCoreIcon(mapView.context, alertColor.toArgb())
+                                    } else {
+                                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                                        icon = createAlertMarkerIcon(mapView.context, alertColor.toArgb())
+                                    }
                                 }
                                 mapView.overlays.add(marker)
                             }
@@ -1174,6 +1197,34 @@ private fun createSafeZoneMarkerIcon(context: android.content.Context, type: Saf
     if (type == SafeZoneType.HOSPITAL) {
        // Optional: Draw a small white cross in the corner or just stick with "H"
     }
+    
+    return BitmapDrawable(context.resources, bitmap)
+}
+
+/**
+ * Creates a simple solid circular core icon for pulsing alerts.
+ */
+private fun createPulseCoreIcon(context: android.content.Context, colorInt: Int): android.graphics.drawable.Drawable {
+    val size = 40 // Smaller than the standard marker
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    
+    val paint = android.graphics.Paint().apply {
+        color = colorInt
+        style = android.graphics.Paint.Style.FILL
+        isAntiAlias = true
+    }
+    
+    val borderPaint = android.graphics.Paint().apply {
+        color = Color.White.toArgb()
+        style = android.graphics.Paint.Style.STROKE
+        strokeWidth = 4f
+        isAntiAlias = true
+    }
+
+    val radius = size / 2f
+    canvas.drawCircle(radius, radius, radius - 2f, paint)
+    canvas.drawCircle(radius, radius, radius - 2f, borderPaint)
     
     return BitmapDrawable(context.resources, bitmap)
 }

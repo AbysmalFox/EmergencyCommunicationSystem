@@ -17,6 +17,8 @@ import com.example.emergencycommunicationsystem.ui.theme.SafetyOrange
 import com.example.emergencycommunicationsystem.ui.theme.StatusWarning
 import java.util.Locale
 
+val highKeywords = listOf("fire", "flood", "earthquake", "tsunami", "typhoon", "evacuate", "urgent", "emergency")
+
 fun getIconForCategory(alert: Alert): ImageVector {
     val categoryId = try { alert.category?.toIntOrNull() ?: 0 } catch (_: Exception) { 0 }
     val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
@@ -83,8 +85,6 @@ fun getAlertSeverity(alert: Alert): String {
     val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
     val content = alert.content?.lowercase(Locale.getDefault()) ?: ""
     val allText = "$title $content"
-    
-    val highKeywords = listOf("fire", "flood", "earthquake", "tsunami", "typhoon", "evacuate", "urgent", "emergency")
     
     return when {
         categoryId == 2 || categoryId == 4 -> "High"
