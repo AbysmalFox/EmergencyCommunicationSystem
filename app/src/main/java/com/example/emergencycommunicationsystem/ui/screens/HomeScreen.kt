@@ -33,6 +33,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.res.painterResource
 import com.example.emergencycommunicationsystem.util.localizedStringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -582,45 +584,48 @@ fun QuickActionsGrid(
     isDarkMode: Boolean,
     currentLanguage: String = "en"
 ) {
-    val defaultMessage = "Chat with Responder"
-    val resourceMessage = localizedStringResource(R.string.message)
-    var buttonText by remember { mutableStateOf(resourceMessage) }
+    // Use "Chat with Responder" as requested
+    val chatTitle = localizedStringResource(R.string.message)
 
-    LaunchedEffect(currentLanguage, resourceMessage) {
-        if (currentLanguage != "en" && resourceMessage == defaultMessage) {
-            buttonText = com.example.emergencycommunicationsystem.util.TranslationService.translate(defaultMessage, currentLanguage)
-        } else {
-            buttonText = resourceMessage
-        }
-    }
-
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        QuickActionCard(
-            title = localizedStringResource(R.string.report_incident),
-            icon = R.drawable.ic_tabler_file_alert,
-            color = StatusDanger,
-            onClick = onReportClick,
-            modifier = Modifier.weight(1f),
-            isDarkMode = isDarkMode
-        )
+        // Row 1: Report Incident & Chat
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            QuickActionCard(
+                title = localizedStringResource(R.string.report_incident),
+                icon = R.drawable.ic_tabler_file_alert,
+                containerColor = StatusDanger,
+                contentColor = Color.White,
+                onClick = onReportClick,
+                modifier = Modifier.weight(1f),
+                isDarkMode = isDarkMode
+            )
+            QuickActionCard(
+                title = chatTitle,
+                icon = R.drawable.ic_tabler_message_plus,
+                containerColor = AlertaraTeal,
+                contentColor = Color.White,
+                onClick = onMessageClick,
+                modifier = Modifier.weight(1f),
+                isDarkMode = isDarkMode
+            )
+        }
+        
+        // Row 2: I Am Safe (Full Width)
         QuickActionCard(
             title = localizedStringResource(R.string.i_am_safe),
             icon = R.drawable.ic_tabler_shield_check,
-            color = StatusSafe,
+            containerColor = StatusSafe,
+            contentColor = Color.White,
             onClick = onSafeClick,
-            modifier = Modifier.weight(1f),
-            isDarkMode = isDarkMode
-        )
-        QuickActionCard(
-            title = buttonText,
-            icon = R.drawable.ic_tabler_message_plus,
-            color = AlertaraTeal,
-            onClick = onMessageClick,
-            modifier = Modifier.weight(1f),
-            isDarkMode = isDarkMode
+            modifier = Modifier.fillMaxWidth(),
+            isDarkMode = isDarkMode,
+            isFullWidth = true
         )
     }
 }
@@ -629,65 +634,86 @@ fun QuickActionsGrid(
 fun QuickActionCard(
     title: String,
     @androidx.annotation.DrawableRes icon: Int,
-    color: Color,
+    containerColor: Color,
+    contentColor: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    isDarkMode: Boolean
+    isDarkMode: Boolean,
+    isFullWidth: Boolean = false
 ) {
-    // Unique leaf-like shape
-    val uniqueShape = RoundedCornerShape(
-        topStart = 4.dp, 
-        topEnd = 24.dp, 
-        bottomStart = 24.dp, 
-        bottomEnd = 4.dp
-    )
+    val haptic = LocalHapticFeedback.current
+    // Standardized Rounded Rectangle Shape
+    val standardShape = RoundedCornerShape(16.dp)
     
     Card(
-        onClick = onClick,
+        onClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onClick()
+        },
         modifier = modifier
-            .height(100.dp)
+            .height(if (isFullWidth) 70.dp else 110.dp) // Lower height for full width button
             .themeShadow(
                 elevation = if (isDarkMode) 8.dp else 4.dp,
-                shape = uniqueShape
+                shape = standardShape
             ),
-        shape = uniqueShape,
+        shape = standardShape,
         colors = CardDefaults.cardColors(
-            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+            containerColor = containerColor
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+        // Remove border for solid color buttons, or keep it subtle
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(vertical = 12.dp, horizontal = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Box(
+        if (isFullWidth) {
+            // Horizontal layout for full width button
+            Row(
                 modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(color.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
+                    .fillMaxSize()
+                    .padding(horizontal = 24.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
                 Icon(
                     painter = painterResource(id = icon),
                     contentDescription = title,
-                    tint = color,
-                    modifier = Modifier.size(22.dp)
+                    tint = contentColor,
+                    modifier = Modifier.size(28.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = title,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = contentColor,
+                    textAlign = TextAlign.Center
                 )
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = title,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 2,
-                lineHeight = 12.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
+        } else {
+            // Vertical layout for square-ish buttons
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = icon),
+                    contentDescription = title,
+                    tint = contentColor,
+                    modifier = Modifier.size(32.dp)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = title,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = contentColor,
+                    maxLines = 2,
+                    lineHeight = 16.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
     }
 }
