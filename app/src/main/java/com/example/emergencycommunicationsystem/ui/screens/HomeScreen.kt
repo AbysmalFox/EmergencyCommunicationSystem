@@ -11,6 +11,9 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -698,7 +701,7 @@ fun ModernAlertsSection(
     onAlertClick: (Int) -> Unit,
     isDarkMode: Boolean
 ) {
-    val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF34635D)
+    val primaryColor = MaterialTheme.colorScheme.primary
 
     when (alertsState) {
         is Resource.Loading -> {
@@ -724,12 +727,12 @@ fun ModernAlertsSection(
                                 imageVector = AppIcons.Alerts,
                                 contentDescription = null,
                                 tint = primaryColor,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(24.dp)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = localizedStringResource(R.string.active_alerts_title),
-                                fontSize = 14.sp,
+                                fontSize = 18.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = MaterialTheme.colorScheme.onBackground
                             )
@@ -737,27 +740,65 @@ fun ModernAlertsSection(
                         
                         Text(
                             text = localizedStringResource(R.string.view_all),
-                            fontSize = 9.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Black,
                             color = primaryColor.copy(alpha = 0.7f),
-                            modifier = Modifier.clickable { /* Navigate */ }
+                            modifier = Modifier.clickable { onAlertClick(0) }
                         )
                     }
                     
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        items(alertsWithDistance.take(5)) { alertWithDistance ->
-                            Box(modifier = Modifier.width(220.dp)) {
-                                CompactAlertCard(
-                                    alert = alertWithDistance.alert,
-                                    distanceKm = alertWithDistance.distanceKm,
-                                    severity = getAlertSeverity(alertWithDistance.alert),
-                                    onClick = { onAlertClick(alertWithDistance.alert.id) }
-                                )
+                    val alertsToShow = alertsWithDistance.take(5)
+                    val pagerState = rememberPagerState(pageCount = { alertsToShow.size })
+                    
+                    LaunchedEffect(pagerState, alertsToShow.size) {
+                        if (alertsToShow.size > 1) {
+                            while (true) {
+                                delay(4000)
+                                if (!pagerState.isScrollInProgress) {
+                                    val nextPage = (pagerState.currentPage + 1) % alertsToShow.size
+                                    pagerState.animateScrollToPage(nextPage)
+                                }
                             }
+                        }
+                    }
+                    
+                    HorizontalPager(
+                        state = pagerState,
+                        contentPadding = PaddingValues(horizontal = 48.dp),
+                        pageSpacing = 16.dp,
+                        modifier = Modifier.fillMaxWidth()
+                    ) { page ->
+                        val alertWithDistance = alertsToShow[page]
+                        CompactAlertCard(
+                            alert = alertWithDistance.alert,
+                            distanceKm = alertWithDistance.distanceKm,
+                            severity = getAlertSeverity(alertWithDistance.alert),
+                            onClick = { onAlertClick(alertWithDistance.alert.id) }
+                        )
+                    }
+                    
+                    // Pagination Dots
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        repeat(alertsToShow.size) { iteration ->
+                            val isSelected = pagerState.currentPage == iteration
+                            val width = if (isSelected) 24.dp else 8.dp
+                            val height = 8.dp
+                            val color = if (isSelected) primaryColor else primaryColor.copy(alpha = 0.3f)
+                            
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 4.dp)
+                                    .height(height)
+                                    .width(width)
+                                    .clip(CircleShape)
+                                    .background(color)
+                            )
                         }
                     }
                 }
