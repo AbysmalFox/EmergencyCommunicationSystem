@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
+import org.osmdroid.util.BoundingBox
 import kotlin.math.*
 
 /**
@@ -25,7 +26,7 @@ class NavigationManager(
     val navigationState: StateFlow<NavigationState> = _navigationState.asStateFlow()
 
     private var currentRoute: Route? = null
-    private var routeGeometry: List<GeoPoint> = emptyList()
+    private var activeRouteGeometry: List<GeoPoint> = emptyList()
 
     /**
      * Start navigation to destination
@@ -52,14 +53,15 @@ class NavigationManager(
                         LogFilter.d(TAG, "Route received: ${route.legs.size} legs, ${route.distance}m total distance")
                         
                         // Decode geometry from route or steps
-                        routeGeometry = try {
-                            val routeGeom = when (val geom = route.geometry) {
+                        activeRouteGeometry = try {
+                            val geometryObj = route.geometry
+                            val routeGeom = when (geometryObj) {
                                 is String -> {
-                                    RoutingService.decodeGeometry(geom)
+                                    RoutingService.decodeGeometry(geometryObj)
                                 }
                                 is Map<*, *> -> {
                                     val gson = com.google.gson.Gson()
-                                    RoutingService.decodeGeometry(gson.toJson(geom))
+                                    RoutingService.decodeGeometry(gson.toJson(geometryObj))
                                 }
                                 else -> {
                                     LogFilter.w(TAG, "Route geometry is null or unknown type, using step geometries")
@@ -107,7 +109,7 @@ class NavigationManager(
                             emptyList()
                         }
                         
-                        if (routeGeometry.isEmpty()) {
+                        if (activeRouteGeometry.isEmpty()) {
                             val error = "Failed to decode route geometry"
                             LogFilter.e(TAG, error)
                             onError(error)
@@ -134,12 +136,12 @@ class NavigationManager(
                             remainingDuration = route.duration,
                             currentInstruction = instructions.firstOrNull(),
                             nextInstruction = instructions.getOrNull(1),
-                            routeGeometry = routeGeometry
+                            routeGeometry = activeRouteGeometry
                         )
                         
                         _navigationState.value = newState
                         LogFilter.d(TAG, "Navigation started successfully")
-                        onSuccess(routeGeometry)
+                        onSuccess(activeRouteGeometry)
                     } else {
                         val error = "OSRM returned empty routes list"
                         LogFilter.e(TAG, error)
@@ -159,6 +161,37 @@ class NavigationManager(
     }
 
     /**
+     * Calculates a bounding box that contains the entire route.
+     * Useful for zooming the map to show both start and end points.
+     */
+    fun getRouteBoundingBox(padding: Double = 0.1): BoundingBox? {
+        if (activeRouteGeometry.isEmpty()) return null
+        
+        var minLat = Double.MAX_VALUE
+        var maxLat = -Double.MAX_VALUE
+        var minLon = Double.MAX_VALUE
+        var maxLon = -Double.MAX_VALUE
+
+        for (point in activeRouteGeometry) {
+            if (point.latitude < minLat) minLat = point.latitude
+            if (point.latitude > maxLat) maxLat = point.latitude
+            if (point.longitude < minLon) minLon = point.longitude
+            if (point.longitude > maxLon) maxLon = point.longitude
+        }
+
+        // Add a small percentage of padding so markers aren't touching the screen edges
+        val latPadding = (maxLat - minLat) * padding
+        val lonPadding = (maxLon - minLon) * padding
+
+        return BoundingBox(
+            maxLat + latPadding, 
+            maxLon + lonPadding, 
+            minLat - latPadding, 
+            minLon - lonPadding
+        )
+    }
+
+    /**
      * Update navigation based on current user location
      */
     fun updateLocation(currentLat: Double, currentLon: Double) {
@@ -168,7 +201,7 @@ class NavigationManager(
             return
         }
         
-        if (routeGeometry.isEmpty()) {
+        if (activeRouteGeometry.isEmpty()) {
             LogFilter.w(TAG, "updateLocation called but route geometry is empty")
             return
         }
@@ -176,7 +209,7 @@ class NavigationManager(
         try {
             // Find closest point on route
             val currentPoint = GeoPoint(currentLat, currentLon)
-            val closestRoutePoint = routeGeometry.minByOrNull { point ->
+            val closestRoutePoint = activeRouteGeometry.minByOrNull { point ->
                 calculateDistance(currentPoint, point)
             }
             
@@ -186,13 +219,13 @@ class NavigationManager(
             }
 
             // Find current step based on closest route point
-            val routePointIndex = routeGeometry.indexOf(closestRoutePoint)
+            val routePointIndex = activeRouteGeometry.indexOf(closestRoutePoint)
             if (routePointIndex < 0) {
                 LogFilter.w(TAG, "Route point index not found")
                 return
             }
             
-            val progress = routePointIndex.toDouble() / routeGeometry.size
+            val progress = routePointIndex.toDouble() / activeRouteGeometry.size
             val distanceToRoute = calculateDistance(currentPoint, closestRoutePoint)
             
             // Log if user is far from route (might be off-route)
@@ -207,12 +240,12 @@ class NavigationManager(
             var currentStepIndex = 0
             
             // Calculate remaining distance along the route geometry from current point to end
-            if (routePointIndex < routeGeometry.size - 1) {
+            if (routePointIndex < activeRouteGeometry.size - 1) {
                 // Sum distances between remaining route points
-                for (i in routePointIndex until routeGeometry.size - 1) {
+                for (i in routePointIndex until activeRouteGeometry.size - 1) {
                     remainingDistance += calculateDistance(
-                        routeGeometry[i],
-                        routeGeometry[i + 1]
+                        activeRouteGeometry[i],
+                        activeRouteGeometry[i + 1]
                     )
                 }
                 
@@ -288,7 +321,7 @@ class NavigationManager(
         LogFilter.d(TAG, "Stopping navigation")
         _navigationState.value = NavigationState()
         currentRoute = null
-        routeGeometry = emptyList()
+        activeRouteGeometry = emptyList()
         LogFilter.d(TAG, "Navigation stopped")
     }
 

@@ -518,7 +518,7 @@ fun MapScreen() {
                                         
                                         val allPoints = routeGeometry + GeoPoint(currentUserLocation.latitude, currentUserLocation.longitude)
                                         val boundingBox = BoundingBox(allPoints.maxOf { it.latitude }, allPoints.maxOf { it.longitude }, allPoints.minOf { it.latitude }, allPoints.minOf { it.longitude })
-                                        map.post { map.zoomToBoundingBox(boundingBox, true, 50) }
+                                        map.post { map.zoomToBoundingBox(boundingBox, true, 250) }
                                     } else {
                                         val routePolyline = Polyline().apply {
                                             setPoints(listOf(GeoPoint(currentUserLocation.latitude, currentUserLocation.longitude), GeoPoint(nearestEvac.latitude, nearestEvac.longitude)))
@@ -530,8 +530,10 @@ fun MapScreen() {
                                         currentRoutePolyline = routePolyline
                                         routeDestination = nearestEvac
                                         isCalculatingRoute = false
-                                        map.controller.animateTo(GeoPoint(nearestEvac.latitude, nearestEvac.longitude))
-                                        map.controller.setZoom(15.0)
+                                        
+                                        val allPoints = listOf(GeoPoint(currentUserLocation.latitude, currentUserLocation.longitude), GeoPoint(nearestEvac.latitude, nearestEvac.longitude))
+                                        val boundingBox = BoundingBox(allPoints.maxOf { it.latitude }, allPoints.maxOf { it.longitude }, allPoints.minOf { it.latitude }, allPoints.minOf { it.longitude })
+                                        map.post { map.zoomToBoundingBox(boundingBox, true, 250) }
                                     }
                                     map.invalidate()
                                 }
@@ -550,10 +552,10 @@ fun MapScreen() {
                                 currentRoutePolyline = fallbackPolyline
                                 routeDestination = nearestEvac
                                 
-                                // Animate camera to destination
-                                val evacPoint = org.osmdroid.util.GeoPoint(nearestEvac.latitude, nearestEvac.longitude)
-                                map.controller.animateTo(evacPoint)
-                                map.controller.setZoom(15.0)
+                                // Zoom to show start and end points
+                                val allPoints = listOf(GeoPoint(currentUserLocation.latitude, currentUserLocation.longitude), GeoPoint(nearestEvac.latitude, nearestEvac.longitude))
+                                val boundingBox = BoundingBox(allPoints.maxOf { it.latitude }, allPoints.maxOf { it.longitude }, allPoints.minOf { it.latitude }, allPoints.minOf { it.longitude })
+                                map.post { map.zoomToBoundingBox(boundingBox, true, 250) }
                                 map.invalidate()
                                 
                                 isCalculatingRoute = false

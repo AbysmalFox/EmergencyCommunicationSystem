@@ -96,6 +96,7 @@ enum class ManeuverType {
  */
 data class NavigationState(
     val isNavigating: Boolean = false,
+    val isOffRoute: Boolean = false,
     val currentStepIndex: Int = 0,
     val instructions: List<NavigationInstruction> = emptyList(),
     val totalDistance: Double = 0.0, // in meters
