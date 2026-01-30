@@ -65,9 +65,14 @@ class ProfileViewModel(
         }
     }
 
-    fun updateProfile(name: String, email: String, phone: String) {
+    fun updateProfile(name: String, email: String, phone: String, profilePicUri: String? = null) {
         viewModelScope.launch {
             try {
+                // Save profile pic locally first (independent of backend success for now, or move inside success block)
+                if (profilePicUri != null) {
+                    AuthManager.saveProfilePic(profilePicUri)
+                }
+
                 val request = UpdateProfileRequest(userId, name, email, phone)
                 val response = authRepository.updateProfile(request)
                 if (response.success) {
@@ -77,7 +82,8 @@ class ProfileViewModel(
                         username = name,
                         email = email,
                         phone = phone,
-                        token = AuthManager.getToken() ?: ""
+                        token = AuthManager.getToken() ?: "",
+                        profilePic = profilePicUri ?: AuthManager.getProfilePic()
                     )
                     _updateProfileResult.value = Result.success(response.message ?: "Profile updated successfully")
                 } else {

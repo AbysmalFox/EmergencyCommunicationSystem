@@ -228,12 +228,16 @@ fun EmergencyApp(
                     val userId = AuthManager.getUserId()
                     val factory = remember(userId, settingsRepository) { ProfileViewModelFactory(userId, settingsRepository) }
                     val profileViewModel: ProfileViewModel = viewModel(key = "profile_$userId", factory = factory)
-
+                    
+                    // Observe user data changes
+                    val userDataUpdate by AuthManager.userDataFlow.collectAsState(initial = Unit)
+                    
                     ProfileScreen(
                         isLoggedIn = isLoggedIn,
                         username = if (isLoggedIn) AuthManager.getUsername() else null,
                         email = if (isLoggedIn) AuthManager.getEmail() else null,
                         phone = if (isLoggedIn) AuthManager.getPhone() else null,
+                        profilePic = if (isLoggedIn) AuthManager.getProfilePic() else null,
                         currentTheme = currentTheme,
                         onThemeChange = onThemeChange,
                         onLoginClick = { navController.navigate(Screen.Login.route) },

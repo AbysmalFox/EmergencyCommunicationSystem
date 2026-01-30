@@ -1,6 +1,10 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
 import android.widget.Toast
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -15,11 +19,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.data.SubscriptionCategory
 import com.example.emergencycommunicationsystem.data.UserPrefs
@@ -39,6 +46,7 @@ fun ProfileScreen(
     username: String?,
     email: String?,
     phone: String?,
+    profilePic: String? = null,
     currentTheme: String, 
     onThemeChange: (String) -> Unit,
     onLoginClick: () -> Unit,
@@ -125,6 +133,7 @@ fun ProfileScreen(
                 ProfileHeader(
                     username = username ?: "User",
                     email = email ?: "",
+                    profilePic = profilePic,
                     onEditClick = {
                         showEditProfile = true
                     }
@@ -153,7 +162,7 @@ fun ProfileScreen(
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = MaterialTheme.colorScheme.secondary,
-                            uncheckedTrackColor = Color.White.copy(alpha = 0.2f)
+                            uncheckedTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                         )
                     )
                 },
@@ -182,7 +191,7 @@ fun ProfileScreen(
             Text(
                 text = localeContext.getString(R.string.appearance),
                 style = MaterialTheme.typography.titleMedium,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
             )
@@ -234,7 +243,7 @@ fun ProfileScreen(
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = MaterialTheme.colorScheme.secondary,
-                            uncheckedTrackColor = Color.White.copy(alpha = 0.2f)
+                            uncheckedTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                         )
                     )
                 },
@@ -346,8 +355,9 @@ fun ProfileScreen(
                 currentName = username ?: "",
                 currentEmail = email ?: "",
                 currentPhone = phone ?: "",
-                onSave = { name, email, phone ->
-                    profileViewModel.updateProfile(name, email, phone)
+                currentProfilePic = profilePic,
+                onSave = { name, email, phone, picUri ->
+                    profileViewModel.updateProfile(name, email, phone, picUri)
                 },
                 onCancel = {
                     scope.launch { editSheetState.hide() }.invokeOnCompletion {
@@ -364,26 +374,93 @@ fun EditProfileSheet(
     currentName: String,
     currentEmail: String,
     currentPhone: String,
-    onSave: (String, String, String) -> Unit,
+    currentProfilePic: String?,
+    onSave: (String, String, String, String?) -> Unit,
     onCancel: () -> Unit
 ) {
     val localeContext = getLocaleContext()
     var name by remember { mutableStateOf(currentName) }
     var email by remember { mutableStateOf(currentEmail) }
     var phone by remember { mutableStateOf(currentPhone) }
+    var profilePicUri by remember { mutableStateOf<Uri?>(if (currentProfilePic != null) Uri.parse(currentProfilePic) else null) }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri ->
+            if (uri != null) {
+                profilePicUri = uri
+            }
+        }
+    )
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
-            .padding(bottom = 32.dp)
+            .padding(bottom = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = localeContext.getString(R.string.edit_profile),
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 24.dp)
+            modifier = Modifier.padding(bottom = 24.dp),
+            color = MaterialTheme.colorScheme.onSurface
         )
+
+        // Profile Picture Edit
+        Box(contentAlignment = Alignment.BottomEnd) {
+            Surface(
+                modifier = Modifier
+                    .size(100.dp)
+                    .clickable { 
+                        photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    },
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            ) {
+                if (profilePicUri != null) {
+                    AsyncImage(
+                        model = profilePicUri,
+                        contentDescription = "Profile Picture",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = AppIcons.Person,
+                            contentDescription = "Avatar",
+                            modifier = Modifier.size(60.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            Surface(
+                modifier = Modifier
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .clickable { 
+                        photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    },
+                color = MaterialTheme.colorScheme.primary,
+                shape = CircleShape,
+                border = BorderStroke(2.dp, MaterialTheme.colorScheme.surface)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Change Photo",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
 
         OutlinedTextField(
             value = name,
@@ -424,15 +501,24 @@ fun EditProfileSheet(
             OutlinedButton(
                 onClick = onCancel,
                 modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
             ) {
                 Text(localeContext.getString(R.string.cancel))
             }
+            
+            val saveBtnColor = if (MaterialTheme.colorScheme.primary == Color.White) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+            val saveBtnContentColor = if (MaterialTheme.colorScheme.primary == Color.White) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onPrimary
+
             Button(
-                onClick = { onSave(name, email, phone) },
+                onClick = { onSave(name, email, phone, profilePicUri?.toString()) },
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = saveBtnColor,
+                    contentColor = saveBtnContentColor
+                )
             ) {
                 Text(localeContext.getString(R.string.save_changes))
             }
@@ -448,11 +534,10 @@ fun ThemeSelectionCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val borderColor = if (selected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.2f)
+    val borderColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
     val backgroundColor = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent
     
-    // For inline display on the dark profile screen, unselected content must be White
-    val contentColor = if (selected) MaterialTheme.colorScheme.primary else Color.White
+    val contentColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
 
     Card(
         onClick = onClick,
@@ -503,7 +588,7 @@ fun ThemeOption(
             colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.secondary)
         )
         Spacer(modifier = Modifier.width(16.dp))
-        Text(text = text, style = MaterialTheme.typography.bodyLarge)
+        Text(text = text, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onBackground)
     }
 }
 
@@ -511,6 +596,7 @@ fun ThemeOption(
 fun ProfileHeader(
     username: String,
     email: String,
+    profilePic: String?,
     onEditClick: () -> Unit
 ) {
     val localeContext = getLocaleContext()
@@ -524,15 +610,24 @@ fun ProfileHeader(
             Surface(
                 modifier = Modifier.size(80.dp),
                 shape = CircleShape,
-                color = Color.White.copy(alpha = 0.15f)
+                color = MaterialTheme.colorScheme.surfaceVariant
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = AppIcons.Person,
+                if (profilePic != null) {
+                    AsyncImage(
+                        model = profilePic,
                         contentDescription = "Avatar",
-                        modifier = Modifier.size(48.dp),
-                        tint = Color.White
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
                     )
+                } else {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = AppIcons.Person,
+                            contentDescription = "Avatar",
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
             Surface(
@@ -549,7 +644,7 @@ fun ProfileHeader(
                         imageVector = Icons.Default.Edit,
                         contentDescription = "Edit",
                         modifier = Modifier.size(14.dp),
-                        tint = Color.White
+                        tint = MaterialTheme.colorScheme.onSecondary
                     )
                 }
             }
@@ -561,14 +656,14 @@ fun ProfileHeader(
             text = username,
             fontSize = 24.sp,
             fontWeight = FontWeight.ExtraBold,
-            color = Color.White
+            color = MaterialTheme.colorScheme.onBackground
         )
 
         Text(
             text = email,
             fontSize = 14.sp,
             fontWeight = FontWeight.Normal,
-            color = Color.White.copy(alpha = 0.7f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
         )
         
         Spacer(modifier = Modifier.height(16.dp))
@@ -596,14 +691,14 @@ fun AnonymousHeader(onLoginClick: () -> Unit, onSignUpClick: () -> Unit) {
         Surface(
             modifier = Modifier.size(80.dp),
             shape = CircleShape,
-            color = Color.White.copy(alpha = 0.15f)
+            color = MaterialTheme.colorScheme.surfaceVariant
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = AppIcons.Person,
                     contentDescription = "Anonymous",
                     modifier = Modifier.size(48.dp),
-                    tint = Color.White
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -612,14 +707,14 @@ fun AnonymousHeader(onLoginClick: () -> Unit, onSignUpClick: () -> Unit) {
             text = localeContext.getString(R.string.anonymous_user),
             fontSize = 24.sp,
             fontWeight = FontWeight.ExtraBold,
-            color = Color.White
+            color = MaterialTheme.colorScheme.onBackground
         )
         Spacer(modifier = Modifier.height(24.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(
                 onClick = onLoginClick, 
                 shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = MaterialTheme.colorScheme.background),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
                 modifier = Modifier.height(48.dp).weight(1f).padding(start = 24.dp)
             ) {
                 Text(localeContext.getString(R.string.login), fontWeight = FontWeight.ExtraBold)
@@ -627,8 +722,8 @@ fun AnonymousHeader(onLoginClick: () -> Unit, onSignUpClick: () -> Unit) {
             OutlinedButton(
                 onClick = onSignUpClick, 
                 shape = RoundedCornerShape(14.dp),
-                border = BorderStroke(2.dp, Color.White),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
                 modifier = Modifier.height(48.dp).weight(1f).padding(end = 24.dp)
             ) {
                 Text(localeContext.getString(R.string.signup), fontWeight = FontWeight.ExtraBold)
@@ -642,7 +737,7 @@ fun SettingsGroupHeader(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.labelLarge,
-        color = Color.White.copy(alpha = 0.6f),
+        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
         fontWeight = FontWeight.Black,
         letterSpacing = 1.5.sp,
         modifier = Modifier
@@ -668,7 +763,7 @@ fun SettingsItem(
         Surface(
             modifier = Modifier.size(40.dp),
             shape = RoundedCornerShape(10.dp),
-            color = Color.White.copy(alpha = 0.1f)
+            color = MaterialTheme.colorScheme.surfaceVariant
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
@@ -680,7 +775,7 @@ fun SettingsItem(
                     },
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
-                    tint = Color.White
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -691,14 +786,14 @@ fun SettingsItem(
             Text(
                 text = text,
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Medium
             )
             if (valueText != null) {
                 Text(
                     text = valueText,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.5f)
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                 )
             }
         }
@@ -709,7 +804,7 @@ fun SettingsItem(
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = Color.White.copy(alpha = 0.3f),
+                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
                 modifier = Modifier.size(20.dp)
             )
         }
