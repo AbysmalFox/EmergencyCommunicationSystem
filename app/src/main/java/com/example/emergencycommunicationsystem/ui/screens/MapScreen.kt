@@ -806,8 +806,8 @@ fun MapLegend(
                 color = Color.Red, 
                 label = translatedAlert, 
                 textColor = contentColor, 
-                isCircle = false, 
-                isPin = true,
+                isCircle = true, 
+                isPin = false,
                 isChecked = showAlerts,
                 onToggle = onShowAlertsChange
             )
