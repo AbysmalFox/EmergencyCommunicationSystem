@@ -28,9 +28,20 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     private val _userLocation = MutableStateFlow<GeoPoint?>(null)
     val userLocation: StateFlow<GeoPoint?> = _userLocation.asStateFlow()
 
-    // Selected Destination
+    // Selected Destination (for Details/Preview)
     private val _selectedEvac = MutableStateFlow<SafeZone?>(null)
     val selectedEvac: StateFlow<SafeZone?> = _selectedEvac.asStateFlow()
+
+    // Active Route Destination (for Navigation)
+    private val _routeDestination = MutableStateFlow<SafeZone?>(null)
+    val routeDestination: StateFlow<SafeZone?> = _routeDestination.asStateFlow()
+
+    // Map UI State
+    private val _isCameraLocked = MutableStateFlow(true)
+    val isCameraLocked: StateFlow<Boolean> = _isCameraLocked.asStateFlow()
+
+    private val _isCalculatingRoute = MutableStateFlow(false)
+    val isCalculatingRoute: StateFlow<Boolean> = _isCalculatingRoute.asStateFlow()
 
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
     private var locationCallback: LocationCallback? = null
@@ -76,6 +87,18 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     
     fun setSelectedEvac(evac: SafeZone?) {
         _selectedEvac.value = evac
+    }
+
+    fun setRouteDestination(destination: SafeZone?) {
+        _routeDestination.value = destination
+    }
+
+    fun setCameraLocked(locked: Boolean) {
+        _isCameraLocked.value = locked
+    }
+
+    fun setIsCalculatingRoute(calculating: Boolean) {
+        _isCalculatingRoute.value = calculating
     }
 
     override fun onCleared() {

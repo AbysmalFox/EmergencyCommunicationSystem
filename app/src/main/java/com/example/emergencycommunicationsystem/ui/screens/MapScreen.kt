@@ -94,9 +94,11 @@ fun MapScreen() {
     var mapView by remember { mutableStateOf<MapView?>(null) }
     var locationOverlay by remember { mutableStateOf<MyLocationNewOverlay?>(null) }
     var currentRoutePolyline by remember { mutableStateOf<Polyline?>(null) }
-    var routeDestination by remember { mutableStateOf<SafeZone?>(null) }
-    var isCalculatingRoute by remember { mutableStateOf(false) }
-    var isCameraLocked by remember { mutableStateOf(true) } // Default to locked
+    
+    // Map State from ViewModel
+    val routeDestination by mapViewModel.routeDestination.collectAsState()
+    val isCalculatingRoute by mapViewModel.isCalculatingRoute.collectAsState()
+    val isCameraLocked by mapViewModel.isCameraLocked.collectAsState()
     
     // Map Filters State
     var showAlerts by remember { mutableStateOf(true) }
@@ -148,7 +150,7 @@ fun MapScreen() {
     }
 
     // LaunchedEffect to observe userLocation changes and update route polyline
-    LaunchedEffect(userLocation) {
+    LaunchedEffect(userLocation, routeDestination) {
         val currentUserLocation = userLocation ?: return@LaunchedEffect
         val selectedDestination = routeDestination ?: return@LaunchedEffect
         
@@ -157,14 +159,24 @@ fun MapScreen() {
             mapView?.overlays?.remove(oldPolyline)
         }
         
-        // Create new polyline with updated location
-        val updatedPolyline = fallbackToStraightLine(
-            map = mapView ?: return@LaunchedEffect,
-            userLocation = currentUserLocation,
-            destination = selectedDestination,
-            context = context,
-            showToast = false
-        )
+        // Create new polyline: Restore detailed route if navigating, otherwise fallback
+        val routeGeom = navigationState.routeGeometry
+        val updatedPolyline = if (navigationState.isNavigating && routeGeom.isNotEmpty()) {
+             Polyline().apply {
+                 setPoints(routeGeom)
+                 color = android.graphics.Color.parseColor("#FF9800") // Orange
+                 width = 14.0f
+                 isGeodesic = false
+             }
+        } else {
+             fallbackToStraightLine(
+                map = mapView ?: return@LaunchedEffect,
+                userLocation = currentUserLocation,
+                destination = selectedDestination,
+                context = context,
+                showToast = false
+            )
+        }
         
         // Add the new polyline to the map
         mapView?.overlays?.add(updatedPolyline)
@@ -220,13 +232,19 @@ fun MapScreen() {
                     }
                     overlays.add(qcBoundary)
 
-                    // Zoom to QC initially
+                    // Zoom to QC initially ONLY if not restoring a state
                     val minLat = qcPoints.minOf { it.latitude }
                     val maxLat = qcPoints.maxOf { it.latitude }
                     val minLon = qcPoints.minOf { it.longitude }
                     val maxLon = qcPoints.maxOf { it.longitude }
                     val boundingBox = BoundingBox(maxLat, maxLon, minLat, minLon)
-                    post { zoomToBoundingBox(boundingBox, true) }
+                    
+                    post { 
+                        // Only zoom to QC if we don't have a specific target
+                        if (routeDestination == null && (!isCameraLocked || userLocation == null)) {
+                            zoomToBoundingBox(boundingBox, true)
+                        }
+                    }
 
                     // User Location
                     val overlay = MyLocationNewOverlay(GpsMyLocationProvider(ctx), this)
@@ -407,7 +425,7 @@ fun MapScreen() {
                                 mapView?.invalidate()
                             }
                             currentRoutePolyline = null
-                            routeDestination = null
+                            mapViewModel.setRouteDestination(null)
                         }
                     )
                 } else {
@@ -434,7 +452,7 @@ fun MapScreen() {
                                     mapView?.invalidate()
                                 }
                                 currentRoutePolyline = null
-                                routeDestination = null
+                                mapViewModel.setRouteDestination(null)
                             }
                         )
                     }
@@ -457,8 +475,8 @@ fun MapScreen() {
                     )
                     
                     if (nearestEvac != null) {
-                        routeDestination = null
-                        isCalculatingRoute = true
+                        mapViewModel.setRouteDestination(null)
+                        mapViewModel.setIsCalculatingRoute(true)
                         currentRoutePolyline?.let { map.overlays.remove(it) }
                         currentRoutePolyline = null
                         navigationManager.stopNavigation()
@@ -503,12 +521,12 @@ fun MapScreen() {
                                             destLat = nearestEvac.latitude,
                                             destLon = nearestEvac.longitude,
                                             onSuccess = {
-                                                routeDestination = nearestEvac
-                                                isCalculatingRoute = false
+                                                mapViewModel.setRouteDestination(nearestEvac)
+                                                mapViewModel.setIsCalculatingRoute(false)
                                             },
                                             onError = { error ->
-                                                routeDestination = nearestEvac
-                                                isCalculatingRoute = false
+                                                mapViewModel.setRouteDestination(nearestEvac)
+                                                mapViewModel.setIsCalculatingRoute(false)
                                                 CoroutineScope(Dispatchers.Main).launch {
                                                     val errorPrefix = localeContext.getString(R.string.map_navigation_error)
                                                     Toast.makeText(context, "$errorPrefix: $error", Toast.LENGTH_LONG).show()
@@ -528,8 +546,8 @@ fun MapScreen() {
                                         }
                                         map.overlays.add(routePolyline)
                                         currentRoutePolyline = routePolyline
-                                        routeDestination = nearestEvac
-                                        isCalculatingRoute = false
+                                        mapViewModel.setRouteDestination(nearestEvac)
+                                        mapViewModel.setIsCalculatingRoute(false)
                                         
                                         val allPoints = listOf(GeoPoint(currentUserLocation.latitude, currentUserLocation.longitude), GeoPoint(nearestEvac.latitude, nearestEvac.longitude))
                                         val boundingBox = BoundingBox(allPoints.maxOf { it.latitude }, allPoints.maxOf { it.longitude }, allPoints.minOf { it.latitude }, allPoints.minOf { it.longitude })
@@ -550,7 +568,7 @@ fun MapScreen() {
                                 val fallbackPolyline = fallbackToStraightLine(map, currentUserLocation, nearestEvac, localeContext, showToast = false)
                                 map.overlays.add(fallbackPolyline)
                                 currentRoutePolyline = fallbackPolyline
-                                routeDestination = nearestEvac
+                                mapViewModel.setRouteDestination(nearestEvac)
                                 
                                 // Zoom to show start and end points
                                 val allPoints = listOf(GeoPoint(currentUserLocation.latitude, currentUserLocation.longitude), GeoPoint(nearestEvac.latitude, nearestEvac.longitude))
@@ -558,7 +576,7 @@ fun MapScreen() {
                                 map.post { map.zoomToBoundingBox(boundingBox, true, 250) }
                                 map.invalidate()
                                 
-                                isCalculatingRoute = false
+                                mapViewModel.setIsCalculatingRoute(false)
                             }
                         }
                     } else {
@@ -592,9 +610,10 @@ fun MapScreen() {
                 val map = mapView
                 
                 // Toggle lock state
-                isCameraLocked = !isCameraLocked
+                val newState = !isCameraLocked
+                mapViewModel.setCameraLocked(newState)
                 
-                if (isCameraLocked) {
+                if (newState) {
                     if (userLocation != null) {
                         map?.controller?.animateTo(userLocation)
                     } else if (overlay?.myLocation != null) {
@@ -615,10 +634,44 @@ fun MapScreen() {
             )
         }
         
-        // Camera Lock Logic
-        LaunchedEffect(userLocation, isCameraLocked) {
-            if (isCameraLocked && userLocation != null && mapView != null) {
-                mapView?.controller?.animateTo(userLocation)
+        // Camera Lock Logic - Restore position when map becomes available or location updates
+        LaunchedEffect(userLocation, isCameraLocked, mapView) {
+            val map = mapView
+            if (isCameraLocked && userLocation != null && map != null) {
+                map.controller.animateTo(userLocation)
+                if (map.zoomLevelDouble < 15.0) {
+                     map.controller.setZoom(18.0)
+                }
+            }
+        }
+        
+        // Route Zoom Logic - Restore zoom when returning to screen with active route
+        LaunchedEffect(routeDestination, mapView, userLocation) {
+            val map = mapView
+            val dest = routeDestination
+            val userLoc = userLocation
+            
+            if (map != null && dest != null && userLoc != null) {
+                // Determine points to include in bounding box
+                val points = mutableListOf<GeoPoint>()
+                points.add(userLoc)
+                points.add(GeoPoint(dest.latitude, dest.longitude))
+                
+                if (navigationState.routeGeometry.isNotEmpty()) {
+                    points.addAll(navigationState.routeGeometry)
+                }
+                
+                val boundingBox = BoundingBox(
+                    points.maxOf { it.latitude }, 
+                    points.maxOf { it.longitude }, 
+                    points.minOf { it.latitude }, 
+                    points.minOf { it.longitude }
+                )
+                
+                // Use post to ensure map layout is ready
+                map.post { 
+                    map.zoomToBoundingBox(boundingBox, true, 250) 
+                }
             }
         }
 
