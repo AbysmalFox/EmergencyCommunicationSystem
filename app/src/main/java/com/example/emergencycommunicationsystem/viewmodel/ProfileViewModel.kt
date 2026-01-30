@@ -1,8 +1,11 @@
 package com.example.emergencycommunicationsystem.viewmodel
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.emergencycommunicationsystem.AuthManager
+import com.example.emergencycommunicationsystem.data.ChangePasswordRequest
 import com.example.emergencycommunicationsystem.data.SubscriptionCategory
 import com.example.emergencycommunicationsystem.data.UpdateProfileRequest
 import com.example.emergencycommunicationsystem.data.repository.AuthRepository
@@ -10,6 +13,12 @@ import com.example.emergencycommunicationsystem.data.repository.SettingsReposito
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import java.io.File
+import java.io.FileOutputStream
 
 class ProfileViewModel(
     private val userId: Int,
@@ -23,6 +32,9 @@ class ProfileViewModel(
 
     private val _updateProfileResult = MutableStateFlow<Result<String>?>(null)
     val updateProfileResult = _updateProfileResult.asStateFlow()
+    
+    private val _changePasswordResult = MutableStateFlow<Result<String>?>(null)
+    val changePasswordResult = _changePasswordResult.asStateFlow()
 
     init {
         if (userId > 0) {
@@ -65,16 +77,35 @@ class ProfileViewModel(
         }
     }
 
-    fun updateProfile(name: String, email: String, phone: String, profilePicUri: String? = null) {
+    fun updateProfile(context: Context, name: String, email: String, phone: String, profilePicUri: String? = null) {
         viewModelScope.launch {
             try {
-                // Save profile pic locally first (independent of backend success for now, or move inside success block)
+                val userIdBody = userId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+                val nameBody = name.toRequestBody("text/plain".toMediaTypeOrNull())
+                val emailBody = email.toRequestBody("text/plain".toMediaTypeOrNull())
+                val phoneBody = phone.toRequestBody("text/plain".toMediaTypeOrNull())
+                
+                var profilePicPart: MultipartBody.Part? = null
                 if (profilePicUri != null) {
+                    val uri = Uri.parse(profilePicUri)
+                    // Create a temp file from the URI
+                    val contentResolver = context.contentResolver
+                    val tempFile = File(context.cacheDir, "temp_profile_pic.jpg")
+                    contentResolver.openInputStream(uri)?.use { input ->
+                        FileOutputStream(tempFile).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    
+                    val requestFile = tempFile.asRequestBody("image/*".toMediaTypeOrNull())
+                    profilePicPart = MultipartBody.Part.createFormData("profile_pic", tempFile.name, requestFile)
+                    
+                    // Also save locally immediately
                     AuthManager.saveProfilePic(profilePicUri)
                 }
 
-                val request = UpdateProfileRequest(userId, name, email, phone)
-                val response = authRepository.updateProfile(request)
+                val response = authRepository.updateProfile(userIdBody, nameBody, emailBody, phoneBody, profilePicPart)
+                
                 if (response.success) {
                     // Update AuthManager with new info
                     AuthManager.saveLoginState(
@@ -94,8 +125,28 @@ class ProfileViewModel(
             }
         }
     }
+    
+    fun changePassword(current: String, new: String) {
+        viewModelScope.launch {
+            try {
+                val request = ChangePasswordRequest(userId, current, new)
+                val response = authRepository.changePassword(request)
+                if (response.success) {
+                    _changePasswordResult.value = Result.success(response.message)
+                } else {
+                    _changePasswordResult.value = Result.failure(Exception(response.message))
+                }
+            } catch (e: Exception) {
+                _changePasswordResult.value = Result.failure(e)
+            }
+        }
+    }
 
     fun clearUpdateProfileResult() {
         _updateProfileResult.value = null
+    }
+    
+    fun clearChangePasswordResult() {
+        _changePasswordResult.value = null
     }
 }

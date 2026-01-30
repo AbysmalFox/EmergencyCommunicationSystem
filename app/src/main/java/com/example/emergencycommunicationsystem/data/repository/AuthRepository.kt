@@ -8,6 +8,9 @@ import com.example.emergencycommunicationsystem.util.DeviceManager
 import retrofit2.HttpException
 import retrofit2.Response
 
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
+
 class AuthRepository {
 
     private suspend fun apiService(): AuthApiService = ApiClient.authApiService()
@@ -69,7 +72,17 @@ class AuthRepository {
         return executeApiCall { apiService().loginUser(loginData) }
     }
 
-    suspend fun updateProfile(request: UpdateProfileRequest): UpdateProfileResponse {
-        return apiService().updateProfile(request)
+    suspend fun updateProfile(
+        userId: RequestBody,
+        username: RequestBody,
+        email: RequestBody,
+        phone: RequestBody,
+        profilePic: MultipartBody.Part?
+    ): UpdateProfileResponse {
+        return apiService().updateProfile(userId, username, email, phone, profilePic)
+    }
+
+    suspend fun changePassword(request: ChangePasswordRequest): ChangePasswordResponse {
+        return executeApiCall { apiService().changePassword(request) }
     }
 }

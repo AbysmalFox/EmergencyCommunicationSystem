@@ -65,3 +65,16 @@ data class UpdateProfileResponse(
     val success: Boolean,
     val message: String?
 )
+
+// Request for changing password
+data class ChangePasswordRequest(
+    @SerializedName("user_id") val userId: Int,
+    @SerializedName("current_password") val currentPassword: String,
+    @SerializedName("new_password") val newPassword: String
+)
+
+// Response for changing password
+data class ChangePasswordResponse(
+    val success: Boolean,
+    val message: String
+)

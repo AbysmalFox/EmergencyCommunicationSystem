@@ -1,9 +1,10 @@
 package com.example.emergencycommunicationsystem.network
 
 import com.example.emergencycommunicationsystem.data.*
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.Response
-import retrofit2.http.Body
-import retrofit2.http.POST
+import retrofit2.http.*
 
 interface AuthApiService {
     @POST("register.php")
@@ -18,6 +19,16 @@ interface AuthApiService {
     @POST("logout.php")
     suspend fun logout(@Body request: LogoutRequest): Response<AuthResponse>
 
+    @Multipart
     @POST("update_profile.php")
-    suspend fun updateProfile(@Body request: UpdateProfileRequest): UpdateProfileResponse
+    suspend fun updateProfile(
+        @Part("user_id") userId: RequestBody,
+        @Part("username") username: RequestBody,
+        @Part("email") email: RequestBody,
+        @Part("phone") phone: RequestBody,
+        @Part profilePic: MultipartBody.Part?
+    ): UpdateProfileResponse
+
+    @POST("change_password.php")
+    suspend fun changePassword(@Body request: ChangePasswordRequest): Response<ChangePasswordResponse>
 }

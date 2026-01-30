@@ -65,6 +65,7 @@ fun ProfileScreen(
     var showNotificationSettings by remember { mutableStateOf(false) }
     var showEditProfile by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showChangePasswordDialog by remember { mutableStateOf(false) }
     
     // Notification Settings State (Local for now, move to VM later)
     var deliveryMethods by remember { mutableStateOf(mapOf("Push Notifications" to true, "SMS" to false, "Email" to false)) }
@@ -93,6 +94,19 @@ fun ProfileScreen(
             profileViewModel.clearUpdateProfileResult()
         }
     }
+    
+    // Change Password result observer
+    val changePasswordResult by profileViewModel.changePasswordResult.collectAsState()
+    LaunchedEffect(changePasswordResult) {
+        changePasswordResult?.onSuccess {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            showChangePasswordDialog = false
+            profileViewModel.clearChangePasswordResult()
+        }?.onFailure {
+            Toast.makeText(context, it.message ?: "Change password failed", Toast.LENGTH_SHORT).show()
+            profileViewModel.clearChangePasswordResult()
+        }
+    }
 
     // Logout Dialog
     if (showLogoutDialog) {
@@ -115,6 +129,16 @@ fun ProfileScreen(
                 TextButton(onClick = { showLogoutDialog = false }) {
                     Text(localeContext.getString(R.string.cancel))
                 }
+            }
+        )
+    }
+    
+    // Change Password Dialog
+    if (showChangePasswordDialog) {
+        ChangePasswordDialog(
+            onDismiss = { showChangePasswordDialog = false },
+            onConfirm = { current, new ->
+                profileViewModel.changePassword(current, new)
             }
         )
     }
@@ -277,7 +301,10 @@ fun ProfileScreen(
             SettingsItem(
                 text = localeContext.getString(R.string.change_password),
                 icon = painterResource(id = R.drawable.ic_tabler_shield_check),
-                onClick = { Toast.makeText(context, "Change Password clicked", Toast.LENGTH_SHORT).show() }
+                onClick = { 
+                    if (isLoggedIn) showChangePasswordDialog = true
+                    else Toast.makeText(context, localeContext.getString(R.string.please_login_to_send_message), Toast.LENGTH_SHORT).show()
+                }
             )
 
             SettingsItem(
@@ -367,7 +394,7 @@ fun ProfileScreen(
                 currentPhone = phone ?: "",
                 currentProfilePic = profilePic,
                 onSave = { name, email, phone, picUri ->
-                    profileViewModel.updateProfile(name, email, phone, picUri)
+                    profileViewModel.updateProfile(context, name, email, phone, picUri)
                 },
                 onCancel = {
                     scope.launch { editSheetState.hide() }.invokeOnCompletion {
@@ -377,6 +404,65 @@ fun ProfileScreen(
             )
         }
     }
+}
+
+@Composable
+fun ChangePasswordDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String, String) -> Unit
+) {
+    val localeContext = getLocaleContext()
+    var currentPassword by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(localeContext.getString(R.string.change_password)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                OutlinedTextField(
+                    value = currentPassword,
+                    onValueChange = { currentPassword = it },
+                    label = { Text("Current Password") },
+                    singleLine = true,
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+                )
+                OutlinedTextField(
+                    value = newPassword,
+                    onValueChange = { newPassword = it },
+                    label = { Text("New Password") },
+                    singleLine = true,
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+                )
+                OutlinedTextField(
+                    value = confirmPassword,
+                    onValueChange = { confirmPassword = it },
+                    label = { Text("Confirm New Password") },
+                    singleLine = true,
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    isError = newPassword.isNotEmpty() && confirmPassword.isNotEmpty() && newPassword != confirmPassword
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { 
+                    if (newPassword == confirmPassword && newPassword.isNotEmpty() && currentPassword.isNotEmpty()) {
+                        onConfirm(currentPassword, newPassword)
+                    }
+                },
+                enabled = newPassword == confirmPassword && newPassword.isNotEmpty() && currentPassword.isNotEmpty()
+            ) {
+                Text(localeContext.getString(R.string.save_changes))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(localeContext.getString(R.string.cancel))
+            }
+        }
+    )
 }
 
 @Composable
