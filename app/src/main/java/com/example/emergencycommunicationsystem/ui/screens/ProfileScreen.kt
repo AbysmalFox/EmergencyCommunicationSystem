@@ -5,6 +5,8 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.PickVisualMediaRequest
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -149,6 +151,7 @@ fun ProfileScreen(
             
             SettingsItem(
                 text = localeContext.getString(R.string.receive_notifications),
+                icon = painterResource(id = R.drawable.ic_tabler_bell_ringing),
                 trailingContent = {
                     Switch(
                         checked = true, 
@@ -174,6 +177,7 @@ fun ProfileScreen(
 
             SettingsItem(
                 text = localeContext.getString(R.string.language_preference),
+                icon = rememberVectorPainter(AppIcons.Language),
                 valueText = when(currentLanguage) {
                     "fil", "tl" -> localeContext.getString(R.string.language_filipino)
                     "es" -> localeContext.getString(R.string.language_spanish)
@@ -231,6 +235,7 @@ fun ProfileScreen(
 
             SettingsItem(
                 text = localeContext.getString(R.string.floating_magnifier),
+                icon = painterResource(id = R.drawable.ic_magnifier),
                 trailingContent = {
                     Switch(
                         checked = isMagnifierEnabled,
@@ -256,10 +261,12 @@ fun ProfileScreen(
                 SettingsGroupHeader(text = localeContext.getString(R.string.history_title))
                 SettingsItem(
                     text = localeContext.getString(R.string.report_history_label),
+                    icon = painterResource(id = R.drawable.ic_tabler_file_alert),
                     onClick = onMyReportsClick
                 )
                 SettingsItem(
                     text = localeContext.getString(R.string.call_history_label),
+                    icon = painterResource(id = R.drawable.ic_tabler_phone),
                     onClick = onCallHistoryClick
                 )
                 Spacer(modifier = Modifier.height(24.dp))
@@ -269,16 +276,19 @@ fun ProfileScreen(
 
             SettingsItem(
                 text = localeContext.getString(R.string.change_password),
+                icon = painterResource(id = R.drawable.ic_tabler_shield_check),
                 onClick = { Toast.makeText(context, "Change Password clicked", Toast.LENGTH_SHORT).show() }
             )
 
             SettingsItem(
                 text = localeContext.getString(R.string.privacy_policy),
+                icon = rememberVectorPainter(AppIcons.Security),
                 onClick = onPrivacyPolicyClick
             )
 
             SettingsItem(
                 text = localeContext.getString(R.string.terms_of_service),
+                icon = rememberVectorPainter(AppIcons.Info),
                 onClick = onAboutAppClick 
             )
 
@@ -749,6 +759,7 @@ fun SettingsGroupHeader(text: String) {
 @Composable
 fun SettingsItem(
     text: String,
+    icon: androidx.compose.ui.graphics.painter.Painter,
     valueText: String? = null,
     trailingContent: (@Composable () -> Unit)? = null,
     onClick: () -> Unit
@@ -767,12 +778,7 @@ fun SettingsItem(
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
-                    imageVector = when(text) {
-                        "Language", "언어" -> AppIcons.Info
-                        "Appearance" -> AppIcons.ArrowBack
-                        "Push Notifications" -> AppIcons.ChevronRight
-                        else -> AppIcons.Info
-                    },
+                    painter = icon,
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
