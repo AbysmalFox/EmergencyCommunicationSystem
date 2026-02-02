@@ -188,6 +188,7 @@ fun EmergencyCallButton(onClick: () -> Unit) {
 @Composable
 fun ActionGrid(
     onEmergencyCallClick: () -> Unit,
+    onInternetCallClick: () -> Unit,
     onReportClick: () -> Unit,
     onSafeClick: () -> Unit,
     onMessageClick: () -> Unit = {}
@@ -195,6 +196,12 @@ fun ActionGrid(
     val localeContext = getLocaleContext()
     Column(verticalArrangement = Arrangement.spacedBy(15.dp)) { // Reduced spacing
         EmergencyCallButton(onClick = onEmergencyCallClick)
+        
+        // Internet Call Slider
+        InternetCallSlider(
+            onCallInitiated = onInternetCallClick,
+            modifier = Modifier.fillMaxWidth()
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(15.dp)) {
             ActionGridItem(
                 title = localeContext.getString(R.string.report_incident),

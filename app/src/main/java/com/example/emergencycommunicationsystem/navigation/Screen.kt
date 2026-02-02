@@ -21,6 +21,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
     data object EmergencyGuideDetail : Screen("emergency_guide_detail/{guideId}", "Emergency Guide Detail", null) {
         fun createRoute(guideId: String) = "emergency_guide_detail/$guideId"
     }
+    data object InternetCall : Screen("internet_call", "Internet Call", null)
 
 
     companion object {

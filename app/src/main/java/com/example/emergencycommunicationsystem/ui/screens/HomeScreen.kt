@@ -66,6 +66,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen(
     onEmergencyCallClick: () -> Unit,
+    onInternetCallClick: () -> Unit,
     onReportIncidentClick: () -> Unit,
     onMessageClick: () -> Unit = {},
     onAlertClick: (Int) -> Unit = {},
@@ -178,6 +179,7 @@ fun HomeScreen(
                 ) {
                     ActionGrid(
                         onEmergencyCallClick = onEmergencyCallClick,
+                        onInternetCallClick = onInternetCallClick,
                         onReportClick = onReportIncidentClick,
                         onSafeClick = { if (!showSafeOverlay) showSafeOverlay = true },
                         onMessageClick = onMessageClick

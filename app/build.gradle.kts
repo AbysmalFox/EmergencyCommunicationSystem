@@ -123,6 +123,14 @@ dependencies {
     // OSMDroid for OpenStreetMap
     implementation("org.osmdroid:osmdroid-android:6.1.14")
 
+    // WebRTC
+    implementation("org.webrtc:google-webrtc:1.0.+")
+    
+    // Socket.IO
+    implementation("io.socket:socket.io-client:2.1.0") {
+        exclude(group = "org.json", module = "json")
+    }
+
     // Testing Dependencies
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

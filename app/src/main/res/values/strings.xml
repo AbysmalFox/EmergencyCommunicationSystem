@@ -12,6 +12,8 @@
     <string name="dashboard_subtitle">Built by Students, for the Community</string>
     <string name="emergency_call_label">EMERGENCY</string>
     <string name="call_button">CALL</string>
+    <string name="call_via_internet_label">CALL VIA INTERNET</string>
+    <string name="slide_to_call_internet">SLIDE TO CALL VIA INTERNET</string>
     <string name="report_incident">Report Incident</string>
     <string name="i_am_safe">I Am Safe</string>
     <string name="gps_signal_lost">GPS signal lost. Ensure location is on.</string>
