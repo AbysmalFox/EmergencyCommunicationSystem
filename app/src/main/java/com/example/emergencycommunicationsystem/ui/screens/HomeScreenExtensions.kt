@@ -1,11 +1,16 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
@@ -22,6 +27,7 @@ import com.example.emergencycommunicationsystem.ui.components.CompactAlertCard
 import com.example.emergencycommunicationsystem.util.LocationUtils
 import com.example.emergencycommunicationsystem.util.Resource
 import com.example.emergencycommunicationsystem.util.getLocaleContext
+import com.example.emergencycommunicationsystem.util.getAlertSeverity
 
 @Composable
 fun ActiveAlertsSection(
@@ -46,17 +52,55 @@ fun ActiveAlertsSection(
             val alerts = state.data.take(3) // Show only top 3 alerts
             
             if (alerts.isNotEmpty()) {
-                Column {
-                    Text(
-                        text = "Active Alerts (${state.data.size})",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
+                val bgColor = MaterialTheme.colorScheme.background
+                val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
+                
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            color = if (isDarkMode) {
+                                Color.Transparent
+                            } else {
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
+                            },
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
+                        )
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Active Alerts",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            letterSpacing = (-0.3).sp
+                        )
+                        androidx.compose.foundation.layout.Box(
+                            modifier = Modifier
+                                .background(
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                                )
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "${state.data.size}",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
                     
                     Column(
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         alerts.forEach { alert ->
                             val distanceKm = if (userLat != null && userLon != null && 

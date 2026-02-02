@@ -5,24 +5,30 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
+import android.view.View
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import androidx.compose.material3.*
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import com.example.emergencycommunicationsystem.R
+import com.example.emergencycommunicationsystem.ui.components.PulsingCircleOverlay
+import com.example.emergencycommunicationsystem.util.highKeywords
 import com.example.emergencycommunicationsystem.util.LocationUtils
 import kotlin.math.*
 import androidx.compose.runtime.DisposableEffect
@@ -36,6 +42,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import com.example.emergencycommunicationsystem.util.NavigationManager
+import com.example.emergencycommunicationsystem.data.network.RoutingService
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import android.widget.Toast
+import com.example.emergencycommunicationsystem.util.LogFilter
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -52,7 +62,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.data.models.SafeZone
 import com.example.emergencycommunicationsystem.data.models.SafeZoneType
-import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
+import com.example.emergencycommunicationsystem.ui.theme.ThemeManager
+import com.example.emergencycommunicationsystem.ui.theme.BrandTealAccent
+import com.example.emergencycommunicationsystem.ui.theme.BrandDeepTeal
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
@@ -63,18 +75,41 @@ import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
+import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
+import com.example.emergencycommunicationsystem.viewmodel.AlertWithDistance
+
+private const val TAG = "MapScreen"
+
 @Composable
 fun MapScreen() {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val alertsViewModel: AlertsViewModel = viewModel()
+    val mapViewModel: com.example.emergencycommunicationsystem.viewmodel.MapViewModel = viewModel()
+    
     val alertsState by alertsViewModel.uiState.collectAsState()
+    val currentLanguage by com.example.emergencycommunicationsystem.data.UserPrefs.getLanguage(context).collectAsState(initial = "en")
+    val localeContext = com.example.emergencycommunicationsystem.util.getLocaleContext()
+    val userLocation by mapViewModel.userLocation.collectAsState()
 
     // State to hold MapView and Overlay for interaction
     var mapView by remember { mutableStateOf<MapView?>(null) }
     var locationOverlay by remember { mutableStateOf<MyLocationNewOverlay?>(null) }
     var currentRoutePolyline by remember { mutableStateOf<Polyline?>(null) }
-    var routeDestination by remember { mutableStateOf<SafeZone?>(null) }
+    
+    // Map State from ViewModel
+    val routeDestination by mapViewModel.routeDestination.collectAsState()
+    val isCalculatingRoute by mapViewModel.isCalculatingRoute.collectAsState()
+    val isCameraLocked by mapViewModel.isCameraLocked.collectAsState()
+    
+    // Map Filters State
+    var showAlerts by remember { mutableStateOf(true) }
+    var showHospitals by remember { mutableStateOf(true) }
+    var showEvacuationCenters by remember { mutableStateOf(true) }
+    
+    // Navigation Manager from ViewModel
+    val navigationManager = mapViewModel.navigationManager
+    val navigationState by mapViewModel.navigationState.collectAsState()
 
     // 1. Handle Lifecycle (Critical for osmdroid location updates)
     DisposableEffect(lifecycleOwner) {
@@ -102,14 +137,56 @@ fun MapScreen() {
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { granted ->
             hasLocationPermission = granted
-            if (granted) locationOverlay?.enableMyLocation()
+            if (granted) {
+                locationOverlay?.enableMyLocation()
+                mapViewModel.startLocationUpdates()
+            }
         }
     )
     LaunchedEffect(Unit) {
         if (!hasLocationPermission) {
             launcher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        } else {
+            mapViewModel.startLocationUpdates()
         }
     }
+
+    // LaunchedEffect to observe userLocation changes and update route polyline
+    LaunchedEffect(userLocation, routeDestination) {
+        val currentUserLocation = userLocation ?: return@LaunchedEffect
+        val selectedDestination = routeDestination ?: return@LaunchedEffect
+        
+        // Remove old polyline to prevent memory leaks and visual ghosting
+        currentRoutePolyline?.let { oldPolyline ->
+            mapView?.overlays?.remove(oldPolyline)
+        }
+        
+        // Create new polyline: Restore detailed route if navigating, otherwise fallback
+        val routeGeom = navigationState.routeGeometry
+        val updatedPolyline = if (navigationState.isNavigating && routeGeom.isNotEmpty()) {
+             Polyline().apply {
+                 setPoints(routeGeom)
+                 color = android.graphics.Color.parseColor("#FF9800") // Orange
+                 width = 14.0f
+                 isGeodesic = false
+             }
+        } else {
+             fallbackToStraightLine(
+                map = mapView ?: return@LaunchedEffect,
+                userLocation = currentUserLocation,
+                destination = selectedDestination,
+                context = context,
+                showToast = false
+            )
+        }
+        
+        // Add the new polyline to the map
+        mapView?.overlays?.add(updatedPolyline)
+        currentRoutePolyline = updatedPolyline
+        mapView?.invalidate()
+    }
+
+    val isDarkMode = ThemeManager.isDarkMode()
 
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(
@@ -119,6 +196,33 @@ fun MapScreen() {
                     mapView = this
                     setTileSource(TileSourceFactory.MAPNIK)
                     setMultiTouchControls(true)
+                    
+                    // Apply Dark Mode Tiles Filter
+                    if (isDarkMode) {
+                        this.overlayManager.tilesOverlay.setColorFilter(
+                            android.graphics.ColorMatrixColorFilter(
+                                floatArrayOf(
+                                    -1f, 0f, 0f, 0f, 255f, // Red inversion
+                                    0f, -1f, 0f, 0f, 255f, // Green inversion
+                                    0f, 0f, -1f, 0f, 255f, // Blue inversion
+                                    0f, 0f, 0f, 1f, 0f     // Alpha unchanged
+                                )
+                            )
+                        )
+                    } else {
+                        this.overlayManager.tilesOverlay.setColorFilter(null)
+                    }
+                    
+                    // AGGRESSIVE tile loading optimization to minimize HWUI logs
+                    try {
+                        minZoomLevel = 12.0
+                        maxZoomLevel = 18.0
+                        isHorizontalMapRepetitionEnabled = false
+                        isVerticalMapRepetitionEnabled = false
+                        setBuiltInZoomControls(false)
+                    } catch (e: Exception) {
+                        LogFilter.w(TAG, "Could not apply all tile optimizations: ${e.message}")
+                    }
 
                     // QC Boundary
                     val qcPoints = getQuezonCityBoundaryPoints()
@@ -130,41 +234,25 @@ fun MapScreen() {
                     }
                     overlays.add(qcBoundary)
 
-                    // Zoom to QC initially
+                    // Zoom to QC initially ONLY if not restoring a state
                     val minLat = qcPoints.minOf { it.latitude }
                     val maxLat = qcPoints.maxOf { it.latitude }
                     val minLon = qcPoints.minOf { it.longitude }
                     val maxLon = qcPoints.maxOf { it.longitude }
                     val boundingBox = BoundingBox(maxLat, maxLon, minLat, minLon)
-                    post { zoomToBoundingBox(boundingBox, true) }
+                    
+                    post { 
+                        // Only zoom to QC if we don't have a specific target
+                        if (routeDestination == null && (!isCameraLocked || userLocation == null)) {
+                            zoomToBoundingBox(boundingBox, true)
+                        }
+                    }
 
                     // User Location
                     val overlay = MyLocationNewOverlay(GpsMyLocationProvider(ctx), this)
                     overlay.enableMyLocation()
-                    // If permission is already granted, this starts it. If not, the launcher callback handles it.
                     overlays.add(overlay)
                     locationOverlay = overlay
-                    
-                    // Add Safe Zones (Hospitals and Evacuation Centers)
-                    val safeZones = getQuezonCitySafeZones()
-                    safeZones.forEach { safeZone ->
-                        val marker = Marker(this).apply {
-                            position = GeoPoint(safeZone.latitude, safeZone.longitude)
-                            // Add type prefix to title for clarity
-                            val typeLabel = when (safeZone.type) {
-                                SafeZoneType.HOSPITAL -> "🏥 Hospital: "
-                                SafeZoneType.EVACUATION_CENTER -> "🛟 Evacuation: "
-                            }
-                            title = "$typeLabel${safeZone.name}"
-                            snippet = safeZone.address ?: when (safeZone.type) {
-                                SafeZoneType.HOSPITAL -> "Hospital - ${safeZone.contact ?: "Contact available"}"
-                                SafeZoneType.EVACUATION_CENTER -> "Evacuation Center${if (safeZone.capacity != null) " - Capacity: ${safeZone.capacity}" else ""}"
-                            }
-                            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                            icon = createSafeZoneMarkerIcon(ctx, safeZone.type)
-                        }
-                        overlays.add(marker)
-                    }
                 }
             }
         )
@@ -174,132 +262,356 @@ fun MapScreen() {
             alertsViewModel.loadAlerts()
         }
         
+        // Track previous alerts to avoid unnecessary marker updates
+        var previousAlertIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
+        
         // Update alert markers when alerts state changes
-        LaunchedEffect(alertsState) {
+        LaunchedEffect(alertsState, currentLanguage, isDarkMode, showAlerts) {
             mapView?.let { mapView ->
-                // Remove existing alert markers (keep boundary, user location, and safe zones)
-                val markersToRemove = mapView.overlays
-                    .filterIsInstance<Marker>()
-                    .filter { marker ->
-                        // Only remove alert markers (red), keep safe zone markers (green/blue)
-                        marker.title?.let { title ->
-                            // Alert markers start with "🚨 Alert:", safe zones start with "🏥 Hospital:" or "🛟 Evacuation:"
-                            title.startsWith("🚨 Alert:")
-                        } ?: false
-                    }
-                    .toList()
-                markersToRemove.forEach { mapView.overlays.remove(it) }
-                
-                // Add new alert markers
                 when (val state = alertsState) {
                     is com.example.emergencycommunicationsystem.util.Resource.Success -> {
-                        state.data
-                            .filter { it.latitude != null && it.longitude != null }
-                            .forEach { alert ->
+                        val allAlerts = state.data.map { it.alert }.filter { it.latitude != null && it.longitude != null }
+                        val currentAlerts = if (showAlerts) allAlerts else emptyList()
+                        val currentAlertIds = currentAlerts.map { it.id }.toSet()
+                        
+                        // Always clean up if toggled off or changed
+                        val markersToRemove = mapView.overlays
+                            .filterIsInstance<Marker>()
+                            .filter { marker ->
+                                marker.title?.contains("Alert") == true || marker.title?.contains("Alerto") == true
+                            }
+                            .toList()
+                        markersToRemove.forEach { mapView.overlays.remove(it) }
+
+                        // Re-add only if supposed to show
+                        if (showAlerts) {
+                            currentAlerts.forEach { alert ->
+                                // Check for high priority keywords to use pulsing overlay
+                                val isHighPriority = highKeywords.any { keyword -> 
+                                    alert.title?.contains(keyword, ignoreCase = true) == true || 
+                                    alert.content?.contains(keyword, ignoreCase = true) == true 
+                                }
+
+                                if (isHighPriority) {
+                                    // Add pulsing effect overlay UNDER the marker
+                                    val pulseOverlay = PulsingCircleOverlay(
+                                        center = GeoPoint(alert.latitude!!, alert.longitude!!),
+                                        color = com.example.emergencycommunicationsystem.util.getStaticColorForCategory(alert, isDarkMode).toArgb()
+                                    )
+                                    mapView.overlays.add(pulseOverlay)
+                                }
+
                                 val marker = Marker(mapView).apply {
                                     position = GeoPoint(alert.latitude!!, alert.longitude!!)
-                                    // Add alert prefix to title for clarity
-                                    title = "🚨 Alert: ${alert.title ?: "Emergency Alert"}"
-                                    snippet = alert.location ?: alert.content ?: "Emergency alert in this area"
-                                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                                    // Use red color for alert markers
-                                    icon = createAlertMarkerIcon(mapView.context)
+                                    
+                                    val alertColor = com.example.emergencycommunicationsystem.util.getStaticColorForCategory(alert, isDarkMode)
+                                    
+                                    CoroutineScope(Dispatchers.Main).launch {
+                                        val translatedAlertLabel = localeContext.getString(R.string.map_alert)
+                                        
+                                        val translatedTitle = if (currentLanguage != "en" && alert.title != null) {
+                                            com.example.emergencycommunicationsystem.util.TranslationService.translate(alert.title, currentLanguage)
+                                        } else alert.title ?: localeContext.getString(R.string.no_title)
+                                        
+                                        title = "🚨 $translatedAlertLabel: $translatedTitle"
+                                        
+                                        val snippetText = alert.location ?: alert.content ?: localeContext.getString(R.string.community_alerts_will_appear_here)
+                                        snippet = if (currentLanguage != "en") {
+                                            com.example.emergencycommunicationsystem.util.TranslationService.translate(snippetText, currentLanguage)
+                                        } else snippetText
+                                    }
+                                    
+                                    // Use new Core Dot icon for high priority, else standard
+                                    if (isHighPriority) {
+                                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                                        icon = createPulseCoreIcon(mapView.context, alertColor.toArgb())
+                                    } else {
+                                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                                        icon = createAlertMarkerIcon(mapView.context, alertColor.toArgb())
+                                    }
                                 }
                                 mapView.overlays.add(marker)
                             }
+                        }
                         mapView.invalidate()
+                        previousAlertIds = currentAlertIds
                     }
                     else -> {}
                 }
             }
         }
 
-        // Map Legend - Top Right Corner
+        // Manage Safe Zone Markers (Hospitals & Evacuation Centers)
+        LaunchedEffect(showHospitals, showEvacuationCenters, currentLanguage, isDarkMode) {
+            mapView?.let { map ->
+                // Remove existing safe zone markers
+                val markersToRemove = map.overlays
+                    .filterIsInstance<Marker>()
+                    .filter { marker -> 
+                        // Identify safe zone markers by their title/content conventions
+                        val title = marker.title ?: ""
+                        title.contains("Hospital") || title.contains("Evacuation") || 
+                        title.contains("🏥") || title.contains("🛟")
+                    }
+                    .toList()
+                markersToRemove.forEach { map.overlays.remove(it) }
+
+                val safeZones = getQuezonCitySafeZones()
+                
+                safeZones.forEach { safeZone ->
+                    val shouldShow = when(safeZone.type) {
+                        SafeZoneType.HOSPITAL -> showHospitals
+                        SafeZoneType.EVACUATION_CENTER -> showEvacuationCenters
+                    }
+
+                    if (shouldShow) {
+                        val marker = Marker(map).apply {
+                            position = GeoPoint(safeZone.latitude, safeZone.longitude)
+                            
+                            // Apply dynamic translation to safe zone info
+                            CoroutineScope(Dispatchers.Main).launch {
+                                val translatedType = if (currentLanguage != "en") {
+                                    val typeStr = when (safeZone.type) {
+                                        SafeZoneType.HOSPITAL -> "Hospital"
+                                        SafeZoneType.EVACUATION_CENTER -> "Evacuation Center"
+                                    }
+                                    com.example.emergencycommunicationsystem.util.TranslationService.translate(typeStr, currentLanguage)
+                                } else {
+                                    when (safeZone.type) {
+                                        SafeZoneType.HOSPITAL -> "Hospital"
+                                        SafeZoneType.EVACUATION_CENTER -> "Evacuation Center"
+                                    }
+                                }
+                                
+                                val typeIcon = when (safeZone.type) {
+                                    SafeZoneType.HOSPITAL -> "🏥"
+                                    SafeZoneType.EVACUATION_CENTER -> "🛟"
+                                }
+                                
+                                title = "$typeIcon $translatedType: ${safeZone.name}"
+                                
+                                snippet = if (safeZone.address != null) {
+                                    if (currentLanguage != "en") com.example.emergencycommunicationsystem.util.TranslationService.translate(safeZone.address, currentLanguage)
+                                    else safeZone.address
+                                } else {
+                                    val fallbackSnippet = when (safeZone.type) {
+                                        SafeZoneType.HOSPITAL -> "Hospital - ${safeZone.contact ?: "Contact available"}"
+                                        SafeZoneType.EVACUATION_CENTER -> "Evacuation Center${if (safeZone.capacity != null) " - Capacity: ${safeZone.capacity}" else ""}"
+                                    }
+                                    if (currentLanguage != "en") com.example.emergencycommunicationsystem.util.TranslationService.translate(fallbackSnippet, currentLanguage)
+                                    else fallbackSnippet
+                                }
+                            }
+                            
+                            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                            icon = createSafeZoneMarkerIcon(map.context, safeZone.type)
+                        }
+                        map.overlays.add(marker)
+                    }
+                }
+                map.invalidate()
+            }
+        }
+
+        // Map Legend (Always visible at TopEnd)
         MapLegend(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = 8.dp, end = 8.dp)
-                .widthIn(max = 110.dp)
+                .padding(top = 16.dp, end = 16.dp)
+                .widthIn(max = 160.dp), // Increased width for switches
+            currentLanguage = currentLanguage,
+            showAlerts = showAlerts,
+            onShowAlertsChange = { showAlerts = it },
+            showHospitals = showHospitals,
+            onShowHospitalsChange = { showHospitals = it },
+            showEvacuationCenters = showEvacuationCenters,
+            onShowEvacuationCentersChange = { showEvacuationCenters = it }
         )
+
+        // 5. Navigation Card or Directions Card (Overlays Legend at TopEnd)
+        if (!isCalculatingRoute) {
+            routeDestination?.let { destination ->
+                if (navigationState.isNavigating) {
+                    NavigationCard(
+                        navigationState = navigationState,
+                        destination = destination,
+                        navigationManager = navigationManager,
+                        currentLanguage = currentLanguage,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = 16.dp, end = 16.dp)
+                            .fillMaxWidth(0.85f),
+                        onClose = {
+                            navigationManager.stopNavigation()
+                            currentRoutePolyline?.let { route ->
+                                mapView?.overlays?.remove(route)
+                                mapView?.invalidate()
+                            }
+                            currentRoutePolyline = null
+                            mapViewModel.setRouteDestination(null)
+                        }
+                    )
+                } else {
+                    val currentUserLocation = userLocation ?: locationOverlay?.myLocation
+                    currentUserLocation?.let { userLoc ->
+                        val distance = LocationUtils.calculateDistance(
+                            userLoc.latitude, userLoc.longitude,
+                            destination.latitude, destination.longitude
+                        )
+                        val distanceText = LocationUtils.formatDistance(distance)
+                        
+                        DirectionsCard(
+                            destination = destination,
+                            distance = distanceText,
+                            currentLanguage = currentLanguage,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(top = 16.dp, end = 16.dp)
+                                .fillMaxWidth(0.85f),
+                            onClose = {
+                                navigationManager.stopNavigation()
+                                currentRoutePolyline?.let { route ->
+                                    mapView?.overlays?.remove(route)
+                                    mapView?.invalidate()
+                                }
+                                currentRoutePolyline = null
+                                mapViewModel.setRouteDestination(null)
+                            }
+                        )
+                    }
+                }
+            }
+        }
         
         // 3. "Find Nearest Evacuation Center" Button
         FloatingActionButton(
             onClick = {
                 val overlay = locationOverlay
                 val map = mapView
-                if (overlay != null && map != null) {
-                    if (overlay.myLocation != null) {
-                        val userLocation = overlay.myLocation
-                        val nearestEvac = findNearestEvacuationCenter(
-                            userLat = userLocation.latitude,
-                            userLon = userLocation.longitude
-                        )
+                // Prioritize ViewModel location, fallback to Overlay location
+                val currentUserLocation = userLocation ?: overlay?.myLocation
+                
+                if (map != null && currentUserLocation != null) {
+                    val nearestEvac = findNearestEvacuationCenter(
+                        userLat = currentUserLocation.latitude,
+                        userLon = currentUserLocation.longitude
+                    )
+                    
+                    if (nearestEvac != null) {
+                        mapViewModel.setRouteDestination(null)
+                        mapViewModel.setIsCalculatingRoute(true)
+                        currentRoutePolyline?.let { map.overlays.remove(it) }
+                        currentRoutePolyline = null
+                        navigationManager.stopNavigation()
                         
-                        if (nearestEvac != null) {
-                            val distance = LocationUtils.calculateDistance(
-                                userLocation.latitude, userLocation.longitude,
-                                nearestEvac.latitude, nearestEvac.longitude
+                        CoroutineScope(Dispatchers.Main).launch {
+                            val loadingMsg = localeContext.getString(R.string.map_calculating_route, nearestEvac.name)
+                            Toast.makeText(context, loadingMsg, Toast.LENGTH_SHORT).show()
+                            
+                            val result = RoutingService.getRoute(
+                                originLat = currentUserLocation.latitude,
+                                originLon = currentUserLocation.longitude,
+                                destLat = nearestEvac.latitude,
+                                destLon = nearestEvac.longitude
                             )
-                            val distanceText = LocationUtils.formatDistance(distance)
                             
-                            // Store destination for route
-                            routeDestination = nearestEvac
-                            
-                            // Remove previous route if exists
-                            currentRoutePolyline?.let { oldRoute ->
-                                map.overlays.remove(oldRoute)
-                            }
-                            
-                            // Draw route from user location to evacuation center
-                            val route = Polyline().apply {
-                                val routePoints = listOf(
-                                    GeoPoint(userLocation.latitude, userLocation.longitude),
-                                    GeoPoint(nearestEvac.latitude, nearestEvac.longitude)
-                                )
-                                setPoints(routePoints)
-                                color = Color(0xFF4CAF50).toArgb() // Green color for route
-                                width = 12.0f
-                                isGeodesic = true // Follows the curve of the Earth
-                            }
-                            map.overlays.add(route)
-                            currentRoutePolyline = route
-                            
-                            Toast.makeText(
-                                context,
-                                "Route to: ${nearestEvac.name} ($distanceText away)",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            
-                            val evacPoint = GeoPoint(nearestEvac.latitude, nearestEvac.longitude)
-                            map.controller.animateTo(evacPoint)
-                            map.controller.setZoom(15.0)
-                            
-                            // Find and show the marker for this evacuation center after animation
-                            CoroutineScope(Dispatchers.Main).launch {
-                                delay(800) // Wait for animation to complete
-                                val marker = map.overlays
-                                    .filterIsInstance<Marker>()
-                                    .firstOrNull { marker ->
-                                        marker.position.latitude == nearestEvac.latitude &&
-                                        marker.position.longitude == nearestEvac.longitude &&
-                                        marker.title?.startsWith("🛟 Evacuation:") == true
+                            result.onSuccess { routeResponse ->
+                                if (routeResponse.routes.isNotEmpty()) {
+                                    val route = routeResponse.routes[0]
+                                    val routeGeometry = try {
+                                        val geometryStr = when (val geom = route.geometry) {
+                                            is String -> geom
+                                            is Map<*, *> -> com.google.gson.Gson().toJson(geom)
+                                            else -> null
+                                        }
+                                        if (geometryStr != null) RoutingService.decodeGeometry(geometryStr)
+                                        else decodeStepGeometries(route)
+                                    } catch (e: Exception) { emptyList() }
+                                    
+                                    if (routeGeometry.isNotEmpty()) {
+                                        val routePolyline = Polyline().apply {
+                                            setPoints(routeGeometry)
+                                            color = Color(0xFFFF9800).toArgb()
+                                            width = 14.0f
+                                            isGeodesic = false
+                                        }
+                                        map.overlays.add(routePolyline)
+                                        currentRoutePolyline = routePolyline
+                                        
+                                        navigationManager.startNavigation(
+                                            originLat = currentUserLocation.latitude,
+                                            originLon = currentUserLocation.longitude,
+                                            destLat = nearestEvac.latitude,
+                                            destLon = nearestEvac.longitude,
+                                            onSuccess = {
+                                                mapViewModel.setRouteDestination(nearestEvac)
+                                                mapViewModel.setIsCalculatingRoute(false)
+                                            },
+                                            onError = { error ->
+                                                mapViewModel.setRouteDestination(nearestEvac)
+                                                mapViewModel.setIsCalculatingRoute(false)
+                                                CoroutineScope(Dispatchers.Main).launch {
+                                                    val errorPrefix = localeContext.getString(R.string.map_navigation_error)
+                                                    Toast.makeText(context, "$errorPrefix: $error", Toast.LENGTH_LONG).show()
+                                                }
+                                            }
+                                        )
+                                        
+                                        val allPoints = routeGeometry + GeoPoint(currentUserLocation.latitude, currentUserLocation.longitude)
+                                        val boundingBox = BoundingBox(allPoints.maxOf { it.latitude }, allPoints.maxOf { it.longitude }, allPoints.minOf { it.latitude }, allPoints.minOf { it.longitude })
+                                        map.post { map.zoomToBoundingBox(boundingBox, true, 250) }
+                                    } else {
+                                        val routePolyline = Polyline().apply {
+                                            setPoints(listOf(GeoPoint(currentUserLocation.latitude, currentUserLocation.longitude), GeoPoint(nearestEvac.latitude, nearestEvac.longitude)))
+                                            color = Color(0xFFFF9800).toArgb()
+                                            width = 12.0f
+                                            isGeodesic = true
+                                        }
+                                        map.overlays.add(routePolyline)
+                                        currentRoutePolyline = routePolyline
+                                        mapViewModel.setRouteDestination(nearestEvac)
+                                        mapViewModel.setIsCalculatingRoute(false)
+                                        
+                                        val allPoints = listOf(GeoPoint(currentUserLocation.latitude, currentUserLocation.longitude), GeoPoint(nearestEvac.latitude, nearestEvac.longitude))
+                                        val boundingBox = BoundingBox(allPoints.maxOf { it.latitude }, allPoints.maxOf { it.longitude }, allPoints.minOf { it.latitude }, allPoints.minOf { it.longitude })
+                                        map.post { map.zoomToBoundingBox(boundingBox, true, 250) }
                                     }
-                                marker?.showInfoWindow()
-                                map.invalidate() // Refresh map to show route
+                                    map.invalidate()
+                                }
+                            }.onFailure { error ->
+                                val errorMsg = error.message ?: ""
+                                CoroutineScope(Dispatchers.Main).launch {
+                                    val translatedError = if (errorMsg.contains("No internet")) {
+                                        localeContext.getString(R.string.map_no_internet)
+                                    } else {
+                                        localeContext.getString(R.string.map_routing_unavailable)
+                                    }
+                                    Toast.makeText(context, translatedError, Toast.LENGTH_LONG).show()
+                                }
+                                val fallbackPolyline = fallbackToStraightLine(map, currentUserLocation, nearestEvac, localeContext, showToast = false)
+                                map.overlays.add(fallbackPolyline)
+                                currentRoutePolyline = fallbackPolyline
+                                mapViewModel.setRouteDestination(nearestEvac)
+                                
+                                // Zoom to show start and end points
+                                val allPoints = listOf(GeoPoint(currentUserLocation.latitude, currentUserLocation.longitude), GeoPoint(nearestEvac.latitude, nearestEvac.longitude))
+                                val boundingBox = BoundingBox(allPoints.maxOf { it.latitude }, allPoints.maxOf { it.longitude }, allPoints.minOf { it.latitude }, allPoints.minOf { it.longitude })
+                                map.post { map.zoomToBoundingBox(boundingBox, true, 250) }
+                                map.invalidate()
+                                
+                                mapViewModel.setIsCalculatingRoute(false)
                             }
-                        } else {
-                            Toast.makeText(
-                                context,
-                                "No evacuation centers found",
-                                Toast.LENGTH_SHORT
-                            ).show()
                         }
                     } else {
-                        Toast.makeText(
-                            context,
-                            "Location not available. Please enable location services.",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        CoroutineScope(Dispatchers.Main).launch {
+                            val noEvacMsg = localeContext.getString(R.string.map_no_evac_found)
+                            Toast.makeText(localeContext, noEvacMsg, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } else {
+                    CoroutineScope(Dispatchers.Main).launch {
+                        val locNotAvailMsg = localeContext.getString(R.string.map_loc_not_available)
+                        Toast.makeText(localeContext, locNotAvailMsg, Toast.LENGTH_SHORT).show()
                     }
                 }
             },
@@ -310,103 +622,210 @@ fun MapScreen() {
         ) {
             Icon(
                 painter = painterResource(id = R.drawable.ic_tabler_home_search),
-                contentDescription = "Find Nearest Evacuation Center"
+                contentDescription = localeContext.getString(R.string.map_finding_nearest)
             )
         }
         
-        // 4. "My Location" Button
+        // 4. "My Location" / Recenter Button
         FloatingActionButton(
             onClick = {
                 val overlay = locationOverlay
                 val map = mapView
-                if (overlay != null && map != null && overlay.myLocation != null) {
-                    map.controller.animateTo(overlay.myLocation)
-                    map.controller.setZoom(18.0)
+                
+                // Toggle lock state
+                val newState = !isCameraLocked
+                mapViewModel.setCameraLocked(newState)
+                
+                if (newState) {
+                    if (userLocation != null) {
+                        map?.controller?.animateTo(userLocation)
+                    } else if (overlay?.myLocation != null) {
+                        map?.controller?.animateTo(overlay.myLocation)
+                    }
+                    map?.controller?.setZoom(18.0)
                 }
             },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 130.dp)
+                .padding(end = 16.dp, bottom = 130.dp),
+            containerColor = if (isCameraLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
         ) {
-            Icon(AppIcons.MyLocation, contentDescription = "My Location")
+            Icon(
+                AppIcons.MyLocation, 
+                contentDescription = if (isCameraLocked) "Unlock Camera" else "Center on Location",
+                tint = if (isCameraLocked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+            )
         }
         
-        // 5. Directions Card - Shows route information
-        routeDestination?.let { destination ->
-            locationOverlay?.myLocation?.let { userLoc ->
-                val distance = LocationUtils.calculateDistance(
-                    userLoc.latitude, userLoc.longitude,
-                    destination.latitude, destination.longitude
-                )
-                val distanceText = LocationUtils.formatDistance(distance)
+        // Camera Lock Logic - Restore position when map becomes available or location updates
+        LaunchedEffect(userLocation, isCameraLocked, mapView) {
+            val map = mapView
+            if (isCameraLocked && userLocation != null && map != null) {
+                map.controller.animateTo(userLocation)
+                if (map.zoomLevelDouble < 15.0) {
+                     map.controller.setZoom(18.0)
+                }
+            }
+        }
+        
+        // Route Zoom Logic - Restore zoom when returning to screen with active route
+        LaunchedEffect(routeDestination, mapView, userLocation) {
+            val map = mapView
+            val dest = routeDestination
+            val userLoc = userLocation
+            
+            if (map != null && dest != null && userLoc != null) {
+                // Determine points to include in bounding box
+                val points = mutableListOf<GeoPoint>()
+                points.add(userLoc)
+                points.add(GeoPoint(dest.latitude, dest.longitude))
                 
-                DirectionsCard(
-                    destination = destination,
-                    distance = distanceText,
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(start = 16.dp, bottom = 130.dp)
-                        .fillMaxWidth(0.85f),
-                    onClose = {
-                        // Clear route
-                        currentRoutePolyline?.let { route ->
-                            mapView?.overlays?.remove(route)
-                            mapView?.invalidate()
-                        }
-                        currentRoutePolyline = null
-                        routeDestination = null
-                    }
+                if (navigationState.routeGeometry.isNotEmpty()) {
+                    points.addAll(navigationState.routeGeometry)
+                }
+                
+                val boundingBox = BoundingBox(
+                    points.maxOf { it.latitude }, 
+                    points.maxOf { it.longitude }, 
+                    points.minOf { it.latitude }, 
+                    points.minOf { it.longitude }
                 )
+                
+                // Use post to ensure map layout is ready
+                map.post { 
+                    map.zoomToBoundingBox(boundingBox, true, 250) 
+                }
+            }
+        }
+
+        // Real-time Dynamic Polyline Update
+        LaunchedEffect(userLocation, navigationState.isNavigating, currentRoutePolyline) {
+            if (navigationState.isNavigating && userLocation != null && currentRoutePolyline != null) {
+                val currentPos = userLocation!!
+                val routeGeom = navigationState.routeGeometry
+                
+                if (routeGeom.isNotEmpty()) {
+                    // Update polyline to start from current location
+                    // We simply connect current location to the remaining route
+                    // Ideally, we find the closest point, but connecting to the start of the remaining geometry (or slightly ahead) works visually
+                    
+                    // Simple approach: [Current Pos] + [Route Geometry]
+                    // Better approach: Slice route geometry? 
+                    // Since NavigationManager doesn't expose "current geometry index", we'll just update the start point 
+                    // or if it's a straight line (fallback), update the start.
+                    
+                    // If it's a straight line (size 2), just update start
+                    if (currentRoutePolyline?.points?.size == 2 && routeGeom.isEmpty()) { // Fallback case
+                         routeDestination?.let { dest ->
+                             currentRoutePolyline?.setPoints(listOf(currentPos, GeoPoint(dest.latitude, dest.longitude)))
+                         }
+                    } else {
+                        // For complex routes, we really should slice it, but without index it's hard.
+                        // User request: "Shrinking Line". 
+                        // Let's rely on NavigationManager's instruction updates for text, 
+                        // and for the line, we can try to find the closest point index here.
+                        
+                        val closestPoint = routeGeom.minByOrNull { point -> 
+                            val dLat = point.latitude - currentPos.latitude
+                            val dLon = point.longitude - currentPos.longitude
+                            dLat * dLat + dLon * dLon // Euclidean distance squared is enough for comparison
+                        }
+                        
+                        closestPoint?.let { closest ->
+                            val index = routeGeom.indexOf(closest)
+                            if (index != -1 && index < routeGeom.size) {
+                                val newPoints = mutableListOf<GeoPoint>()
+                                newPoints.add(currentPos)
+                                newPoints.addAll(routeGeom.subList(index, routeGeom.size))
+                                currentRoutePolyline?.setPoints(newPoints)
+                            }
+                        }
+                    }
+                    mapView?.invalidate()
+                } else {
+                     // Fallback for straight line or if geometry missing
+                     routeDestination?.let { dest ->
+                         currentRoutePolyline?.setPoints(listOf(currentPos, GeoPoint(dest.latitude, dest.longitude)))
+                         mapView?.invalidate()
+                     }
+                }
             }
         }
     }
 }
 
 /**
- * Map Legend component to show what each marker type represents
+ * Map Legend component
  */
 @Composable
-fun MapLegend(modifier: Modifier = Modifier) {
+fun MapLegend(
+    modifier: Modifier = Modifier, 
+    currentLanguage: String = "en",
+    showAlerts: Boolean = true,
+    onShowAlertsChange: (Boolean) -> Unit = {},
+    showHospitals: Boolean = true,
+    onShowHospitalsChange: (Boolean) -> Unit = {},
+    showEvacuationCenters: Boolean = true,
+    onShowEvacuationCentersChange: (Boolean) -> Unit = {}
+) {
+    val isDarkMode = ThemeManager.isDarkMode()
+    val backgroundColor = if (isDarkMode) Color(0xFF1E1E1E).copy(alpha = 0.95f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
+    val contentColor = if (isDarkMode) Color.White else MaterialTheme.colorScheme.onSurface
+    val localeContext = com.example.emergencycommunicationsystem.util.getLocaleContext()
+    
+    val translatedLegend = localeContext.getString(R.string.map_legend)
+    val translatedAlert = localeContext.getString(R.string.map_alert)
+    val translatedHospital = localeContext.getString(R.string.map_hospital)
+    val translatedEvac = localeContext.getString(R.string.map_evacuation)
+    
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(4.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+        color = backgroundColor,
         shadowElevation = 4.dp
     ) {
         Column(
-            modifier = Modifier.padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            modifier = Modifier.padding(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                text = "Legend",
+                text = translatedLegend,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(bottom = 2.dp)
+                color = contentColor,
+                modifier = Modifier.padding(bottom = 2.dp, start = 4.dp)
             )
             
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 2.dp),
                 thickness = 1.dp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                color = contentColor.copy(alpha = 0.3f)
             )
             
-            // Alert Marker
             LegendItem(
-                color = Color.Red,
-                label = "Alert"
+                color = Color.Red, 
+                label = translatedAlert, 
+                textColor = contentColor, 
+                isCircle = true, 
+                isPin = false,
+                isChecked = showAlerts,
+                onToggle = onShowAlertsChange
             )
-            
-            // Hospital Marker
             LegendItem(
-                color = Color(0xFF4CAF50),
-                label = "Hospital"
+                color = Color(0xFF4CAF50), 
+                label = translatedHospital, 
+                textColor = contentColor, 
+                isCircle = false,
+                isChecked = showHospitals,
+                onToggle = onShowHospitalsChange
             )
-            
-            // Evacuation Center Marker
             LegendItem(
-                color = Color(0xFF2196F3),
-                label = "Evacuation"
+                color = Color(0xFF2196F3), 
+                label = translatedEvac, 
+                textColor = contentColor, 
+                isCircle = false,
+                isChecked = showEvacuationCenters,
+                onToggle = onShowEvacuationCentersChange
             )
         }
     }
@@ -414,123 +833,93 @@ fun MapLegend(modifier: Modifier = Modifier) {
 
 @Composable
 fun LegendItem(
-    color: Color,
-    label: String
+    color: Color, 
+    label: String, 
+    textColor: Color, 
+    isCircle: Boolean = true,
+    isPin: Boolean = false,
+    isChecked: Boolean = true,
+    onToggle: (Boolean) -> Unit = {}
 ) {
+    val isDarkMode = ThemeManager.isDarkMode()
+    
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onToggle(!isChecked) }
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        Checkbox(
+            checked = isChecked,
+            onCheckedChange = null, // Handled by Row click
+            modifier = Modifier.size(20.dp),
+            colors = CheckboxDefaults.colors(
+                checkedColor = if (isDarkMode) MaterialTheme.colorScheme.primary else BrandTealAccent,
+                uncheckedColor = textColor.copy(alpha = 0.6f),
+                checkmarkColor = if (isDarkMode) MaterialTheme.colorScheme.onPrimary else Color.White
+            )
+        )
+
+        val shape = when {
+            isPin -> RoundedCornerShape(2.dp) // For Diamond rotation
+            isCircle -> CircleShape
+            else -> RoundedCornerShape(4.dp) // Square for Safe Zones
+        }
+        
         Box(
             modifier = Modifier
-                .size(14.dp)
-                .background(color, RoundedCornerShape(50))
-                .border(1.5.dp, Color.White, RoundedCornerShape(50))
+                .size(12.dp)
+                .rotate(if (isPin) 45f else 0f) // Diamond shape in legend
+                .background(if (isChecked) color else color.copy(alpha = 0.4f), shape)
+                .border(1.dp, if (isChecked) textColor.copy(alpha = 0.5f) else textColor.copy(alpha = 0.2f), shape)
         )
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onSurface
+            color = if (isChecked) textColor else textColor.copy(alpha = 0.5f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
 
 /**
- * Creates a red marker icon for alerts
- */
-private fun createAlertMarkerIcon(context: android.content.Context): android.graphics.drawable.Drawable {
-    // Create a simple red circle marker
-    val size = 48
-    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(bitmap)
-    
-    // Draw red circle
-    val paint = android.graphics.Paint().apply {
-        color = Color.Red.toArgb()
-        style = android.graphics.Paint.Style.FILL
-        isAntiAlias = true
-    }
-    val strokePaint = android.graphics.Paint().apply {
-        color = Color.White.toArgb()
-        style = android.graphics.Paint.Style.STROKE
-        strokeWidth = 4f
-        isAntiAlias = true
-    }
-    
-    val centerX = size / 2f
-    val centerY = size / 2f
-    val radius = (size / 2f) - 4f
-    
-    canvas.drawCircle(centerX, centerY, radius, paint)
-    canvas.drawCircle(centerX, centerY, radius, strokePaint)
-    
-    return BitmapDrawable(context.resources, bitmap)
-}
-
-/**
- * Creates a marker icon for safe zones (hospitals = green, evacuation centers = blue)
- */
-private fun createSafeZoneMarkerIcon(context: android.content.Context, type: SafeZoneType): android.graphics.drawable.Drawable {
-    val size = 48
-    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(bitmap)
-    
-    // Choose color based on type
-    val zoneColor = when (type) {
-        SafeZoneType.HOSPITAL -> Color(0xFF4CAF50) // Green
-        SafeZoneType.EVACUATION_CENTER -> Color(0xFF2196F3) // Blue
-    }
-    
-    // Draw circle with appropriate color
-    val paint = android.graphics.Paint().apply {
-        color = zoneColor.toArgb()
-        style = android.graphics.Paint.Style.FILL
-        isAntiAlias = true
-    }
-    val strokePaint = android.graphics.Paint().apply {
-        color = Color.White.toArgb()
-        style = android.graphics.Paint.Style.STROKE
-        strokeWidth = 4f
-        isAntiAlias = true
-    }
-    
-    val centerX = size / 2f
-    val centerY = size / 2f
-    val radius = (size / 2f) - 4f
-    
-    canvas.drawCircle(centerX, centerY, radius, paint)
-    canvas.drawCircle(centerX, centerY, radius, strokePaint)
-    
-    // Add icon symbol (H for Hospital, E for Evacuation)
-    val textPaint = android.graphics.Paint().apply {
-        color = Color.White.toArgb()
-        textSize = 24f
-        textAlign = android.graphics.Paint.Align.CENTER
-        isAntiAlias = true
-        typeface = android.graphics.Typeface.DEFAULT_BOLD
-    }
-    val symbol = when (type) {
-        SafeZoneType.HOSPITAL -> "H"
-        SafeZoneType.EVACUATION_CENTER -> "E"
-    }
-    val textY = centerY + (textPaint.descent() + textPaint.ascent()) / 2
-    canvas.drawText(symbol, centerX, textY, textPaint)
-    
-    return BitmapDrawable(context.resources, bitmap)
-}
-
-/**
- * Directions Card component showing route information to evacuation center
+ * Directions Card
  */
 @Composable
 fun DirectionsCard(
     destination: SafeZone,
     distance: String,
+    currentLanguage: String = "en",
     modifier: Modifier = Modifier,
     onClose: () -> Unit
 ) {
+    val localeContext = com.example.emergencycommunicationsystem.util.getLocaleContext()
+    
+    val translatedDirections = localeContext.getString(R.string.map_directions)
+    val translatedTo = localeContext.getString(R.string.map_to)
+    val translatedDistanceLabel = localeContext.getString(R.string.map_distance)
+    val translatedCapacityLabel = localeContext.getString(R.string.map_capacity)
+    val translatedRouteInstr = localeContext.getString(R.string.map_route_instruction)
+    
+    var translatedAddress by remember(destination.address) { mutableStateOf(destination.address ?: "") }
+    var translatedDestName by remember(destination.name) { mutableStateOf(destination.name) }
+    
+    LaunchedEffect(currentLanguage, destination.address, destination.name) {
+        if (currentLanguage != "en") {
+            destination.address?.let { addr ->
+                launch { translatedAddress = com.example.emergencycommunicationsystem.util.TranslationService.translate(addr, currentLanguage) }
+            }
+            launch { translatedDestName = com.example.emergencycommunicationsystem.util.TranslationService.translate(destination.name, currentLanguage) }
+        } else {
+            translatedAddress = destination.address ?: ""
+            translatedDestName = destination.name
+        }
+    }
+
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
@@ -538,10 +927,9 @@ fun DirectionsCard(
         shadowElevation = 8.dp
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            // Header with close button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -549,92 +937,367 @@ fun DirectionsCard(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Icon(
-                        Icons.Filled.Navigation,
-                        contentDescription = "Route",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = "Directions",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Icon(Icons.Filled.Navigation, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Text(text = translatedDirections, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 }
-                IconButton(onClick = onClose) {
-                    Icon(
-                        Icons.Filled.Close,
-                        contentDescription = "Close",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Filled.Close, contentDescription = null, modifier = Modifier.size(18.dp))
                 }
             }
             
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 4.dp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f), thickness = 0.5.dp)
             
-            // Destination info
-            Column(
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = "To: ${destination.name}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                
-                destination.address?.let { address ->
-                    Text(
-                        text = address,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(text = "$translatedTo: $translatedDestName", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (translatedAddress.isNotEmpty()) {
+                    Text(text = translatedAddress, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                
-                Row(
-                    modifier = Modifier.padding(top = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "Distance: $distance",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    
-                    destination.capacity?.let { capacity ->
-                        Text(
-                            text = "• Capacity: $capacity",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                Row(modifier = Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = "$translatedDistanceLabel: $distance", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    destination.capacity?.let { cap ->
+                        Text(text = "• $translatedCapacityLabel: $cap", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
             
-            // Route instruction
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-            ) {
-                Text(
-                    text = "Follow the green route line on the map to reach the evacuation center.",
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(12.dp),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+            Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)) {
+                Text(text = translatedRouteInstr, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(8.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
+}
+
+/**
+ * Navigation Card
+ */
+@Composable
+fun NavigationCard(
+    navigationState: com.example.emergencycommunicationsystem.data.models.NavigationState,
+    destination: SafeZone,
+    navigationManager: com.example.emergencycommunicationsystem.util.NavigationManager,
+    currentLanguage: String = "en",
+    modifier: Modifier = Modifier,
+    onClose: () -> Unit
+) {
+    val localeContext = com.example.emergencycommunicationsystem.util.getLocaleContext()
+    
+    val translatedNavLabel = localeContext.getString(R.string.map_navigation)
+    val translatedRemaining = localeContext.getString(R.string.map_remaining)
+    val translatedEtaLabel = localeContext.getString(R.string.map_eta)
+    val translatedThen = localeContext.getString(R.string.map_then)
+    
+    var translatedCurInstr by remember(navigationState.currentInstruction?.instruction) { mutableStateOf(navigationState.currentInstruction?.instruction ?: "") }
+    var translatedNextInstr by remember(navigationState.nextInstruction?.instruction) { mutableStateOf(navigationState.nextInstruction?.instruction ?: "") }
+    var translatedDestName by remember(destination.name) { mutableStateOf(destination.name) }
+
+    LaunchedEffect(currentLanguage, navigationState.currentInstruction, navigationState.nextInstruction, destination.name) {
+        if (currentLanguage != "en") {
+            navigationState.currentInstruction?.instruction?.let { instr ->
+                launch { translatedCurInstr = com.example.emergencycommunicationsystem.util.TranslationService.translate(instr, currentLanguage) }
+            }
+            navigationState.nextInstruction?.instruction?.let { instr ->
+                launch { translatedNextInstr = com.example.emergencycommunicationsystem.util.TranslationService.translate(instr, currentLanguage) }
+            }
+            launch { translatedDestName = com.example.emergencycommunicationsystem.util.TranslationService.translate(destination.name, currentLanguage) }
+        } else {
+            translatedCurInstr = navigationState.currentInstruction?.instruction ?: ""
+            translatedNextInstr = navigationState.nextInstruction?.instruction ?: ""
+            translatedDestName = destination.name
+        }
+    }
+
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 8.dp
+    ) {
+        Column(modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(Icons.Filled.Navigation, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    Text(text = translatedNavLabel, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                }
+                IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.Filled.Close, contentDescription = "Stop", modifier = Modifier.size(16.dp))
+                }
+            }
+            
+            HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f), thickness = 0.5.dp)
+            Text(text = translatedDestName, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            
+            if (translatedCurInstr.isNotEmpty()) {
+                Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)) {
+                    Row(modifier = Modifier.fillMaxWidth().padding(6.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = translatedCurInstr, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        navigationState.currentInstruction?.let { instr ->
+                            Text(text = LocationUtils.formatDistance(instr.distance / 1000.0), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+            }
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(text = "$translatedRemaining:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(text = LocationUtils.formatDistance(navigationState.remainingDistance / 1000.0), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(text = "$translatedEtaLabel:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(text = navigationManager.formatETA(navigationState.remainingDuration), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                }
+            }
+            
+            if (translatedNextInstr.isNotEmpty()) {
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Icon(Icons.Filled.Place, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(12.dp))
+                    Text(text = "$translatedThen: $translatedNextInstr", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Creates a diamond-shaped marker icon for alerts with an exclamation mark.
+ */
+private fun createAlertMarkerIcon(context: android.content.Context, colorInt: Int): android.graphics.drawable.Drawable {
+    val size = 64
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    
+    val paint = android.graphics.Paint().apply {
+        color = colorInt
+        style = android.graphics.Paint.Style.FILL
+        isAntiAlias = true
+    }
+    
+    val strokePaint = android.graphics.Paint().apply {
+        color = Color.White.toArgb()
+        style = android.graphics.Paint.Style.STROKE
+        strokeWidth = 4f
+        isAntiAlias = true
+    }
+
+    // Draw Diamond Shape
+    val path = android.graphics.Path()
+    path.moveTo(size / 2f, 4f) // Top
+    path.lineTo(size - 4f, size / 2f) // Right
+    path.lineTo(size / 2f, size - 4f) // Bottom
+    path.lineTo(4f, size / 2f) // Left
+    path.close()
+    
+    // Draw Shadow
+    canvas.drawPath(path, android.graphics.Paint().apply {
+        color = Color.Black.toArgb()
+        alpha = 60
+        maskFilter = android.graphics.BlurMaskFilter(4f, android.graphics.BlurMaskFilter.Blur.NORMAL)
+    })
+    
+    canvas.drawPath(path, paint)
+    canvas.drawPath(path, strokePaint)
+    
+    // Draw "!" in center
+    val textPaint = android.graphics.Paint().apply {
+        color = Color.White.toArgb()
+        textSize = 34f
+        textAlign = android.graphics.Paint.Align.CENTER
+        isAntiAlias = true
+        typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+    }
+    
+    val centerX = size / 2f
+    val centerY = size / 2f
+    val textY = centerY - ((textPaint.descent() + textPaint.ascent()) / 2)
+    
+    canvas.drawText("!", centerX, textY, textPaint)
+    
+    return BitmapDrawable(context.resources, bitmap)
+}
+
+/**
+ * Creates a marker icon for safe zones (hospitals = green, evacuation centers = blue)
+ * Visuals: Rounded Square with White Border and Shadow effect to differentiate from circular Alerts.
+ */
+private fun createSafeZoneMarkerIcon(context: android.content.Context, type: SafeZoneType): android.graphics.drawable.Drawable {
+    val size = 64 // Increased size for better visibility
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    
+    // Choose color based on type
+    val zoneColor = when (type) {
+        SafeZoneType.HOSPITAL -> Color(0xFF43A047) // Green 600
+        SafeZoneType.EVACUATION_CENTER -> Color(0xFF1E88E5) // Blue 600
+    }
+    
+    // Shadow Paint
+    val shadowPaint = android.graphics.Paint().apply {
+        color = Color.Black.toArgb()
+        alpha = 80 // Semi-transparent black
+        style = android.graphics.Paint.Style.FILL
+        isAntiAlias = true
+        maskFilter = android.graphics.BlurMaskFilter(4f, android.graphics.BlurMaskFilter.Blur.NORMAL)
+    }
+
+    // Main Fill Paint
+    val paint = android.graphics.Paint().apply {
+        color = zoneColor.toArgb()
+        style = android.graphics.Paint.Style.FILL
+        isAntiAlias = true
+    }
+    
+    // Border Paint
+    val strokePaint = android.graphics.Paint().apply {
+        color = Color.White.toArgb()
+        style = android.graphics.Paint.Style.STROKE
+        strokeWidth = 4f
+        isAntiAlias = true
+    }
+    
+    val rectSize = 48f // Size of the main shape
+    val offset = (size - rectSize) / 2f
+    val cornerRadius = 12f
+    
+    // Draw Shadow (slightly offset)
+    val shadowRect = android.graphics.RectF(offset + 2, offset + 4, offset + rectSize + 2, offset + rectSize + 4)
+    canvas.drawRoundRect(shadowRect, cornerRadius, cornerRadius, shadowPaint)
+    
+    // Draw Main Shape (Rounded Rect)
+    val mainRect = android.graphics.RectF(offset, offset, offset + rectSize, offset + rectSize)
+    canvas.drawRoundRect(mainRect, cornerRadius, cornerRadius, paint)
+    canvas.drawRoundRect(mainRect, cornerRadius, cornerRadius, strokePaint)
+    
+    // Add icon symbol (H for Hospital, E for Evacuation)
+    // Using a simple cross for Hospital and a person/shelter symbol for Evac would be better, but text is robust.
+    // Let's use "+" for Hospital if possible, or bold "H".
+    val textPaint = android.graphics.Paint().apply {
+        color = Color.White.toArgb()
+        textSize = 28f
+        textAlign = android.graphics.Paint.Align.CENTER
+        isAntiAlias = true
+        typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+    }
+    
+    val symbol = when (type) {
+        SafeZoneType.HOSPITAL -> "H" // Or "+" if preferred
+        SafeZoneType.EVACUATION_CENTER -> "E"
+    }
+    
+    // Center text vertically
+    val centerX = size / 2f
+    val centerY = size / 2f
+    val textY = centerY - ((textPaint.descent() + textPaint.ascent()) / 2)
+    
+    canvas.drawText(symbol, centerX, textY, textPaint)
+    
+    // Add small "Plus" badge for Hospital to make it distinct
+    if (type == SafeZoneType.HOSPITAL) {
+       // Optional: Draw a small white cross in the corner or just stick with "H"
+    }
+    
+    return BitmapDrawable(context.resources, bitmap)
+}
+
+/**
+ * Creates a simple solid circular core icon for pulsing alerts.
+ */
+private fun createPulseCoreIcon(context: android.content.Context, colorInt: Int): android.graphics.drawable.Drawable {
+    val size = 40 // Smaller than the standard marker
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    
+    val paint = android.graphics.Paint().apply {
+        color = colorInt
+        style = android.graphics.Paint.Style.FILL
+        isAntiAlias = true
+    }
+    
+    val borderPaint = android.graphics.Paint().apply {
+        color = Color.White.toArgb()
+        style = android.graphics.Paint.Style.STROKE
+        strokeWidth = 4f
+        isAntiAlias = true
+    }
+
+    val radius = size / 2f
+    canvas.drawCircle(radius, radius, radius - 2f, paint)
+    canvas.drawCircle(radius, radius, radius - 2f, borderPaint)
+    
+    return BitmapDrawable(context.resources, bitmap)
+}
+
+/**
+ * Helper function to decode step geometries as fallback
+ */
+private fun decodeStepGeometries(route: com.example.emergencycommunicationsystem.data.models.Route): List<org.osmdroid.util.GeoPoint> {
+    return try {
+        route.legs.flatMap { leg ->
+            leg.steps.flatMap { step ->
+                try {
+                    val stepGeom = when (val geom = step.geometry) {
+                        is String -> geom
+                        is Map<*, *> -> {
+                            val gson = com.google.gson.Gson()
+                            gson.toJson(geom)
+                        }
+                        else -> null
+                    }
+                    if (stepGeom != null) {
+                        com.example.emergencycommunicationsystem.data.network.RoutingService.decodeGeometry(stepGeom)
+                    } else {
+                        emptyList()
+                    }
+                } catch (e: Exception) {
+                    // Suppress individual step geometry errors to avoid spam
+                    emptyList()
+                }
+            }
+        }
+    } catch (e: Exception) {
+        LogFilter.e(TAG, "Error in decodeStepGeometries: ${e.message}", e)
+        emptyList()
+    }
+}
+
+/**
+ * Helper function to fallback to straight line route
+ * @param showToast If true, shows a toast message (set to false if toast is already shown)
+ * @return The created Polyline so it can be tracked for removal
+ */
+private fun fallbackToStraightLine(
+    map: org.osmdroid.views.MapView,
+    userLocation: org.osmdroid.util.GeoPoint,
+    destination: com.example.emergencycommunicationsystem.data.models.SafeZone,
+    context: android.content.Context,
+    showToast: Boolean = true
+): org.osmdroid.views.overlay.Polyline {
+    LogFilter.d(TAG, "Using fallback straight line route")
+    val routePolyline = org.osmdroid.views.overlay.Polyline().apply {
+        val routePoints = listOf(
+            userLocation,
+            org.osmdroid.util.GeoPoint(destination.latitude, destination.longitude)
+        )
+        setPoints(routePoints)
+        color = androidx.compose.ui.graphics.Color(0xFFFF9800).toArgb() // Orange color for route
+        width = 12.0f
+        isGeodesic = true
+    }
+    
+    // Note: The polyline is NOT added to the map here to prevent memory leaks
+    // The caller is responsible for adding it to map.overlays
+    
+    if (showToast) {
+        android.widget.Toast.makeText(
+            context,
+            context.getString(R.string.map_direct_route_fallback),
+            android.widget.Toast.LENGTH_SHORT
+        ).show()
+    }
+    
+    return routePolyline
 }
 
 /**

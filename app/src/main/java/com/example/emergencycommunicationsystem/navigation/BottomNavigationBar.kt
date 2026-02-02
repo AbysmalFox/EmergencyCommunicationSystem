@@ -2,10 +2,7 @@ package com.example.emergencycommunicationsystem.navigation
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -13,17 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -37,9 +24,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,10 +38,14 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.animation.animateContentSize
+import com.example.emergencycommunicationsystem.ui.theme.ThemeManager
+import com.example.emergencycommunicationsystem.ui.theme.BrandTealAccent
+import com.example.emergencycommunicationsystem.ui.theme.BrandDeepTeal
+import androidx.compose.ui.graphics.Color
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 
-const val navOverlayHeight = 92
-const val navOverlayLift = 36
+const val navOverlayHeight = 72 
+const val navOverlayLift = 28
 
 @Composable
 fun BottomNavigationBar(
@@ -68,27 +62,39 @@ fun BottomNavigationBar(
         }.coerceAtLeast(0)
     }
 
+    // CRITICAL FIX: Use ThemeManager to detect selected appearance, not system default
+    val isDark = ThemeManager.isDarkMode()
+    
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(navOverlayHeight.dp)
-            .padding(horizontal = 20.dp)
+            .padding(horizontal = 24.dp)
             .offset(y = (-navOverlayLift).dp)
+            .shadow(
+                elevation = 16.dp,
+                shape = RoundedCornerShape(32.dp),
+                spotColor = Color.Black.copy(alpha = if (isDark) 0.5f else 0.2f)
+            )
             .clip(RoundedCornerShape(32.dp))
-            .background(MaterialTheme.colorScheme.background)
-            .border( // Add the border here
-                width = 2.dp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), // Subtle outline
+            .background(
+                if (isDark) Color(0xFF1E293B) else Color.White
+            )
+            .border(
+                width = 1.dp,
+                color = if (isDark) Color.White.copy(alpha = 0.1f) else Color(0xFFE2E8F0),
                 shape = RoundedCornerShape(32.dp)
             )
     ) {
-        val containerWidth = LocalConfiguration.current.screenWidthDp.dp - 40.dp
+        val containerWidth = LocalConfiguration.current.screenWidthDp.dp - 48.dp
         val itemWidth = containerWidth / screens.size
 
-        // Sliding pill indicator with a spring animation
         val indicatorOffset: Dp by animateDpAsState(
             targetValue = itemWidth * currentSelectionIndex,
-            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy, 
+                stiffness = Spring.StiffnessMediumLow
+            ),
             label = "indicatorOffset"
         )
 
@@ -97,9 +103,12 @@ fun BottomNavigationBar(
                 .offset(x = indicatorOffset)
                 .width(itemWidth)
                 .fillMaxHeight()
-                .padding(vertical = 12.dp, horizontal = 8.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(MaterialTheme.colorScheme.surface)
+                .padding(vertical = 8.dp, horizontal = 8.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(
+                    if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                    else Color(0xFF00897B).copy(alpha = 0.08f)
+                )
         )
 
         Row(
@@ -109,7 +118,7 @@ fun BottomNavigationBar(
         ) {
             screens.forEachIndexed { index, screen ->
                 val isSelected = currentSelectionIndex == index
-                NavItem(screen = screen, isSelected = isSelected) {
+                NavItem(screen = screen, isSelected = isSelected, isDarkMode = isDark) {
                     if (currentDestination?.route != screen.route) {
                         navController.navigate(screen.route) {
                             popUpTo(navController.graph.findStartDestination().id) { saveState = true }
@@ -124,24 +133,28 @@ fun BottomNavigationBar(
 }
 
 @Composable
-private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, onClick: () -> Unit) {
+private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, isDarkMode: Boolean, onClick: () -> Unit) {
     val haptic = LocalHapticFeedback.current
     val localeContext = getLocaleContext()
 
+    val accentColor = if (isDarkMode) Color(0xFF4DB6AC) else Color(0xFF00897B)
+    val inactiveColor = if (isDarkMode) Color.Gray.copy(alpha = 0.6f) else Color.LightGray
+
     val iconColor by animateColorAsState(
-        targetValue = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = tween(300),
+        targetValue = if (isSelected) accentColor else inactiveColor,
+        animationSpec = tween(400),
         label = "iconColor"
     )
 
-    // Icon "floats" up when selected by reducing its offset
-    val iconOffsetY by animateDpAsState(
-        targetValue = if (isSelected) (-2).dp else 0.dp,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
-        label = "iconOffsetY"
+    val itemScale by animateFloatAsState(
+        targetValue = if (isSelected) 1.15f else 1.0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "itemScale"
     )
 
-    // Get localized title for the screen
     val localizedTitle = when (screen) {
         is Screen.Home -> localeContext.getString(R.string.home)
         is Screen.Alerts -> localeContext.getString(R.string.alerts)
@@ -154,13 +167,13 @@ private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, onClick: () ->
         modifier = Modifier
             .fillMaxHeight()
             .weight(1f)
+            .scale(itemScale)
             .noRippleClickable {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 onClick()
             },
         contentAlignment = Alignment.Center
     ) {
-        // Use Tabler icons for bottom navigation
         val tablerIconRes = when (screen) {
             is Screen.Home -> R.drawable.ic_tabler_home
             is Screen.Alerts -> R.drawable.ic_tabler_bell_ringing
@@ -171,10 +184,6 @@ private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, onClick: () ->
         
         if (tablerIconRes != null) {
             Column(
-                modifier = Modifier.animateContentSize(animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessLow
-                )),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -182,19 +191,20 @@ private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, onClick: () ->
                     painter = painterResource(id = tablerIconRes),
                     contentDescription = localizedTitle,
                     tint = iconColor,
-                    modifier = Modifier.offset(y = iconOffsetY)
+                    modifier = Modifier.size(if (isSelected) 26.dp else 22.dp)
                 )
 
                 AnimatedVisibility(
                     visible = isSelected,
-                    enter = fadeIn(animationSpec = tween(delayMillis = 150)) + slideInVertically { it / 2 },
-                    exit = fadeOut(animationSpec = tween(150))
+                    enter = fadeIn() + slideInVertically(initialOffsetY = { 10 }),
+                    exit = fadeOut()
                 ) {
                     Text(
                         text = localizedTitle,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(top = 6.dp)
+                        color = accentColor,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier.padding(top = 1.dp)
                     )
                 }
             }

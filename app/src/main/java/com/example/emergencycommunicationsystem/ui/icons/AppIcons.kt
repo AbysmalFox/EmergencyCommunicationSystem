@@ -67,9 +67,18 @@ object AppIcons {
     val LocalPolice: ImageVector = Icons.Filled.LocalPolice
     val Send: ImageVector = Icons.AutoMirrored.Filled.Send
     val MicOff: ImageVector = Icons.Filled.MicOff
+    val VolumeUp: ImageVector = Icons.Filled.VolumeUp
     val Dialpad: ImageVector = Icons.Filled.Dialpad
     val CallEnd: ImageVector = Icons.Filled.CallEnd
     val Traffic: ImageVector = Icons.Filled.Traffic
     val Shield: ImageVector = Icons.Filled.Shield
     val LocalHospital: ImageVector = Icons.Filled.LocalHospital
+    
+    // Theme Icons
+    val Settings: ImageVector = Icons.Filled.Settings
+    val LightMode: ImageVector = Icons.Filled.LightMode
+    val DarkMode: ImageVector = Icons.Filled.DarkMode
+    
+    // Misc
+    val DateRange: ImageVector = Icons.Filled.DateRange
 }

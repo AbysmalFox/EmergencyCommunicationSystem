@@ -35,7 +35,12 @@ object LocaleManager {
         return when (langCode) {
             "fil" -> Locale("fil")
             "es" -> Locale("es")
-            else -> Locale("en")
+            "bcl" -> Locale("bcl")
+            "ceb" -> Locale("ceb")
+            "war" -> Locale("war")
+            "ilo" -> Locale("ilo")
+            "en" -> Locale("en")
+            else -> Locale(langCode)
         }
     }
 }
@@ -83,3 +88,13 @@ fun LocaleProvider(
  */
 @Composable
 fun getLocaleContext(): Context = LocalLocaleContext.current
+
+@Composable
+fun localizedStringResource(id: Int): String {
+    return LocalLocaleContext.current.getString(id)
+}
+
+@Composable
+fun localizedStringResource(id: Int, vararg args: Any): String {
+    return LocalLocaleContext.current.getString(id, *args)
+}

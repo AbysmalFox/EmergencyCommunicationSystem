@@ -12,61 +12,69 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-// Define the new Dark Color Scheme using the colors from Color.kt
+// Dark Theme
 private val AppDarkColorScheme = darkColorScheme(
-    primary = Teal,                 // Main accent color for buttons, icons, switches
-    onPrimary = DarkNavy,           // Color of text/icons on top of the primary color (e.g., text on a Teal button)
-    secondary = Slate,              // Secondary accent color
-    onSecondary = White,            // Text/icons on top of the secondary color
-    background = DarkNavy,          // Main screen background
-    onBackground = White,           // Main text color on the background
-    surface = Slate,                // Color of cards and other surfaces on top of the background
-    onSurface = White,              // Main text color on surfaces (like cards)
-    surfaceVariant = DarkNavy,      // Subtle variation for surfaces
-    onSurfaceVariant = LightGray,   // Text color for less important elements on surfaces
-    error = Color(0xFFFF6B6B),      // A standard error color
+    primary = Teal,                 
+    onPrimary = DarkNavy,           
+    secondary = Slate,              
+    onSecondary = White,            
+    background = DarkNavy,          
+    onBackground = White,           
+    surface = Slate,                
+    onSurface = White,              
+    surfaceVariant = DarkNavy,      
+    onSurfaceVariant = LightGray,   
+    error = Color(0xFFFF6B6B),      
     onError = Color.White
 )
 
-// We can define a light scheme too, though the focus is on the dark one
-private val AppLightColorScheme = lightColorScheme(
-    primary = Slate,
-    secondary = Teal,
-    background = Color(0xFFF0F2F5),
-    surface = White,
-    onPrimary = White,
-    onSecondary = DarkNavy,
-    onBackground = DarkNavy,
-    onSurface = DarkNavy
+/**
+ * Main Light Theme applying the requested "Dark Green BG / White Card" palette.
+ * background: AlertaraBackground (Dark Greenish)
+ * onBackground: White (For contrast on dark BG)
+ * surface: White (Pure White for Cards to make them clearer)
+ * onSurface: BrandDeepTeal (Dark Greenish text for readability on white cards)
+ */
+private val AlertaraLightColorScheme = lightColorScheme(
+    primary = Color.White,      
+    onPrimary = AlertaraBackground,
+    secondary = BrandTealAccent,   
+    onSecondary = White,
+    background = AlertaraBackground, // Dark Greenish (0xFF34635D)
+    onBackground = Color.White,      // Readable white text on dark background
+    surface = Color.White,           // Changed to Pure White for better clarity
+    onSurface = Color.Black,         // Black text for maximum readability on white
+    surfaceVariant = BrandTealLight, // Instruction Box remains light greenish
+    onSurfaceVariant = BrandDeepTeal, 
+    outline = Color(0xFFB2DFDB),     
+    error = StatusDanger,
+    onError = White
 )
 
 @Composable
 fun EmergencyCommunicationSystemTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+ but we will disable it to enforce our custom theme
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
-        // We will default to our custom dark theme as it matches the palette
         darkTheme -> AppDarkColorScheme
-        else -> AppDarkColorScheme // Or use AppLightColorScheme if you want to support a light version
+        else -> AlertaraLightColorScheme
     }
 
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            // With edge-to-edge, we make the status bar transparent to let the app's background show.
-            window.statusBarColor = Color.Transparent.toArgb()
-            // This controls whether the status bar icons (clock, battery) are light or dark.
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            window.statusBarColor = colorScheme.background.toArgb()
+            // In light theme, if background is dark, we want light status bar icons
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
         }
     }
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = AppTypography,
         content = content
     )
 }

@@ -1,53 +1,45 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
 import android.widget.Toast
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import com.example.emergencycommunicationsystem.ui.icons.AppIcons
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.data.SubscriptionCategory
+import com.example.emergencycommunicationsystem.data.UserPrefs
+import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModel
+import com.example.emergencycommunicationsystem.ui.screens.NotificationSettingsScreenContent
 import kotlinx.coroutines.launch
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ChevronRight
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,43 +47,98 @@ fun ProfileScreen(
     isLoggedIn: Boolean,
     username: String?,
     email: String?,
-    phone: String?, // Added phone parameter
+    phone: String?,
+    profilePic: String? = null,
+    currentTheme: String, 
+    onThemeChange: (String) -> Unit,
     onLoginClick: () -> Unit,
     onSignUpClick: () -> Unit,
     onLogoutClick: () -> Unit,
     onLanguageSettingsClick: () -> Unit,
     onPrivacyPolicyClick: () -> Unit,
     onAboutAppClick: () -> Unit,
+    onMagnifierToggle: (Boolean) -> Unit,
+    onMyReportsClick: () -> Unit,
+    onCallHistoryClick: () -> Unit,
     profileViewModel: ProfileViewModel
 ) {
     var showNotificationSettings by remember { mutableStateOf(false) }
+    var showEditProfile by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState()
+    var showChangePasswordDialog by remember { mutableStateOf(false) }
+    
+    // Notification Settings State (Local for now, move to VM later)
+    var deliveryMethods by remember { mutableStateOf(mapOf("Push Notifications" to true, "SMS" to false, "Email" to false)) }
+    var isQuietHoursEnabled by remember { mutableStateOf(false) }
+    var quietHoursStart by remember { mutableStateOf(22 to 0) } // 22:00
+    var quietHoursEnd by remember { mutableStateOf(6 to 0) }   // 06:00
+    
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val editSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val localeContext = getLocaleContext()
 
+    val isMagnifierEnabled by UserPrefs.isMagnifierEnabled(context).collectAsState(initial = false)
+    val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
+
+    // Update Profile result observer
+    val updateResult by profileViewModel.updateProfileResult.collectAsState()
+    LaunchedEffect(updateResult) {
+        updateResult?.onSuccess {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            showEditProfile = false
+            profileViewModel.clearUpdateProfileResult()
+        }?.onFailure {
+            Toast.makeText(context, it.message ?: "Update failed", Toast.LENGTH_SHORT).show()
+            profileViewModel.clearUpdateProfileResult()
+        }
+    }
+    
+    // Change Password result observer
+    val changePasswordResult by profileViewModel.changePasswordResult.collectAsState()
+    LaunchedEffect(changePasswordResult) {
+        changePasswordResult?.onSuccess {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            showChangePasswordDialog = false
+            profileViewModel.clearChangePasswordResult()
+        }?.onFailure {
+            Toast.makeText(context, it.message ?: "Change password failed", Toast.LENGTH_SHORT).show()
+            profileViewModel.clearChangePasswordResult()
+        }
+    }
+
+    // Logout Dialog
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            title = { Text("Logout") },
-            text = { Text("Are you sure you want to log out?") },
+            title = { Text(localeContext.getString(R.string.logout)) },
+            text = { Text(localeContext.getString(R.string.logout_message)) },
             confirmButton = {
                 TextButton(
                     onClick = {
                         showLogoutDialog = false
-                        onLogoutClick() // Call the original logout function
-                    }
+                        onLogoutClick()
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("Logout")
+                    Text(localeContext.getString(R.string.logout))
                 }
             },
             dismissButton = {
-                TextButton(
-                    onClick = { showLogoutDialog = false }
-                ) {
-                    Text("Cancel")
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text(localeContext.getString(R.string.cancel))
                 }
+            }
+        )
+    }
+    
+    // Change Password Dialog
+    if (showChangePasswordDialog) {
+        ChangePasswordDialog(
+            onDismiss = { showChangePasswordDialog = false },
+            onConfirm = { current, new ->
+                profileViewModel.changePassword(current, new)
             }
         )
     }
@@ -100,288 +147,760 @@ fun ProfileScreen(
         containerColor = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxSize()
     ) { paddingValues ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp, vertical = 24.dp),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 136.dp), // Reserve space for floating bottom nav
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            item {
-                Text(
-                    localeContext.getString(R.string.profile_and_settings),
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(bottom = 16.dp)
+            // A. Profile Header
+            if (isLoggedIn) {
+                ProfileHeader(
+                    username = username ?: "User",
+                    email = email ?: "",
+                    profilePic = profilePic,
+                    onEditClick = {
+                        showEditProfile = true
+                    }
+                )
+            } else {
+                AnonymousHeader(onLoginClick, onSignUpClick)
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // B. Settings List (Grouped)
+            SettingsGroupHeader(text = localeContext.getString(R.string.preferences))
+            
+            SettingsItem(
+                text = localeContext.getString(R.string.receive_notifications),
+                icon = painterResource(id = R.drawable.ic_tabler_bell_ringing),
+                trailingContent = {
+                    Switch(
+                        checked = true, 
+                        onCheckedChange = { 
+                             if (isLoggedIn) {
+                                 showNotificationSettings = true 
+                             } else {
+                                 Toast.makeText(context, localeContext.getString(R.string.please_login_to_send_message), Toast.LENGTH_SHORT).show()
+                             }
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = MaterialTheme.colorScheme.secondary,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                        )
+                    )
+                },
+                onClick = { 
+                    if (isLoggedIn) showNotificationSettings = true 
+                    else Toast.makeText(context, localeContext.getString(R.string.please_login_to_send_message), Toast.LENGTH_SHORT).show()
+                }
+            )
+
+            SettingsItem(
+                text = localeContext.getString(R.string.language_preference),
+                icon = rememberVectorPainter(AppIcons.Language),
+                valueText = when(currentLanguage) {
+                    "fil", "tl" -> localeContext.getString(R.string.language_filipino)
+                    "es" -> localeContext.getString(R.string.language_spanish)
+                    "ceb" -> localeContext.getString(R.string.language_cebuano)
+                    "war" -> localeContext.getString(R.string.language_waray)
+                    "ilo" -> localeContext.getString(R.string.language_ilocano)
+                    "bcl" -> localeContext.getString(R.string.language_bicolano)
+                    else -> localeContext.getString(R.string.language_english)
+                }, 
+                onClick = onLanguageSettingsClick
+            )
+
+            // Embedded Theme Selector
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = localeContext.getString(R.string.appearance),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ThemeSelectionCard(
+                    text = localeContext.getString(R.string.system_theme),
+                    selected = currentTheme == "system",
+                    icon = AppIcons.Settings,
+                    onClick = { onThemeChange("system") },
+                    modifier = Modifier.weight(1f)
+                )
+                ThemeSelectionCard(
+                    text = localeContext.getString(R.string.light_theme),
+                    selected = currentTheme == "light",
+                    icon = AppIcons.LightMode, 
+                    onClick = { onThemeChange("light") },
+                    modifier = Modifier.weight(1f)
+                )
+                ThemeSelectionCard(
+                    text = localeContext.getString(R.string.dark_theme),
+                    selected = currentTheme == "dark",
+                    icon = AppIcons.DarkMode,
+                    onClick = { onThemeChange("dark") },
+                    modifier = Modifier.weight(1f)
                 )
             }
+            Spacer(modifier = Modifier.height(16.dp))
 
-            item {
-                if (isLoggedIn) {
-                    LoggedInUserCard(
-                        username = username, 
-                        email = email, 
-                        phone = phone, 
-                        onLogoutClick = { showLogoutDialog = true }
+            Spacer(modifier = Modifier.height(24.dp))
+
+            SettingsGroupHeader(text = localeContext.getString(R.string.accessibility))
+
+            SettingsItem(
+                text = localeContext.getString(R.string.floating_magnifier),
+                icon = painterResource(id = R.drawable.ic_magnifier),
+                trailingContent = {
+                    Switch(
+                        checked = isMagnifierEnabled,
+                        onCheckedChange = { enabled ->
+                            scope.launch {
+                                UserPrefs.saveMagnifierEnabled(context, enabled)
+                                onMagnifierToggle(enabled)
+                            }
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = MaterialTheme.colorScheme.secondary,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                        )
                     )
-                } else {
-                    AnonymousUserCard(onLoginClick = onLoginClick, onSignUpClick = onSignUpClick)
-                }
-                Spacer(modifier = Modifier.height(16.dp))
+                },
+                onClick = { /* Toggle via switch */ }
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            if (isLoggedIn) {
+                SettingsGroupHeader(text = localeContext.getString(R.string.history_title))
+                SettingsItem(
+                    text = localeContext.getString(R.string.report_history_label),
+                    icon = painterResource(id = R.drawable.ic_tabler_file_alert),
+                    onClick = onMyReportsClick
+                )
+                SettingsItem(
+                    text = localeContext.getString(R.string.call_history_label),
+                    icon = painterResource(id = R.drawable.ic_tabler_phone),
+                    onClick = onCallHistoryClick
+                )
+                Spacer(modifier = Modifier.height(24.dp))
             }
 
-            item {
-                Text(
-                    localeContext.getString(R.string.settings),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onBackground,
+            SettingsGroupHeader(text = localeContext.getString(R.string.security))
+
+            SettingsItem(
+                text = localeContext.getString(R.string.change_password),
+                icon = painterResource(id = R.drawable.ic_tabler_shield_check),
+                onClick = { 
+                    if (isLoggedIn) showChangePasswordDialog = true
+                    else Toast.makeText(context, localeContext.getString(R.string.please_login_to_send_message), Toast.LENGTH_SHORT).show()
+                }
+            )
+
+            SettingsItem(
+                text = localeContext.getString(R.string.privacy_policy),
+                icon = rememberVectorPainter(AppIcons.Security),
+                onClick = onPrivacyPolicyClick
+            )
+
+            SettingsItem(
+                text = localeContext.getString(R.string.terms_of_service),
+                icon = rememberVectorPainter(AppIcons.Info),
+                onClick = onAboutAppClick 
+            )
+
+            Spacer(modifier = Modifier.height(40.dp))
+
+            if (isLoggedIn) {
+                TextButton(
+                    onClick = { showLogoutDialog = true },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 8.dp)
-                )
-            }
-
-            item {
-                ProfileItem(
-                    icon = AppIcons.Alerts,
-                    text = localeContext.getString(R.string.receive_notifications),
-                    onClick = { 
-                        if (isLoggedIn) {
-                            showNotificationSettings = true 
-                        } else {
-                            Toast.makeText(context, "Please log in to manage notifications", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                )
-            }
-            item {
-                ProfileItem(
-                    icon = AppIcons.Language,
-                    text = localeContext.getString(R.string.language_preference),
-                    onClick = onLanguageSettingsClick
-                )
-            }
-            item {
-                ProfileItem(
-                    icon = AppIcons.Security,
-                    text = localeContext.getString(R.string.privacy_policy),
-                    onClick = onPrivacyPolicyClick
-                )
-            }
-            item {
-                ProfileItem(
-                    icon = AppIcons.Info,
-                    text = localeContext.getString(R.string.about_app),
-                    onClick = onAboutAppClick
-                )
-            }
-        }
-
-        if (showNotificationSettings) {
-            ModalBottomSheet(
-                onDismissRequest = { showNotificationSettings = false },
-                sheetState = sheetState
-            ) {
-                val settingsState by profileViewModel.uiState.collectAsState()
-                if (settingsState != null) {
-                    NotificationSettingsSheet(
-                        categories = settingsState!!,
-                        onSubscriptionChange = { categoryId, isEnabled ->
-                            profileViewModel.onSubscriptionChange(categoryId, isEnabled)
-                        },
-                        onDoneClick = {
-                            scope.launch {
-                                sheetState.hide()
-                            }.invokeOnCompletion {
-                                if (!sheetState.isVisible) {
-                                    showNotificationSettings = false
-                                }
-                            }
-                        }
+                        .padding(horizontal = 16.dp),
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onBackground)
+                ) {
+                    Icon(
+                        painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_tabler_logout),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp)
                     )
-                } else {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        CircularProgressIndicator()
-                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = localeContext.getString(R.string.logout),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
+            
+            Spacer(modifier = Modifier.height(100.dp))
+        }
+    }
+
+    if (showNotificationSettings) {
+        ModalBottomSheet(
+            onDismissRequest = { showNotificationSettings = false },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            val settingsState by profileViewModel.uiState.collectAsState()
+            if (settingsState != null) {
+                NotificationSettingsScreenContent(
+                    categories = settingsState!!,
+                    onSubscriptionChange = { categoryId, isEnabled ->
+                        profileViewModel.onSubscriptionChange(categoryId, isEnabled)
+                    },
+                    onDeliveryMethodChange = { method, isEnabled ->
+                        deliveryMethods = deliveryMethods.toMutableMap().apply { this[method] = isEnabled }
+                    },
+                    onQuietHoursChange = { isQuietHoursEnabled = it },
+                    isQuietHoursEnabled = isQuietHoursEnabled,
+                    deliveryMethods = deliveryMethods,
+                    quietHoursStart = quietHoursStart,
+                    quietHoursEnd = quietHoursEnd,
+                    onStartTimeChange = { h, m -> quietHoursStart = h to m },
+                    onEndTimeChange = { h, m -> quietHoursEnd = h to m }
+                )
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxWidth().height(200.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+                }
+            }
+        }
+    }
+
+    if (showEditProfile) {
+        ModalBottomSheet(
+            onDismissRequest = { showEditProfile = false },
+            sheetState = editSheetState,
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            EditProfileSheet(
+                currentName = username ?: "",
+                currentEmail = email ?: "",
+                currentPhone = phone ?: "",
+                currentProfilePic = profilePic,
+                onSave = { name, email, phone, picUri ->
+                    profileViewModel.updateProfile(context, name, email, phone, picUri)
+                },
+                onCancel = {
+                    scope.launch { editSheetState.hide() }.invokeOnCompletion {
+                        if (!editSheetState.isVisible) showEditProfile = false
+                    }
+                }
+            )
         }
     }
 }
 
 @Composable
-private fun NotificationSettingsSheet(
-    categories: List<SubscriptionCategory>,
-    onSubscriptionChange: (Int, Boolean) -> Unit,
-    onDoneClick: () -> Unit
+fun ChangePasswordDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String, String) -> Unit
 ) {
+    val localeContext = getLocaleContext()
+    var currentPassword by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(localeContext.getString(R.string.change_password)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                OutlinedTextField(
+                    value = currentPassword,
+                    onValueChange = { currentPassword = it },
+                    label = { Text("Current Password") },
+                    singleLine = true,
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+                )
+                OutlinedTextField(
+                    value = newPassword,
+                    onValueChange = { newPassword = it },
+                    label = { Text("New Password") },
+                    singleLine = true,
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+                )
+                OutlinedTextField(
+                    value = confirmPassword,
+                    onValueChange = { confirmPassword = it },
+                    label = { Text("Confirm New Password") },
+                    singleLine = true,
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    isError = newPassword.isNotEmpty() && confirmPassword.isNotEmpty() && newPassword != confirmPassword
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { 
+                    if (newPassword == confirmPassword && newPassword.isNotEmpty() && currentPassword.isNotEmpty()) {
+                        onConfirm(currentPassword, newPassword)
+                    }
+                },
+                enabled = newPassword == confirmPassword && newPassword.isNotEmpty() && currentPassword.isNotEmpty()
+            ) {
+                Text(localeContext.getString(R.string.save_changes))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(localeContext.getString(R.string.cancel))
+            }
+        }
+    )
+}
+
+@Composable
+fun EditProfileSheet(
+    currentName: String,
+    currentEmail: String,
+    currentPhone: String,
+    currentProfilePic: String?,
+    onSave: (String, String, String, String?) -> Unit,
+    onCancel: () -> Unit
+) {
+    val localeContext = getLocaleContext()
+    var name by remember { mutableStateOf(currentName) }
+    var email by remember { mutableStateOf(currentEmail) }
+    var phone by remember { mutableStateOf(currentPhone) }
+    var profilePicUri by remember { mutableStateOf<Uri?>(if (currentProfilePic != null) Uri.parse(currentProfilePic) else null) }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri ->
+            if (uri != null) {
+                profilePicUri = uri
+            }
+        }
+    )
+
     Column(
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .padding(bottom = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            "Notification Settings",
-            style = MaterialTheme.typography.titleLarge,
+            text = localeContext.getString(R.string.edit_profile),
+            fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 24.dp)
+            modifier = Modifier.padding(bottom = 24.dp),
+            color = MaterialTheme.colorScheme.onSurface
         )
 
-        LazyColumn {
-            items(categories.size) { index ->
-                val category = categories[index]
-                ProfileItem(
-                    icon = AppIcons.Warning, // You can make this dynamic later
-                    text = category.name,
-                    checked = category.isSubscribed == 1,
-                    onCheckedChange = { isEnabled ->
-                        onSubscriptionChange(category.categoryId, isEnabled)
+        // Profile Picture Edit
+        Box(contentAlignment = Alignment.BottomEnd) {
+            Surface(
+                modifier = Modifier
+                    .size(100.dp)
+                    .clickable { 
+                        photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    },
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            ) {
+                if (profilePicUri != null) {
+                    AsyncImage(
+                        model = profilePicUri,
+                        contentDescription = "Profile Picture",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = AppIcons.Person,
+                            contentDescription = "Avatar",
+                            modifier = Modifier.size(60.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-                )
+                }
+            }
+            Surface(
+                modifier = Modifier
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .clickable { 
+                        photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    },
+                color = MaterialTheme.colorScheme.primary,
+                shape = CircleShape,
+                border = BorderStroke(2.dp, MaterialTheme.colorScheme.surface)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Change Photo",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
             }
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        Button(
-            onClick = onDoneClick,
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text(localeContext.getString(R.string.full_name)) },
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large
-        ) {
-            Text("Done")
-        }
-    }
-}
+            shape = RoundedCornerShape(12.dp)
+        )
 
-@Composable
-private fun AnonymousUserCard(
-    onLoginClick: () -> Unit,
-    onSignUpClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = AppIcons.Person,
-                contentDescription = "User avatar",
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                "Anonymous User",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onLoginClick, modifier = Modifier.weight(1f)) {
-                    Text("Login")
-                }
-                OutlinedButton(onClick = onSignUpClick, modifier = Modifier.weight(1f)) {
-                    Text("Sign Up")
-                }
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text(localeContext.getString(R.string.email_address)) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = phone,
+            onValueChange = { phone = it },
+            label = { Text(localeContext.getString(R.string.phone_number)) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedButton(
+                onClick = onCancel,
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
+            ) {
+                Text(localeContext.getString(R.string.cancel))
+            }
+            
+            val saveBtnColor = if (MaterialTheme.colorScheme.primary == Color.White) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+            val saveBtnContentColor = if (MaterialTheme.colorScheme.primary == Color.White) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onPrimary
+
+            Button(
+                onClick = { onSave(name, email, phone, profilePicUri?.toString()) },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = saveBtnColor,
+                    contentColor = saveBtnContentColor
+                )
+            ) {
+                Text(localeContext.getString(R.string.save_changes))
             }
         }
     }
 }
 
 @Composable
-private fun LoggedInUserCard(
-    username: String?,
-    email: String?,
-    phone: String?,
-    onLogoutClick: () -> Unit
+fun ThemeSelectionCard(
+    text: String,
+    selected: Boolean,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
+    val borderColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+    val backgroundColor = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent
+    
+    val contentColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        onClick = onClick,
+        modifier = modifier
+            .height(100.dp),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(if (selected) 2.dp else 1.dp, borderColor),
+        colors = CardDefaults.cardColors(containerColor = backgroundColor)
     ) {
         Column(
+            modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 24.dp, horizontal = 16.dp),
             verticalArrangement = Arrangement.Center
         ) {
             Icon(
-                imageVector = AppIcons.Person,
-                contentDescription = "User avatar",
-                modifier = Modifier.size(56.dp),
-                tint = MaterialTheme.colorScheme.primary
+                imageVector = icon,
+                contentDescription = text,
+                tint = contentColor,
+                modifier = Modifier.size(28.dp)
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = username ?: "User",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = email ?: "",
+                text = text,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                color = contentColor
             )
-            if (!phone.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = phone,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+        }
+    }
+}
+
+@Composable
+fun ThemeOption(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp, horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(
+            selected = selected,
+            onClick = null,
+            colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.secondary)
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(text = text, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onBackground)
+    }
+}
+
+@Composable
+fun ProfileHeader(
+    username: String,
+    email: String,
+    profilePic: String?,
+    onEditClick: () -> Unit
+) {
+    val localeContext = getLocaleContext()
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 40.dp, bottom = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(contentAlignment = Alignment.BottomEnd) {
+            Surface(
+                modifier = Modifier.size(80.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                if (profilePic != null) {
+                    AsyncImage(
+                        model = profilePic,
+                        contentDescription = "Avatar",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = AppIcons.Person,
+                            contentDescription = "Avatar",
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            Surface(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .clickable { onEditClick() },
+                color = MaterialTheme.colorScheme.secondary,
+                shape = CircleShape,
+                border = BorderStroke(2.dp, MaterialTheme.colorScheme.background)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit",
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSecondary
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = username,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        Text(
+            text = email,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Normal,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Button(
+            onClick = onEditClick,
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp)
+        ) {
+            Text(localeContext.getString(R.string.edit_profile), fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+fun AnonymousHeader(onLoginClick: () -> Unit, onSignUpClick: () -> Unit) {
+    val localeContext = getLocaleContext()
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 40.dp, bottom = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Surface(
+            modifier = Modifier.size(80.dp),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceVariant
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = AppIcons.Person,
+                    contentDescription = "Anonymous",
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Spacer(modifier = Modifier.height(16.dp))
-            TextButton(onClick = onLogoutClick) {
-                Text("Logout")
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = localeContext.getString(R.string.anonymous_user),
+            fontSize = 24.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(
+                onClick = onLoginClick, 
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
+                modifier = Modifier.height(48.dp).weight(1f).padding(start = 24.dp)
+            ) {
+                Text(localeContext.getString(R.string.login), fontWeight = FontWeight.ExtraBold)
+            }
+            OutlinedButton(
+                onClick = onSignUpClick, 
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+                modifier = Modifier.height(48.dp).weight(1f).padding(end = 24.dp)
+            ) {
+                Text(localeContext.getString(R.string.signup), fontWeight = FontWeight.ExtraBold)
             }
         }
     }
 }
 
 @Composable
-fun ProfileItem(
-    icon: ImageVector,
-    text: String,
-    checked: Boolean? = null,
-    onCheckedChange: ((Boolean) -> Unit)? = null,
-    onClick: (() -> Unit)? = null
-) {
-    val isSwitchItem = checked != null && onCheckedChange != null
+fun SettingsGroupHeader(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+        fontWeight = FontWeight.Black,
+        letterSpacing = 1.5.sp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 12.dp)
+    )
+}
 
-    Card(
-        onClick = {
-            if (onClick != null) onClick()
-            else if (isSwitchItem) onCheckedChange?.invoke(checked.not())
-        },
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+@Composable
+fun SettingsItem(
+    text: String,
+    icon: androidx.compose.ui.graphics.painter.Painter,
+    valueText: String? = null,
+    trailingContent: (@Composable () -> Unit)? = null,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp, horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Surface(
+            modifier = Modifier.size(40.dp),
+            shape = RoundedCornerShape(10.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant
         ) {
-            Icon(icon, contentDescription = text, tint = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(text, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
-            if (isSwitchItem) {
-                Switch(
-                    checked = checked ?: false,
-                    onCheckedChange = onCheckedChange,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.primary,
-                        checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                    )
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    painter = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            } else if (onClick != null) {
-                Icon(AppIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        }
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Medium
+            )
+            if (valueText != null) {
+                Text(
+                    text = valueText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                )
+            }
+        }
+        
+        if (trailingContent != null) {
+            trailingContent()
+        } else {
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }
+
+

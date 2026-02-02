@@ -3,6 +3,7 @@ package com.example.emergencycommunicationsystem.data.repository
 import android.content.Context
 import android.net.Uri
 import com.example.emergencycommunicationsystem.data.IncidentReportResponse
+import com.example.emergencycommunicationsystem.data.UserReportsResponse
 import com.example.emergencycommunicationsystem.data.network.ApiClient
 import com.example.emergencycommunicationsystem.network.IncidentApiService
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -10,10 +11,24 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
+import com.example.emergencycommunicationsystem.util.Resource
 
 class IncidentRepository {
 
     private suspend fun apiService(): IncidentApiService = ApiClient.incidentApiService()
+
+    suspend fun getUserReports(userId: Int): Resource<UserReportsResponse> {
+        return try {
+            val response = apiService().getUserReports(userId)
+            if (response.success) {
+                Resource.Success(response)
+            } else {
+                Resource.Error(response.message ?: "Failed to fetch reports")
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "An error occurred")
+        }
+    }
 
     suspend fun submitIncident(
         context: Context,

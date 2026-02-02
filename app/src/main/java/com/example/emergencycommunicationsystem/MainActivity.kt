@@ -3,12 +3,12 @@ package com.example.emergencycommunicationsystem
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -19,6 +19,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -34,30 +35,33 @@ import com.example.emergencycommunicationsystem.data.repository.MessagingReposit
 import com.example.emergencycommunicationsystem.data.repository.SettingsRepository
 import com.example.emergencycommunicationsystem.navigation.BottomNavigationBar
 import com.example.emergencycommunicationsystem.navigation.Screen
+import com.example.emergencycommunicationsystem.ui.BaseActivity
 import com.example.emergencycommunicationsystem.ui.screens.*
 import com.example.emergencycommunicationsystem.ui.theme.EmergencyCommunicationSystemTheme
 import com.example.emergencycommunicationsystem.util.LocationUpdater
 import com.example.emergencycommunicationsystem.util.LocationUtils
 import com.example.emergencycommunicationsystem.util.LocaleProvider
+import com.example.emergencycommunicationsystem.util.LocaleManager
+import com.example.emergencycommunicationsystem.util.GeminiWeatherService
 import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModel
 import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModelFactory
 import com.example.emergencycommunicationsystem.ui.screens.SignUpViewModel
 import com.example.emergencycommunicationsystem.ui.screens.SignUpState
 import com.example.emergencycommunicationsystem.ui.screens.InternetCallScreen
-import com.example.emergencycommunicationsystem.viewmodel.InternetCallViewModel
+import com.example.emergencycommunicationsystem.ui.screens.CallHistoryScreen
+import com.example.emergencycommunicationsystem.ui.screens.MyReportsScreen
 import com.example.emergencycommunicationsystem.data.repository.CallRepository
 import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.osmdroid.config.Configuration
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.util.Locale
 
-class MainActivity : ComponentActivity() {
+class MainActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,20 +69,15 @@ class MainActivity : ComponentActivity() {
         // Set locale early in onCreate
         lifecycleScope.launch(Dispatchers.IO) {
             val lang = UserPrefs.getLanguage(this@MainActivity).first()
-            val locale = LocaleHelper.getLocaleFromCode(lang)
+            val locale = LocaleManager.getLocaleFromCode(lang)
             Locale.setDefault(locale)
         }
 
-        // Required OSMDroid configuration
         Configuration.getInstance().userAgentValue = packageName
 
-        // Initialize background tasks off the Main thread
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                // Initialize AuthManager first as it's purely local
                 AuthManager.initialize(applicationContext)
-                
-                // Then perform the production network check
                 ApiClient.initializeAndCheckConnection(applicationContext)
                 Log.i("MainActivity", "System initialization completed successfully.")
             } catch (e: Exception) {
@@ -89,10 +88,27 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            EmergencyCommunicationSystemTheme {
-                // Wrap with LocaleProvider to provide locale-aware context to all screens
+            val context = LocalContext.current
+            val currentTheme by UserPrefs.getTheme(context).collectAsState(initial = "light")
+            val isDarkTheme = currentTheme == "dark"
+
+            EmergencyCommunicationSystemTheme(darkTheme = isDarkTheme) {
                 LocaleProvider {
-                EmergencyApp()
+                    EmergencyApp(
+                        currentTheme = currentTheme,
+                        onThemeChange = { newTheme ->
+                            lifecycleScope.launch(Dispatchers.IO) {
+                                UserPrefs.saveTheme(context, newTheme)
+                            }
+                        },
+                        onMagnifierToggle = { enabled ->
+                            if (enabled) setupMagnifier() else removeMagnifier()
+                        },
+                        onLanguageChange = {
+                            GeminiWeatherService.clearCache()
+                            recreate()
+                        }
+                    )
                 }
             }
         }
@@ -100,12 +116,16 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun EmergencyApp() {
+fun EmergencyApp(
+    currentTheme: String,
+    onThemeChange: (String) -> Unit,
+    onMagnifierToggle: (Boolean) -> Unit,
+    onLanguageChange: () -> Unit
+) {
     val navController = rememberNavController()
     val weatherViewModel: WeatherViewModel = viewModel()
     val weatherState by weatherViewModel.weatherState.collectAsState()
     val context = LocalContext.current
-    val activity = (LocalContext.current as? ComponentActivity)
     val coroutineScope = rememberCoroutineScope()
 
     val messagingRepository = remember { MessagingRepository() }
@@ -117,7 +137,6 @@ fun EmergencyApp() {
     val currentRoute = navBackStackEntry?.destination?.route
 
     val mainScreens = listOf(Screen.Home.route, Screen.Alerts.route, Screen.Map.route, Screen.Profile.route)
-    val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
 
     if (isLoggedIn) {
         LocationUpdater {
@@ -156,7 +175,9 @@ fun EmergencyApp() {
         }
     }
 
-    Scaffold { innerPadding ->
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background
+    ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
             NavHost(
                 navController = navController,
@@ -175,13 +196,10 @@ fun EmergencyApp() {
                         },
                         onAlertClick = { _ ->
                             navController.navigate(Screen.Alerts.route) {
-                                // Pop up to the start destination to avoid building up a back stack
                                 popUpTo(navController.graph.findStartDestination().id) {
                                     saveState = true
                                 }
-                                // Avoid multiple copies of the same destination
                                 launchSingleTop = true
-                                // Restore state when reselecting a previously selected item
                                 restoreState = true
                             }
                         },
@@ -194,28 +212,18 @@ fun EmergencyApp() {
                 composable(Screen.Alerts.route) {
                     AlertsScreen(
                         onMessageClick = { alertId, alertTitle ->
-                            try { // <-- PROPER ERROR HANDLING
-                                Log.d("Navigation", "Attempting to navigate for alertId: '''$alertId'''")
+                            try {
                                 val userId = AuthManager.getUserId()
                                 if (userId > 0) {
-                                    val alertIdInt = alertId.toInt() // The risky operation
+                                    val alertIdInt = alertId.toInt()
                                     val encodedTitle = URLEncoder.encode(alertTitle, "UTF-8")
                                     val userName = AuthManager.getUsername() ?: "User"
                                     navController.navigate("${Screen.Messaging.route}?alertId=$alertIdInt&alertTitle=$encodedTitle&userId=$userId&userName=$userName")
-                                    Log.i("Navigation", "Successfully navigated to MessagingScreen for alertId: $alertIdInt.")
                                 } else {
-                                    Log.w("Navigation", "Navigation blocked: User is not logged in (userId: $userId).")
                                     Toast.makeText(context, "Please log in to send a message", Toast.LENGTH_SHORT).show()
                                 }
-                            } catch (e: NumberFormatException) {
-                                // THIS IS THE LOGCAT MESSAGE YOU NEED
-                                Log.e("NavigationError", "Failed to navigate. The alert ID '''$alertId''' is not a valid integer.", e)
-                                // Also show a user-friendly message
-                                Toast.makeText(context, "Error: Invalid alert data. Cannot open message.", Toast.LENGTH_LONG).show()
                             } catch (e: Exception) {
-                                // Catch any other unexpected errors during navigation
-                                Log.e("NavigationError", "An unexpected error occurred during navigation for alert: $alertTitle", e)
-                                Toast.makeText(context, "An unexpected error occurred.", Toast.LENGTH_LONG).show()
+                                Log.e("NavigationError", "Error navigating to messaging", e)
                             }
                         }
                     )
@@ -227,12 +235,18 @@ fun EmergencyApp() {
                     val userId = AuthManager.getUserId()
                     val factory = remember(userId, settingsRepository) { ProfileViewModelFactory(userId, settingsRepository) }
                     val profileViewModel: ProfileViewModel = viewModel(key = "profile_$userId", factory = factory)
-
+                    
+                    // Observe user data changes
+                    val userDataUpdate by AuthManager.userDataFlow.collectAsState(initial = Unit)
+                    
                     ProfileScreen(
                         isLoggedIn = isLoggedIn,
                         username = if (isLoggedIn) AuthManager.getUsername() else null,
                         email = if (isLoggedIn) AuthManager.getEmail() else null,
                         phone = if (isLoggedIn) AuthManager.getPhone() else null,
+                        profilePic = if (isLoggedIn) AuthManager.getProfilePic() else null,
+                        currentTheme = currentTheme,
+                        onThemeChange = onThemeChange,
                         onLoginClick = { navController.navigate(Screen.Login.route) },
                         onSignUpClick = { navController.navigate(Screen.SignUp.route) },
                         onLogoutClick = {
@@ -249,16 +263,23 @@ fun EmergencyApp() {
                         onLanguageSettingsClick = { navController.navigate(Screen.LanguageSettings.route) },
                         onPrivacyPolicyClick = { navController.navigate(Screen.PrivacyPolicy.route) },
                         onAboutAppClick = { navController.navigate(Screen.AboutApp.route) },
+                        onMagnifierToggle = onMagnifierToggle,
+                        onMyReportsClick = { navController.navigate(Screen.MyReports.route) },
+                        onCallHistoryClick = { navController.navigate(Screen.CallHistory.route) },
                         profileViewModel = profileViewModel
                     )
                 }
                 composable(Screen.EmergencyContacts.route) {
                     EmergencyContactsScreen(
-                        onBackPressed = { navController.popBackStack() }
+                        onBackPressed = { navController.popBackStack() },
+                        onMyReportsClick = { navController.navigate(Screen.MyReports.route) }
                     )
                 }
                 composable(Screen.ReportIncident.route) {
                     ReportIncidentScreen(weatherState = weatherState, onBackPressed = { navController.popBackStack() })
+                }
+                composable(Screen.CallHistory.route) {
+                    CallHistoryScreen(onBackPressed = { navController.popBackStack() })
                 }
                 composable(Screen.EmergencyGuides.route) {
                     EmergencyGuidesScreen(
@@ -270,17 +291,19 @@ fun EmergencyApp() {
                 }
                 composable(
                     route = Screen.EmergencyGuideDetail.route,
-                    arguments = listOf(
-                        navArgument("guideId") {
-                            type = NavType.StringType
-                        }
-                    )
+                    arguments = listOf(navArgument("guideId") { type = NavType.StringType })
                 ) { backStackEntry ->
                     val guideId = backStackEntry.arguments?.getString("guideId") ?: ""
-                    EmergencyGuideDetailScreen(
-                        guideId = guideId,
-                        onBackPressed = { navController.popBackStack() }
-                    )
+                    EmergencyGuideDetailScreen(guideId = guideId, onBackPressed = { navController.popBackStack() })
+                }
+                composable(Screen.MyReports.route) {
+                    val userId = AuthManager.getUserId()
+                    if (userId != -1) {
+                        MyReportsScreen(userId = userId, onBackPressed = { navController.popBackStack() })
+                    } else {
+                        // Handle case where user is not logged in but somehow reached this screen
+                        LaunchedEffect(Unit) { navController.popBackStack() }
+                    }
                 }
                 composable(Screen.Login.route) {
                     LoginScreen(
@@ -313,16 +336,12 @@ fun EmergencyApp() {
                 }
                 composable(Screen.LanguageSettings.route) {
                     LanguageSettingsScreen(
-                        currentLanguage = currentLanguage,
+                        currentLanguage = UserPrefs.getLanguage(context).collectAsState(initial = "en").value,
                         onConfirm = { lang ->
                             coroutineScope.launch(Dispatchers.IO) {
-                                // Save the language preference and wait for it to complete
                                 UserPrefs.saveLanguage(context, lang)
-                                // Small delay to ensure DataStore write is persisted
-                                kotlinx.coroutines.delay(200)
-                                // Recreate activity for full locale update
                                 withContext(Dispatchers.Main) {
-                                    activity?.recreate()
+                                    onLanguageChange()
                                 }
                             }
                         },
@@ -348,10 +367,12 @@ fun EmergencyApp() {
                     val userId = backStackEntry.arguments?.getInt("userId") ?: -1
                     val alertTitle = URLDecoder.decode(backStackEntry.arguments?.getString("alertTitle") ?: "Chat", "UTF-8")
                     val userName = backStackEntry.arguments?.getString("userName") ?: ""
+                    
+                    val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
 
                     if (alertId > 0 && userId > 0) {
-                        val factory = MessagingViewModelFactory(alertId, userId, alertTitle, messagingRepository)
-                        val messagingViewModel: MessagingViewModel = viewModel(key = "messaging_$alertId", factory = factory)
+                        val factory = MessagingViewModelFactory(alertId, userId, alertTitle, messagingRepository, currentLanguage)
+                        val messagingViewModel: MessagingViewModel = viewModel(key = "messaging_${alertId}_$currentLanguage", factory = factory)
 
                         MessagingScreen(
                             viewModel = messagingViewModel,
@@ -393,7 +414,9 @@ fun EmergencyApp() {
             if (currentRoute in mainScreens) {
                 BottomNavigationBar(
                     navController = navController,
-                    modifier = Modifier.align(Alignment.BottomCenter)
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 16.dp)
                 )
             }
         }

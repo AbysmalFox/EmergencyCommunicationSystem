@@ -51,3 +51,30 @@ data class User(
     val email: String,
     val phone: String? = null
 )
+
+// Request to update user profile
+data class UpdateProfileRequest(
+    @SerializedName("user_id") val userId: Int,
+    val username: String,
+    val email: String,
+    val phone: String
+)
+
+// Response for profile update
+data class UpdateProfileResponse(
+    val success: Boolean,
+    val message: String?
+)
+
+// Request for changing password
+data class ChangePasswordRequest(
+    @SerializedName("user_id") val userId: Int,
+    @SerializedName("current_password") val currentPassword: String,
+    @SerializedName("new_password") val newPassword: String
+)
+
+// Response for changing password
+data class ChangePasswordResponse(
+    val success: Boolean,
+    val message: String
+)

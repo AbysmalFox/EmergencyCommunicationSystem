@@ -1,15 +1,6 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
 import android.content.Intent
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -31,30 +22,19 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -62,8 +42,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
-import java.util.Locale
-import kotlinx.coroutines.delay
+import com.example.emergencycommunicationsystem.R
+import com.example.emergencycommunicationsystem.util.getLocaleContext
 
 private data class Hotline(
     val name: String,
@@ -73,19 +53,22 @@ private data class Hotline(
     val buttonIcon: ImageVector
 )
 
-@Suppress("UNUSED_VALUE")
 @Composable
-fun EmergencyContactsScreen(onBackPressed: () -> Unit) {
-    var activeCall by remember { mutableStateOf<Hotline?>(null) }
+fun EmergencyContactsScreen(
+    onBackPressed: () -> Unit,
+    onMyReportsClick: () -> Unit
+) {
+    val context = LocalContext.current
+    val localeContext = getLocaleContext()
 
-    val hotlineGroups = remember {
+    val hotlineGroups = remember(localeContext) {
         mapOf(
-            "Quezon City Specific Hotlines" to listOf(
+            localeContext.getString(R.string.hotline_group_qc) to listOf(
                 Hotline("QC Helpline", "122", "Primary 24/7 contact center for all emergencies.", AppIcons.EmergencyCall, AppIcons.EmergencyCall),
                 Hotline("QC DRRMO", "89275914", "Disaster Risk Reduction and Management.", AppIcons.Warning, AppIcons.Warning),
                 Hotline("Quezon City Fire District", "83302344", "For fire hazards, rescues, and inspections.", AppIcons.LocalFireDepartment, AppIcons.LocalFireDepartment)
             ),
-            "Nationwide Emergency Hotlines" to listOf(
+            localeContext.getString(R.string.hotline_group_nationwide) to listOf(
                 Hotline("National Emergency Hotline", "911", "National emergency hotline for police, fire, and medical.", AppIcons.Shield, AppIcons.Shield),
                 Hotline("PNP", "117", "Philippine National Police connection.", AppIcons.LocalPolice, AppIcons.LocalPolice),
                 Hotline("Philippine Red Cross", "143", "Medical and humanitarian aid.", AppIcons.LocalHospital, AppIcons.LocalHospital),
@@ -95,27 +78,15 @@ fun EmergencyContactsScreen(onBackPressed: () -> Unit) {
         )
     }
 
-    Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
-        AnimatedContent(
-            modifier = Modifier.padding(padding),
-            targetState = activeCall,
-            transitionSpec = { fadeIn(animationSpec = tween(400)) togetherWith fadeOut(animationSpec = tween(400)) },
-            label = "ScreenSwitch"
-        ) { call ->
-            if (call == null) {
-                HotlineList(
-                    hotlineGroups = hotlineGroups,
-                    onItemClick = { hotline -> activeCall = hotline },
-                    onBackPressed = onBackPressed
-                )
-            } else {
-                SimulatedCallInterface(
-                    hotline = call,
-                    onEndCall = { activeCall = null }
-                )
-            }
-        }
-    }
+    HotlineList(
+        hotlineGroups = hotlineGroups,
+        onItemClick = { hotline ->
+            val intent = Intent(Intent.ACTION_DIAL, "tel:${hotline.number}".toUri())
+            context.startActivity(intent)
+        },
+        onBackPressed = onBackPressed,
+        onMyReportsClick = onMyReportsClick
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -123,8 +94,10 @@ fun EmergencyContactsScreen(onBackPressed: () -> Unit) {
 private fun HotlineList(
     hotlineGroups: Map<String, List<Hotline>>,
     onItemClick: (Hotline) -> Unit,
-    onBackPressed: () -> Unit
+    onBackPressed: () -> Unit,
+    onMyReportsClick: () -> Unit
 ) {
+    val localeContext = com.example.emergencycommunicationsystem.util.getLocaleContext()
     Scaffold(
         topBar = {
             // Custom reduced-height TopAppBar
@@ -132,7 +105,7 @@ private fun HotlineList(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.background)
-                    .height(20.dp) // Reduced from default 64dp
+                    .height(56.dp) // Standard height for touch targets
             ) {
                 Row(
                     modifier = Modifier
@@ -150,196 +123,110 @@ private fun HotlineList(
                             tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
-                    Text(
-                        "Emergency Hotlines",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(start = 4.dp)
-                    )
-                }
-            }
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            // add extra bottom padding so content and footer are not overlapped by the global bottom nav
-            contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            hotlineGroups.forEach { (header, hotlines) ->
-                stickyHeader {
-                    ListHeader(title = header)
-                }
-                items(hotlines, key = { it.number }) {
-                    HotlineCard(hotline = it, onClick = onItemClick)
-                }
-            }
-
-            // Footer placed as a list item so it appears above the global bottom nav
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-                Footer()
-            }
-        }
-    }
-}
-
-@Composable
-private fun ListHeader(title: String) {
-    Text(
-        text = title,
-        color = MaterialTheme.colorScheme.primary,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(vertical = 8.dp)
-    )
-}
-
-@Composable
-private fun HotlineCard(hotline: Hotline, onClick: (Hotline) -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable { onClick(hotline) },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Row(
-            modifier = Modifier.padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(hotline.listIcon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(hotline.name, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(hotline.number, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = 32.dp))
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(hotline.description, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium, lineHeight = 18.sp, modifier = Modifier.padding(start = 32.dp))
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Box(
-                modifier = Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(hotline.buttonIcon, "Call ${hotline.name}", tint = MaterialTheme.colorScheme.onPrimary)
-            }
-        }
-    }
-}
-
-@Composable
-private fun SimulatedCallInterface(hotline: Hotline, onEndCall: () -> Unit) {
-    var timerSeconds by remember { mutableIntStateOf(0) }
-    val context = LocalContext.current
-
-    LaunchedEffect(Unit) {
-        val intent = Intent(Intent.ACTION_DIAL, "tel:${hotline.number}".toUri())
-        context.startActivity(intent)
-
-        while (true) {
-            delay(1000)
-            timerSeconds++
-        }
-    }
-
-    val infiniteTransition = rememberInfiniteTransition(label = "Pulse")
-    val scale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.2f,
-        animationSpec = infiniteRepeatable(animation = tween(1000), repeatMode = RepeatMode.Reverse), label = "Scale"
-    )
-
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        Spacer(modifier = Modifier.height(100.dp))
-
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(contentAlignment = Alignment.Center) {
-                Box(modifier = Modifier.size(150.dp).scale(scale).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)))
-                Box(
-                    modifier = Modifier.size(120.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(hotline.buttonIcon, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(60.dp))
-                }
-            }
-            Spacer(modifier = Modifier.height(32.dp))
-            Text("Calling...", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(hotline.name, color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(8.dp))
-            val minutes = timerSeconds / 60
-            val seconds = timerSeconds % 60
-            Text(String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds), color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.titleLarge)
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 80.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            ActionButton(icon = AppIcons.MicOff, text = "Mute", onClick = {})
-            EndCallButton(onEndCall)
-            ActionButton(icon = AppIcons.Dialpad, text = "Keypad", onClick = {})
-        }
-    }
-}
-
-@Composable
-private fun ActionButton(icon: ImageVector, text: String, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(
-            onClick = onClick,
-            shape = CircleShape,
-            modifier = Modifier.size(64.dp),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)),
-            contentPadding = PaddingValues(0.dp)
-        ) {
-            Icon(icon, contentDescription = text, tint = MaterialTheme.colorScheme.onBackground)
-        }
-        Text(text, color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.bodyMedium)
-    }
-}
-
-
-@Composable
-private fun EndCallButton(onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        shape = CircleShape,
-        modifier = Modifier.size(72.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.error
-        ),
-        contentPadding = PaddingValues(0.dp)
-    ) {
-        Icon(
-            AppIcons.CallEnd,
-            contentDescription = "End Call",
-            modifier = Modifier.size(36.dp),
-            tint = MaterialTheme.colorScheme.onError
-        )
-    }
-}
-
-@Composable
-private fun Footer() {
-    Text(
-        text = "Location: Quezon City. Disclaimer: Use only for emergencies.",
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        style = MaterialTheme.typography.bodySmall,
-        textAlign = TextAlign.Center,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-    )
-}
+                                        Text(
+                                            localeContext.getString(R.string.hotline_title),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onBackground,
+                                            modifier = Modifier.weight(1f).padding(start = 4.dp)
+                                        )
+                                        IconButton(
+                                            onClick = onMyReportsClick,
+                                            modifier = Modifier.size(48.dp)
+                                        ) {
+                                            Icon(
+                                                // Using a history/list icon. DateRange is available now.
+                                                AppIcons.DateRange, 
+                                                contentDescription = localeContext.getString(R.string.my_reports_title),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                }
+                            },
+                            containerColor = MaterialTheme.colorScheme.background
+                        ) { padding ->
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize().padding(padding),
+                                // add extra bottom padding so content and footer are not overlapped by the global bottom nav
+                                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                hotlineGroups.forEach { (header, hotlines) ->
+                                    stickyHeader {
+                                        ListHeader(title = header)
+                                    }
+                                    items(hotlines, key = { it.number }) {
+                                        HotlineCard(hotline = it, onClick = onItemClick)
+                                    }
+                                }
+                    
+                                // Footer placed as a list item so it appears above the global bottom nav
+                                item {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Footer(localeContext.getString(R.string.hotline_footer))
+                                }
+                            }
+                        }
+                    }
+                    
+                    @Composable
+                    private fun ListHeader(title: String) {
+                        Text(
+                            text = title,
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.background)
+                                .padding(vertical = 8.dp)
+                        )
+                    }
+                    
+                    @Composable
+                    private fun HotlineCard(hotline: Hotline, onClick: (Hotline) -> Unit) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth().clickable { onClick(hotline) },
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(20.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(hotline.listIcon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(hotline.name, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(hotline.number, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = 32.dp))
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(hotline.description, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium, lineHeight = 18.sp, modifier = Modifier.padding(start = 32.dp))
+                                }
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Box(
+                                    modifier = Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(hotline.buttonIcon, "Call ${hotline.name}", tint = MaterialTheme.colorScheme.onPrimary)
+                                }
+                            }
+                        }
+                    }
+                    
+                    @Composable
+                    private fun Footer(text: String) {
+                        Text(
+                            text = text,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        )
+                    }
+                    

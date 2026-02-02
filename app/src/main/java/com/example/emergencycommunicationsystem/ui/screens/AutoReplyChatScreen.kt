@@ -34,6 +34,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+import com.example.emergencycommunicationsystem.ui.theme.*
+import com.example.emergencycommunicationsystem.ui.theme.ThemeManager
+import com.example.emergencycommunicationsystem.util.Resource
+import com.example.emergencycommunicationsystem.util.TranslationService
+import com.example.emergencycommunicationsystem.util.getLocaleContext
+
 // --- Data Models ---
 
 enum class Sender {
@@ -165,7 +171,7 @@ fun AutoReplyChatScreen(viewModel: AutoReplyViewModel = androidx.lifecycle.viewm
 
     Scaffold(
         topBar = { ChatHeader() },
-        containerColor = MaterialTheme.colorScheme.surface
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier

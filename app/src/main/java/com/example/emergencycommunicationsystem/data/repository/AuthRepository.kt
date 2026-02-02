@@ -1,16 +1,15 @@
 package com.example.emergencycommunicationsystem.data.repository
 
 import android.content.Context
-import com.example.emergencycommunicationsystem.data.AuthResponse
-import com.example.emergencycommunicationsystem.data.LoginRequest
-import com.example.emergencycommunicationsystem.data.LogoutRequest
-import com.example.emergencycommunicationsystem.data.RegisterRequest
+import com.example.emergencycommunicationsystem.data.*
 import com.example.emergencycommunicationsystem.data.network.ApiClient
 import com.example.emergencycommunicationsystem.network.AuthApiService
 import com.example.emergencycommunicationsystem.util.DeviceManager
-import com.example.emergencycommunicationsystem.util.LocationUtils
 import retrofit2.HttpException
 import retrofit2.Response
+
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 
 class AuthRepository {
 
@@ -25,7 +24,6 @@ class AuthRepository {
                 throw HttpException(response)
             }
         } catch (e: Exception) {
-            // Re-throw any exception to be handled by the ViewModel
             throw e
         }
     }
@@ -57,7 +55,6 @@ class AuthRepository {
         registerData["device_name"] = DeviceManager.getDeviceName()
         registerData["push_token"] = DeviceManager.getPushToken()
 
-        // Add location data if available
         request.latitude?.let { registerData["latitude"] = it }
         request.longitude?.let { registerData["longitude"] = it }
         request.address?.let { registerData["address"] = it }
@@ -71,11 +68,21 @@ class AuthRepository {
         return executeApiCall { apiService().logout(request) }
     }
     
-    /**
-     * Login with Google account
-     * Sends Google ID token and account info to backend
-     */
     suspend fun loginWithGoogle(context: Context, loginData: Map<String, Any>): AuthResponse {
         return executeApiCall { apiService().loginUser(loginData) }
+    }
+
+    suspend fun updateProfile(
+        userId: RequestBody,
+        username: RequestBody,
+        email: RequestBody,
+        phone: RequestBody,
+        profilePic: MultipartBody.Part?
+    ): UpdateProfileResponse {
+        return apiService().updateProfile(userId, username, email, phone, profilePic)
+    }
+
+    suspend fun changePassword(request: ChangePasswordRequest): ChangePasswordResponse {
+        return executeApiCall { apiService().changePassword(request) }
     }
 }

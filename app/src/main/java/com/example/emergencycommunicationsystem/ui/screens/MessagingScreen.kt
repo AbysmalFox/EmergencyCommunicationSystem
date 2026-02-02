@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.data.models.Message
 import com.example.emergencycommunicationsystem.data.models.QuickReply
 import kotlinx.coroutines.flow.collectLatest
@@ -52,6 +53,7 @@ fun MessagingScreen(
     onNavigateToPersistentChat: () -> Unit,
     onNavigateToEmergencyContacts: () -> Unit
 ) {
+    val localeContext = com.example.emergencycommunicationsystem.util.getLocaleContext()
     val messages by viewModel.messages.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
@@ -92,14 +94,15 @@ fun MessagingScreen(
                 title = {
                     Column {
                         Text(
-                            text = alertTitle ?: "Chat",
+                            text = alertTitle ?: localeContext.getString(R.string.chat_title),
                             fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
-                            text = if (alertId != 999) "Automated Assistant" else "Live Responder",
+                            text = if (alertId != 999) localeContext.getString(R.string.automated_assistant) else localeContext.getString(R.string.live_responder),
                             fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                         )
                     }
                 },
@@ -107,7 +110,7 @@ fun MessagingScreen(
                     IconButton(onClick = onBackPressed) {
                         Icon(
                             imageVector = AppIcons.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = localeContext.getString(R.string.language_settings_back)
                         )
                     }
                 },
@@ -159,65 +162,67 @@ fun MessagingScreen(
                         }
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    if (alertId == 999) {
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TextField(
-                            value = messageInput,
-                            onValueChange = { viewModel.updateMessageInput(it) },
+                        Row(
                             modifier = Modifier
-                                .weight(1f)
-                                .height(56.dp),
-                            placeholder = { Text("Type a message...") },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent
-                            ),
-                            singleLine = true,
-                            enabled = !isSending
-                        )
-
-                        IconButton(
-                            onClick = {
-                                if (alertId == 999) {
-                                    viewModel.sendPersistentMessage(userName ?: "User")
-                                } else {
-                                    viewModel.sendTemporaryMessage(messageInput)
-                                }
-                            },
-                            modifier = Modifier
-                                .size(56.dp)
-                                .background(
-                                    color = if (isSending || messageInput.isBlank())
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                                    else
-                                        MaterialTheme.colorScheme.primary,
-                                    shape = RoundedCornerShape(12.dp)
-                                ),
-                            enabled = !isSending && messageInput.isNotBlank()
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            if (isSending) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    color = MaterialTheme.colorScheme.onPrimary
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = AppIcons.Send,
-                                    contentDescription = "Send",
-                                    tint = MaterialTheme.colorScheme.onPrimary
-                                )
+                            TextField(
+                                value = messageInput,
+                                onValueChange = { viewModel.updateMessageInput(it) },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(56.dp),
+                                placeholder = { Text(localeContext.getString(R.string.type_message)) },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent
+                                ),
+                                singleLine = true,
+                                enabled = !isSending
+                            )
+
+                            IconButton(
+                                onClick = {
+                                    viewModel.sendPersistentMessage(userName ?: "User")
+                                },
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .background(
+                                        color = if (isSending || messageInput.isBlank())
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                                        else
+                                            MaterialTheme.colorScheme.primary,
+                                        shape = RoundedCornerShape(12.dp)
+                                    ),
+                                enabled = !isSending && messageInput.isNotBlank()
+                            ) {
+                                if (isSending) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = AppIcons.Send,
+                                        contentDescription = localeContext.getString(R.string.send_button),
+                                        tint = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                }
                             }
                         }
+                    } else {
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
             }
@@ -312,7 +317,7 @@ fun MessageBubble(message: Message, isCurrentUser: Boolean) {
                     }
                     Text(
                         text = message.messageText ?: "",
-                        color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onBackground
+                        color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Spacer(modifier = Modifier.height(6.dp))

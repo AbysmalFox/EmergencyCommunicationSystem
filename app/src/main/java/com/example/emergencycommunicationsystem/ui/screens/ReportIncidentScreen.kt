@@ -32,6 +32,9 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -62,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.AuthManager
 import com.example.emergencycommunicationsystem.data.models.WeatherState
 import com.example.emergencycommunicationsystem.viewmodel.ReportIncidentViewModel
@@ -79,19 +83,26 @@ fun ReportIncidentScreen(
     onBackPressed: () -> Unit,
     reportViewModel: ReportIncidentViewModel = viewModel()
 ) {
+    val localeContext = com.example.emergencycommunicationsystem.util.getLocaleContext()
     var incidentDetails by remember { mutableStateOf("") }
     var reporterName by remember { mutableStateOf("") }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
 
     val incidentTypes = mapOf(
-        "Fire" to AppIcons.LocalFireDepartment,
-        "Flood" to AppIcons.Flood,
-        "Medical" to AppIcons.MedicalServices,
-        "Crime" to AppIcons.LocalPolice
+        localeContext.getString(R.string.incident_fire) to AppIcons.LocalFireDepartment,
+        localeContext.getString(R.string.incident_flood) to AppIcons.Flood,
+        localeContext.getString(R.string.incident_medical) to AppIcons.MedicalServices,
+        localeContext.getString(R.string.incident_accident) to AppIcons.Traffic,
+        localeContext.getString(R.string.incident_earthquake) to AppIcons.Earthquake,
+        localeContext.getString(R.string.incident_other) to AppIcons.Info
     )
     var selectedIncidentType by remember { mutableStateOf(incidentTypes.keys.first()) }
 
-    val urgencyLevels = listOf("Low", "Medium", "High")
+    val urgencyLevels = listOf(
+        localeContext.getString(R.string.urgency_low),
+        localeContext.getString(R.string.urgency_medium),
+        localeContext.getString(R.string.urgency_high)
+    )
     var selectedUrgency by remember { mutableStateOf(urgencyLevels[0]) }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -143,11 +154,11 @@ fun ReportIncidentScreen(
                         )
                     }
                     Text(
-                        "Report Incident",
+                        localeContext.getString(R.string.report_incident),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(start = 4.dp)
-                    )
+            )
                 }
             }
         },
@@ -171,7 +182,8 @@ fun ReportIncidentScreen(
                     IncidentTypeSelector(
                         incidentTypes = incidentTypes,
                         selectedType = selectedIncidentType,
-                        onTypeSelect = { selectedIncidentType = it }
+                        onTypeSelect = { selectedIncidentType = it },
+                        title = localeContext.getString(R.string.type_of_incident)
                     )
                 }
 
@@ -179,7 +191,8 @@ fun ReportIncidentScreen(
                     UrgencySelector(
                         urgencyLevels = urgencyLevels,
                         selectedUrgency = selectedUrgency,
-                        onUrgencySelect = { selectedUrgency = it }
+                        onUrgencySelect = { selectedUrgency = it },
+                        title = localeContext.getString(R.string.urgency_level)
                     )
                 }
 
@@ -187,8 +200,8 @@ fun ReportIncidentScreen(
                     FormTextField(
                         value = reporterName,
                         onValueChange = { reporterName = it },
-                        label = "Your Name (Optional)",
-                        placeholder = "Defaults to Anonymous"
+                        label = localeContext.getString(R.string.reporter_name_label),
+                        placeholder = localeContext.getString(R.string.reporter_name_placeholder)
                     )
                 }
 
@@ -196,8 +209,8 @@ fun ReportIncidentScreen(
                     FormTextField(
                         value = incidentDetails,
                         onValueChange = { incidentDetails = it },
-                        label = "Details of Incident",
-                        placeholder = "Provide as much detail as possible...",
+                        label = localeContext.getString(R.string.details_label),
+                        placeholder = localeContext.getString(R.string.details_placeholder),
                         modifier = Modifier.height(120.dp)
                     )
                 }
@@ -205,7 +218,9 @@ fun ReportIncidentScreen(
                 item {
                     ImageAttachment(
                         imageUri = imageUri,
-                        onAttachImage = { imagePickerLauncher.launch("image/*") }
+                        onAttachImage = { imagePickerLauncher.launch("image/*") },
+                        attachLabel = localeContext.getString(R.string.attach_photo),
+                        changeLabel = localeContext.getString(R.string.change_photo)
                     )
                 }
             }
@@ -242,7 +257,7 @@ fun ReportIncidentScreen(
                     CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
                 } else {
                     Text(
-                        text = "Submit Report",
+                        text = localeContext.getString(R.string.submit_report),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -254,8 +269,9 @@ fun ReportIncidentScreen(
 
 @Composable
 fun MapView(weatherState: WeatherState) {
+    val localeContext = com.example.emergencycommunicationsystem.util.getLocaleContext()
     val context = LocalContext.current
-    var address by remember { mutableStateOf("Detecting location...") }
+    var address by remember { mutableStateOf(localeContext.getString(R.string.detecting_location)) }
     var mapView by remember { mutableStateOf<MapView?>(null) }
 
     val locationPoint = if (weatherState is WeatherState.Success) {
@@ -290,17 +306,17 @@ fun MapView(weatherState: WeatherState) {
                 val geocoder = Geocoder(context, Locale.getDefault())
                 @Suppress("DEPRECATION")
                 val results = geocoder.getFromLocation(weatherState.lat, weatherState.lon, 1)
-                address = results?.firstOrNull()?.getAddressLine(0) ?: "Address not found"
+                address = results?.firstOrNull()?.getAddressLine(0) ?: localeContext.getString(R.string.address_not_found)
                 weatherState.address = address
             } catch (e: Exception) {
-                address = "Could not determine address"
+                address = localeContext.getString(R.string.could_not_determine_address)
             }
         }
     }
 
     Column {
         Text(
-            text = "Location",
+            text = localeContext.getString(R.string.location_label),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
@@ -347,50 +363,68 @@ fun MapView(weatherState: WeatherState) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IncidentTypeSelector(
     incidentTypes: Map<String, ImageVector>,
     selectedType: String,
-    onTypeSelect: (String) -> Unit
+    onTypeSelect: (String) -> Unit,
+    title: String
 ) {
+    var expanded by remember { mutableStateOf(false) }
+
     Column {
         Text(
-            text = "Type of Incident",
+            text = title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
         )
-        Spacer(modifier = Modifier.height(12.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded },
+            modifier = Modifier.fillMaxWidth()
         ) {
-            incidentTypes.forEach { (type, icon) ->
-                val isSelected = type == selectedType
-                val containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
-                val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+            OutlinedTextField(
+                value = selectedType,
+                onValueChange = {},
+                readOnly = true,
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = incidentTypes[selectedType] ?: AppIcons.Info,
+                        contentDescription = null
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(),
+                shape = MaterialTheme.shapes.large,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
+                )
+            )
 
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .aspectRatio(1f)
-                        .clickable { onTypeSelect(type) },
-                    shape = MaterialTheme.shapes.large,
-                    colors = CardDefaults.cardColors(
-                        containerColor = containerColor,
-                        contentColor = contentColor
-                    ),
-                    elevation = CardDefaults.cardElevation(if (isSelected) 4.dp else 1.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                    ) {
-                        Icon(imageVector = icon, contentDescription = type, modifier = Modifier.size(32.dp))
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(type, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
-                    }
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                incidentTypes.forEach { (type, icon) ->
+                    DropdownMenuItem(
+                        text = { Text(text = type) },
+                        leadingIcon = {
+                            Icon(imageVector = icon, contentDescription = null)
+                        },
+                        onClick = {
+                            onTypeSelect(type)
+                            expanded = false
+                        }
+                    )
                 }
             }
         }
@@ -401,7 +435,8 @@ fun IncidentTypeSelector(
 fun UrgencySelector(
     urgencyLevels: List<String>,
     selectedUrgency: String,
-    onUrgencySelect: (String) -> Unit
+    onUrgencySelect: (String) -> Unit,
+    title: String
 ) {
     val lowUrgencyColor = Color(0xFF3B82F6) // A calm blue
     val mediumUrgencyColor = Color(0xFFF59E0B) // A cautionary orange
@@ -409,7 +444,7 @@ fun UrgencySelector(
 
     Column {
         Text(
-            text = "Urgency Level",
+            text = title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
@@ -487,7 +522,9 @@ fun FormTextField(
 @Composable
 fun ImageAttachment(
     imageUri: Uri?,
-    onAttachImage: () -> Unit
+    onAttachImage: () -> Unit,
+    attachLabel: String,
+    changeLabel: String
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -516,7 +553,7 @@ fun ImageAttachment(
         ) {
             Icon(AppIcons.AddPhoto, contentDescription = "Add Photo", modifier = Modifier.size(ButtonDefaults.IconSize))
             Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-            Text(if (imageUri == null) "Attach Photo" else "Change Photo")
+            Text(if (imageUri == null) attachLabel else changeLabel)
         }
     }
 }

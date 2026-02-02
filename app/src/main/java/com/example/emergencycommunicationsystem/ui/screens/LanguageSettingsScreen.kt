@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.util.getLocaleContext
+import com.example.emergencycommunicationsystem.util.GeminiWeatherService
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,7 +54,11 @@ fun LanguageSettingsScreen(
     val languages = listOf(
         "en" to context.getString(R.string.language_english),
         "fil" to context.getString(R.string.language_filipino),
-        "es" to context.getString(R.string.language_spanish)
+        "es" to context.getString(R.string.language_spanish),
+        "bcl" to context.getString(R.string.language_bicolano),
+        "ceb" to context.getString(R.string.language_cebuano),
+        "war" to context.getString(R.string.language_waray),
+        "ilo" to context.getString(R.string.language_ilocano)
     )
 
     Scaffold(
@@ -102,7 +107,10 @@ fun LanguageSettingsScreen(
             Spacer(modifier = Modifier.weight(1f))
 
             Button(
-                onClick = { onConfirm(selectedLanguage) },
+                onClick = { 
+                    GeminiWeatherService.clearCache()
+                    onConfirm(selectedLanguage) 
+                },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = selectedLanguage != currentLanguage,
                 shape = RoundedCornerShape(50)

@@ -10,8 +10,17 @@ package com.example.emergencycommunicationsystem.ui.components
 import android.content.Intent
 import androidx.core.net.toUri
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -26,8 +35,53 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.fillMaxSize
+import kotlin.math.roundToInt
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import kotlin.math.PI
+import kotlin.math.sin
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
+import com.example.emergencycommunicationsystem.ui.theme.VibrantRed
+import com.example.emergencycommunicationsystem.ui.theme.VibrantRedLight
+import com.example.emergencycommunicationsystem.ui.theme.EmergencyRedMain
+import com.example.emergencycommunicationsystem.ui.theme.EmergencyRedLight
+import com.example.emergencycommunicationsystem.ui.theme.EmergencyRedDark
+import com.example.emergencycommunicationsystem.ui.theme.EmergencyRedPulse
+import com.example.emergencycommunicationsystem.ui.theme.DarkNavy
+import com.example.emergencycommunicationsystem.ui.theme.Slate
+import com.example.emergencycommunicationsystem.ui.theme.CardBorder
+import com.example.emergencycommunicationsystem.ui.theme.SoftShadow
+import com.example.emergencycommunicationsystem.ui.theme.StatusDanger
+import com.example.emergencycommunicationsystem.ui.theme.StatusDangerLight
+import com.example.emergencycommunicationsystem.ui.theme.StatusInfo
+import com.example.emergencycommunicationsystem.ui.theme.StatusSafe
+import com.example.emergencycommunicationsystem.ui.theme.StatusSafeLight
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -45,30 +99,55 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
+import android.speech.tts.TextToSpeech
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Text
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.emergencycommunicationsystem.util.WeatherIconUtils
 import com.example.emergencycommunicationsystem.util.getLocaleContext
+import com.example.emergencycommunicationsystem.util.localizedStringResource
+import com.example.emergencycommunicationsystem.util.TranslationService
+import com.example.emergencycommunicationsystem.util.LocaleManager
+import com.example.emergencycommunicationsystem.data.UserPrefs
 import com.example.emergencycommunicationsystem.data.models.WeatherState
 import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.navigation.Screen
-import com.example.emergencycommunicationsystem.ui.screens.getIconForCategory
+import com.example.emergencycommunicationsystem.util.getIconForCategory
+import com.example.emergencycommunicationsystem.util.getColorForCategory
+import com.example.emergencycommunicationsystem.util.getCategoryDisplayName
+import com.example.emergencycommunicationsystem.util.getSeverityColor
+import com.example.emergencycommunicationsystem.util.getAlertSeverity
 import kotlinx.coroutines.delay
+import com.example.emergencycommunicationsystem.ui.components.InternetCallSlider
 import java.util.Locale
 
 @Composable
@@ -132,53 +211,262 @@ fun SegmentedButtonRow(options: List<String>, selectedOption: String, onOptionSe
     }
 }
 
+/**
+ * Helper function to draw an animated wave pattern (optimized for performance)
+ */
+private fun DrawScope.drawWavePattern(
+    size: Size,
+    waveOffset: Float,
+    waveColor: Color,
+    waveAmplitude: Float,
+    waveFrequency: Float
+) {
+    val centerY = size.height / 2f
+    val waveLength = size.width / waveFrequency
+    
+    // Optimized: Use fewer points for better performance (step 8 instead of 3)
+    val stepSize = 8f // Larger step = fewer calculations = better performance
+    
+    // Simplified: Draw only one wave layer instead of multiple
+    val path = Path()
+    path.moveTo(0f, size.height)
+    path.lineTo(0f, centerY)
+    
+    // Draw the wave curve with fewer points
+    var x = 0f
+    while (x <= size.width) {
+        val y = centerY + waveAmplitude * sin((x / waveLength) * 2f * PI.toFloat() + waveOffset)
+        path.lineTo(x, y)
+        x += stepSize
+    }
+    
+    // Complete the path to create a filled shape
+    path.lineTo(size.width, size.height)
+    path.close()
+    
+    // Draw single filled wave (simplified from multiple layers)
+    drawPath(
+        path = path,
+        color = waveColor.copy(alpha = 0.15f) // Reduced opacity for subtlety
+    )
+}
+
 @Composable
 fun EmergencyCallButton(onClick: () -> Unit) {
     val localeContext = getLocaleContext()
-    val shape = RoundedCornerShape(24.dp)
-    Button(
-        onClick = onClick,
-        shape = shape,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFFC93F3F) // Red color from image
+    val density = LocalDensity.current
+    val haptic = LocalHapticFeedback.current
+    
+    // Theme and colors - Updated to match the action buttons style
+    val bgColor = MaterialTheme.colorScheme.background
+    val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
+    
+    // Track background matches the action buttons (Surface/White)
+    val trackBg = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+    val activeRed = Color(0xFFE02E2E) 
+    val labelColor = MaterialTheme.colorScheme.onSurface
+    val secondaryLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val vibrantLightGreen = Color(0xFF90EE90) // Soft, vibrant light green
+
+    // Swipe state
+    val swipeOffset = remember { Animatable(0f) }
+    val coroutineScope = rememberCoroutineScope()
+    
+    // Completion state for visual feedback
+    var isCompleted by remember { mutableStateOf(false) }
+    
+    // Animations
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val chevronAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
         ),
+        label = "chevron_alpha"
+    )
+
+    // Expand thumb on completion
+    val thumbSize by animateDpAsState(
+        targetValue = if (isCompleted) 200.dp else 82.dp, 
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy),
+        label = "thumb_expansion"
+    )
+
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 10.dp, // Reduced elevation
-                shape = shape,
-                spotColor = Color.Red,
-                ambientColor = Color.Red.copy(alpha = 0.4f)
-            )
-            .height(80.dp) // Reduced height
+            .height(96.dp)
+            .padding(vertical = 6.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+        val widthPx = with(density) { this@BoxWithConstraints.maxWidth.toPx() }
+        val thumbWidth = 82.dp
+        val thumbWidthPx = with(density) { thumbWidth.toPx() }
+        val padding = 0.dp 
+        val paddingPx = with(density) { padding.toPx() }
+        
+        val maxOffset = (widthPx - thumbWidthPx - (paddingPx * 2)).coerceAtLeast(0f)
+        val progress = (swipeOffset.value / maxOffset).coerceIn(0f, 1f)
+        
+        val shape = RoundedCornerShape(100.dp) // Fully rounded capsule
+
+        // Handle Color: from soft light green to red when dragged
+        val thumbBgColor = lerp(vibrantLightGreen, activeRed, progress)
+        // Icon Tint: stand out against handle
+        val iconTint = if (progress > 0.5f) Color.White else Color(0xFF2E5A2E) // Dark forest green tint for contrast when green
+
+        // 1. The Track Container
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .shadow(
+                    elevation = if (isDarkMode) 8.dp else 4.dp,
+                    shape = shape,
+                    spotColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.2f)
+                )
+                .clip(shape)
+                .background(trackBg)
+                .border(
+                    width = if (isDarkMode) 1.dp else 0.5.dp,
+                    color = if (isDarkMode) Color.Black.copy(alpha = 0.1f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
+                    shape = shape
+                )
         ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_tabler_phone),
-                contentDescription = localeContext.getString(R.string.emergency_call_label),
-                tint = Color.White,
-                modifier = Modifier.size(32.dp) // Reduced icon size
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column {
-                Text(
-                    text = localeContext.getString(R.string.emergency_call_label),
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp, // Reduced font size
-                    letterSpacing = 1.5.sp
+            
+            // 2. The Progress Fill
+            if (swipeOffset.value > 0f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .drawBehind {
+                            val fillWidth = swipeOffset.value + (thumbWidthPx / 2)
+                            drawRect(
+                                color = activeRed.copy(alpha = progress * 0.8f),
+                                size = Size(fillWidth, size.height)
+                            )
+                        }
                 )
-                Text(
-                    text = localeContext.getString(R.string.call_button),
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp, // Reduced font size
-                    letterSpacing = 1.5.sp
+            }
+
+            // 3. Labels
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                // Main Slide Text
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .offset(x = 24.dp)
+                        .graphicsLayer {
+                            alpha = (1f - (progress * 4f)).coerceIn(0f, 1f)
+                        }
+                ) {
+                    Text(
+                        text = localizedStringResource(R.string.slide_to_call),
+                        color = labelColor,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        letterSpacing = 1.2.sp,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 16.sp
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Row {
+                        repeat(3) { index ->
+                            Text(
+                                text = "›",
+                                color = labelColor.copy(
+                                    alpha = (chevronAlpha - (index * 0.2f)).coerceIn(0.1f, 1f)
+                                ),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp
+                            )
+                        }
+                    }
+                }
+                
+                // Release to Cancel (Centered)
+                if (progress > 0.2f && !isCompleted) {
+                    Text(
+                        text = "RELEASE TO CANCEL",
+                        color = secondaryLabelColor,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        letterSpacing = 1.sp,
+                        modifier = Modifier
+                            .graphicsLayer {
+                                alpha = (progress - 0.2f).coerceIn(0f, 1f)
+                            }
+                    )
+                }
+            }
+            
+            // 4. The Draggable Thumb
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .offset { IntOffset(swipeOffset.value.roundToInt() + paddingPx.toInt(), 0) }
+                    .size(thumbSize)
+                    .shadow(
+                        elevation = 8.dp,
+                        shape = CircleShape,
+                        spotColor = Color.Black.copy(alpha = 0.3f)
+                    )
+                    .clip(CircleShape)
+                    .background(thumbBgColor)
+                    .border(3.dp, Color.White, CircleShape) // Prominent White Border
+                    .draggable(
+                        orientation = Orientation.Horizontal,
+                        state = rememberDraggableState { delta ->
+                            if (!isCompleted) {
+                                coroutineScope.launch {
+                                    val newOffset = (swipeOffset.value + delta).coerceIn(0f, maxOffset)
+                                    swipeOffset.snapTo(newOffset)
+                                }
+                            }
+                        },
+                        onDragStopped = {
+                            if (swipeOffset.value >= maxOffset * 0.85f) {
+                                isCompleted = true
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                coroutineScope.launch {
+                                    swipeOffset.animateTo(maxOffset, spring(stiffness = Spring.StiffnessMediumLow))
+                                    delay(200)
+                                    onClick()
+                                    delay(500)
+                                    isCompleted = false
+                                    swipeOffset.snapTo(0f)
+                                }
+                            } else {
+                                coroutineScope.launch {
+                                    swipeOffset.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+                                }
+                            }
+                        }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_tabler_phone),
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .graphicsLayer {
+                            rotationZ = progress * 30f
+                            val scale = if (isCompleted) 1.5f else 1f + (progress * 0.1f)
+                            scaleX = scale
+                            scaleY = scale
+                        }
                 )
+                
+                if (isCompleted) {
+                     Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(activeRed.copy(alpha = 0.1f))
+                    )
+                }
             }
         }
     }
@@ -194,7 +482,7 @@ fun ActionGrid(
     onMessageClick: () -> Unit = {}
 ) {
     val localeContext = getLocaleContext()
-    Column(verticalArrangement = Arrangement.spacedBy(15.dp)) { // Reduced spacing
+    Column(verticalArrangement = Arrangement.spacedBy(15.dp)) {
         EmergencyCallButton(onClick = onEmergencyCallClick)
         
         // Internet Call Slider
@@ -202,29 +490,41 @@ fun ActionGrid(
             onCallInitiated = onInternetCallClick,
             modifier = Modifier.fillMaxWidth()
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(15.dp)) {
+        
+        // Stacked actions
+        Column(verticalArrangement = Arrangement.spacedBy(15.dp)) {
             ActionGridItem(
                 title = localeContext.getString(R.string.report_incident),
                 onClick = onReportClick,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
                 useTablerIcon = true,
-                tablerIconRes = R.drawable.ic_tabler_file_alert
+                tablerIconRes = R.drawable.ic_tabler_file_alert,
+                accentColor = StatusDanger,
+                isFilled = true
             )
             ActionGridItem(
                 title = localeContext.getString(R.string.i_am_safe),
                 onClick = onSafeClick,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
                 useTablerIcon = true,
-                tablerIconRes = R.drawable.ic_tabler_shield_check
+                tablerIconRes = R.drawable.ic_tabler_shield_check,
+                accentColor = StatusSafe,
+                isFilled = true
             )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(15.dp)) {
             ActionGridItem(
                 title = "Message Responder",
                 onClick = onMessageClick,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
                 useTablerIcon = true,
-                tablerIconRes = R.drawable.ic_tabler_message_plus
+                tablerIconRes = R.drawable.ic_tabler_message_plus,
+                accentColor = StatusInfo,
+                isFilled = false, // Changed to false for variety or keep true? 
+                // Keeping consistent with previous request which had it as false/outline? 
+                // Previous code: isFilled = false.
+                // Let's keep it consistent or maybe make it filled for uniformity?
+                // User asked for "Stack buttons". Usually implies uniformity.
+                // But let's stick to the previous style for Message Responder unless asked.
+                isCentered = true
             )
         }
     }
@@ -237,40 +537,86 @@ fun ActionGridItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     useTablerIcon: Boolean = false,
-    @androidx.annotation.DrawableRes tablerIconRes: Int? = null
+    @androidx.annotation.DrawableRes tablerIconRes: Int? = null,
+    accentColor: Color = MaterialTheme.colorScheme.primary,
+    isFilled: Boolean = false,
+    isCentered: Boolean = false
 ) {
     val shape = RoundedCornerShape(24.dp)
-    Button(
+    // Use MaterialTheme to detect dark mode (respects user's theme preference)
+    // Check if background is dark by comparing luminance
+    val bgColor = MaterialTheme.colorScheme.background
+    val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
+    
+    // Use lighter colors in dark mode for red and green - significantly lighter
+    val adjustedAccentColor = when {
+        isDarkMode && accentColor == StatusDanger -> StatusDangerLight
+        isDarkMode && accentColor == StatusSafe -> StatusSafeLight
+        else -> accentColor
+    }
+    
+    // Filled style uses solid accent color with white icon
+    // Non-filled style uses subtle tint with colored icon
+    val circleBackgroundColor = if (isFilled) adjustedAccentColor else adjustedAccentColor.copy(alpha = 0.1f)
+    val iconTintColor = if (isFilled) Color.White else adjustedAccentColor
+    
+    Card(
         onClick = onClick,
         shape = shape,
-        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDarkMode) {
+                MaterialTheme.colorScheme.surface
+            } else {
+                Color.White
+            }
+        ),
         modifier = modifier
-            .shadow(elevation = 4.dp, shape = shape, spotColor = Color.Black.copy(alpha = 0.3f))
-            .height(80.dp), // Reduced height
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+            .shadow(
+                elevation = if (isDarkMode) 8.dp else 4.dp,
+                shape = shape,
+                spotColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.08f),
+                ambientColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.05f)
+            )
+            .height(84.dp),
+        border = BorderStroke(
+            width = if (isDarkMode) 1.dp else 0.5.dp,
+            color = if (isDarkMode) {
+                Color.Black.copy(alpha = 0.1f)
+            } else {
+                adjustedAccentColor.copy(alpha = 0.2f)
+            }
+        )
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+            horizontalArrangement = if (isCentered) Arrangement.Center else Arrangement.Start
         ) {
-            if (useTablerIcon && tablerIconRes != null) {
-                Icon(
-                    painter = painterResource(id = tablerIconRes),
-                    contentDescription = title,
-                    tint = Color.White,
-                    modifier = Modifier.size(37.dp)
-                )
-            } else if (icon != null) {
-                Icon(icon, contentDescription = title, tint = Color.White, modifier = Modifier.size(32.dp))
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(circleBackgroundColor),
+                contentAlignment = Alignment.Center
+            ) {
+                if (useTablerIcon && tablerIconRes != null) {
+                    Icon(
+                        painter = painterResource(id = tablerIconRes),
+                        contentDescription = title,
+                        tint = iconTintColor,
+                        modifier = Modifier.size(28.dp)
+                    )
+                } else if (icon != null) {
+                    Icon(icon, contentDescription = title, tint = iconTintColor, modifier = Modifier.size(28.dp))
+                }
             }
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = title.uppercase(),
-                color = Color.White,
+                text = title,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold,
-                fontSize = 12.sp,
-                letterSpacing = 0.5.sp
+                fontSize = 13.sp,
+                lineHeight = 16.sp
             )
         }
     }
@@ -278,7 +624,7 @@ fun ActionGridItem(
 
 
 @Composable
-fun WeatherWidget(state: WeatherState) {
+fun WeatherWidget(state: WeatherState, onRetry: () -> Unit = {}) {
     val shape = RoundedCornerShape(24.dp)
     when (state) {
         is WeatherState.Loading -> {
@@ -294,76 +640,100 @@ fun WeatherWidget(state: WeatherState) {
             }
         }
         is WeatherState.Success -> {
-            Column(
+            // Sage Green & Teal Gradient Palette
+            val deepSage = Color(0xFF8DA399) 
+            val teal = Color(0xFF4B8B8B)
+            val gradient = Brush.verticalGradient(colors = listOf(deepSage, teal))
+
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(elevation = 4.dp, shape = shape, spotColor = Color.Black.copy(alpha = 0.3f))
+                    .shadow(elevation = 12.dp, shape = shape, spotColor = teal)
                     .clip(shape)
-                    .background(MaterialTheme.colorScheme.surface)
+                    .background(gradient)
+                    .background(Color.White.copy(alpha = 0.05f)) // Glass overlay
+                    .border(
+                        width = 1.5.dp, 
+                        color = Color.White,
+                        shape = shape
+                    )
                     .padding(24.dp)
             ) {
-                Row(
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    AsyncImage(
-                        model = state.iconUrl,
-                        contentDescription = state.condition,
-                        modifier = Modifier.size(90.dp)
-                    )
-                    Spacer(modifier = Modifier.width(20.dp))
-                    Column(
-                        modifier = Modifier.weight(1f)
+                    // Top Section: Icon & Temperature centered
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
                     ) {
-                        Row {
-                            Text(
-                                text = state.temperature.substringBefore("."),
-                                fontSize = 72.sp,
-                                fontWeight = FontWeight.Light,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = ".${state.temperature.substringAfter(".").substringBefore("°")}°C",
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Light,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.padding(top = 12.dp)
+                        // Floating 3D Cloud with Greenish Circle
+                        Box(
+                            modifier = Modifier
+                                .size(110.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF5D7A70).copy(alpha = 0.3f)), // Greenish theme
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AsyncImage(
+                                model = WeatherIconUtils.getWeatherAnimation(state.condition),
+                                contentDescription = state.condition,
+                                modifier = Modifier.size(90.dp),
+                                contentScale = ContentScale.Fit
                             )
                         }
+                        
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        // Large Temperature Typography
                         Text(
-                            text = state.condition,
-                            fontSize = 20.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                            text = "${state.temperature.substringBefore(".")}°C",
+                            fontSize = 80.sp,
+                            fontWeight = FontWeight.Light,
+                            color = Color.White
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = AppIcons.Location,
-                                contentDescription = "Location",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = state.location,
-                                fontSize = 16.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
                     }
+
+                    // Condition & Location
+                    Text(
+                        text = state.condition,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White.copy(alpha = 0.95f)
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = AppIcons.Location,
+                            contentDescription = "Location",
+                            tint = Color.White.copy(alpha = 0.8f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = state.location,
+                            fontSize = 16.sp,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Metrics Row (Will need to update this component to use White tint separately or pass a color)
+                    WeatherDetailsRow(state, contentColor = Color.White)
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // AI Insight Pill
+                    WeatherAdvice(advice = state.advice)
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    HorizontalForecastWidget(state.forecastData, useWhiteText = true)
                 }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                WeatherDetailsRow(state)
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                WeatherAdvice(advice = state.advice)
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                HorizontalForecastWidget(state.forecastData)
             }
         }
         is WeatherState.Error -> {
@@ -378,11 +748,29 @@ fun WeatherWidget(state: WeatherState) {
                 ) {
                     val localeContext = getLocaleContext()
                     Icon(AppIcons.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.onError)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Weather Information Unavailable",
+                            color = MaterialTheme.colorScheme.onError,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = state.message,
+                            color = MaterialTheme.colorScheme.onError.copy(alpha = 0.9f),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        localeContext.getString(R.string.gps_signal_lost),
-                        color = MaterialTheme.colorScheme.onError,
-                    )
+                    androidx.compose.material3.TextButton(
+                        onClick = onRetry,
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onError),
+                        modifier = Modifier.background(MaterialTheme.colorScheme.onError.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+                    ) {
+                        Text("Retry", fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
@@ -390,7 +778,7 @@ fun WeatherWidget(state: WeatherState) {
 }
 
 @Composable
-fun WeatherDetailsRow(state: WeatherState.Success) {
+fun WeatherDetailsRow(state: WeatherState.Success, contentColor: Color = MaterialTheme.colorScheme.onSurface) {
     val localeContext = getLocaleContext()
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -399,78 +787,163 @@ fun WeatherDetailsRow(state: WeatherState.Success) {
         WeatherDetailItem(
             icon = AppIcons.Thermostat,
             label = localeContext.getString(R.string.feels_like),
-            value = state.feelsLike
+            value = state.feelsLike,
+            contentColor = contentColor
         )
         WeatherDetailItem(
             icon = AppIcons.Humidity,
             label = localeContext.getString(R.string.humidity),
-            value = state.humidity
+            value = state.humidity,
+            contentColor = contentColor
         )
         WeatherDetailItem(
             icon = AppIcons.Wind,
             label = localeContext.getString(R.string.wind),
-            value = state.windSpeed
+            value = state.windSpeed,
+            contentColor = contentColor
         )
         WeatherDetailItem(
             icon = AppIcons.Visibility,
             label = localeContext.getString(R.string.visibility),
-            value = state.visibility
+            value = state.visibility,
+            contentColor = contentColor
         )
     }
 }
 
 @Composable
-fun WeatherDetailItem(icon: ImageVector, label: String, value: String) {
+fun WeatherDetailItem(icon: ImageVector, label: String, value: String, contentColor: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(
             imageVector = icon,
             contentDescription = label,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(24.dp)
+            tint = contentColor,
+            modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = value,
             fontWeight = FontWeight.Bold,
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurface
+            fontSize = 13.sp,
+            color = contentColor
         )
         Text(
             text = label,
-            fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            fontSize = 11.sp,
+            color = contentColor.copy(alpha = 0.7f)
         )
     }
 }
 
 @Composable
 fun WeatherAdvice(advice: String) {
-    var displayedText by remember(advice) { mutableStateOf("") }
+    val context = LocalContext.current
+    val currentLanguage by com.example.emergencycommunicationsystem.data.UserPrefs.getLanguage(context)
+        .collectAsState(initial = "en")
+    
+    var translatedAdvice by remember { mutableStateOf(advice) }
+    
+    LaunchedEffect(advice, currentLanguage) {
+        if (currentLanguage != "en" && advice.isNotBlank()) {
+            translatedAdvice = com.example.emergencycommunicationsystem.util.TranslationService.translate(
+                advice,
+                currentLanguage
+            )
+        } else {
+            translatedAdvice = advice
+        }
+    }
+    
+    var displayedText by remember(translatedAdvice) { mutableStateOf("") }
 
-    LaunchedEffect(advice) {
+    LaunchedEffect(translatedAdvice) {
         displayedText = ""
         delay(200)
-        advice.forEachIndexed { index, _ ->
-            displayedText = advice.substring(0, index + 1)
+        translatedAdvice.forEachIndexed { index, _ ->
+            displayedText = translatedAdvice.substring(0, index + 1)
             delay(30)
         }
     }
 
-    Row(verticalAlignment = Alignment.Top) {
-        Icon(
-            imageVector = AppIcons.Chat,
-            contentDescription = "Weather Advice",
-            tint = MaterialTheme.colorScheme.primary,
+    // TTS Logic
+    var tts by remember { mutableStateOf<TextToSpeech?>(null) }
+    var isSpeaking by remember { mutableStateOf(false) }
+
+    DisposableEffect(context) {
+        val ttsInstance = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                // Ready
+            }
+        }
+        tts = ttsInstance
+        onDispose {
+            ttsInstance.stop()
+            ttsInstance.shutdown()
+        }
+    }
+
+    // UPDATED LAYOUT: AI Reporter Pill
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize() // Automatically animate height changes
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color.White.copy(alpha = 0.15f))
+            .padding(12.dp),
+        verticalAlignment = Alignment.Top // Keep avatar at top for long text
+    ) {
+        // AI Reporter Avatar
+        Image(
+            painter = painterResource(id = R.drawable.report),
+            contentDescription = "AI Reporter",
             modifier = Modifier
-                .padding(end = 12.dp, top = 4.dp)
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.2f)) // Subtle backing
+                .border(1.dp, Color.White.copy(alpha = 0.5f), CircleShape),
+            contentScale = ContentScale.Crop
+        )
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "AI Reporter",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White.copy(alpha = 0.7f),
+                modifier = Modifier.padding(bottom = 2.dp)
+            )
+            Text(
+                text = displayedText.ifEmpty { "Analysing weather data..." },
+                fontSize = 13.sp,
+                color = Color.White,
+                lineHeight = 18.sp,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        // TTS Button
+        IconButton(
+            onClick = {
+                if (isSpeaking) {
+                    tts?.stop()
+                    isSpeaking = false
+                } else {
+                    tts?.speak(translatedAdvice, TextToSpeech.QUEUE_FLUSH, null, null)
+                    isSpeaking = true
+                }
+            },
+            modifier = Modifier
                 .size(24.dp)
-        )
-        val localeContext = getLocaleContext()
-        Text(
-            text = displayedText.ifEmpty { localeContext.getString(R.string.weather_widget_message) },
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodyMedium
-        )
+                .align(Alignment.Top)
+        ) {
+            Icon(
+                imageVector = if (isSpeaking) Icons.Filled.Stop else AppIcons.VolumeUp,
+                contentDescription = "Read Aloud",
+                tint = Color.White.copy(alpha = 0.8f)
+            )
+        }
     }
 }
 
@@ -497,6 +970,10 @@ fun HotlineItem(name: String, number: String) {
 @Composable
 fun AppBottomNavigation(selectedScreen: Screen, onScreenSelected: (Screen) -> Unit) {
     val items = listOf(Screen.Home, Screen.Alerts, Screen.Profile)
+    
+    // Detect dark mode to adjust colors
+    val bgColor = MaterialTheme.colorScheme.background
+    val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
 
     Box(
         modifier = Modifier
@@ -507,11 +984,29 @@ fun AppBottomNavigation(selectedScreen: Screen, onScreenSelected: (Screen) -> Un
         Surface(
             modifier = Modifier
                 .shadow(
-                    elevation = 8.dp,
+                    elevation = 20.dp, // Increased elevation for more prominence
                     shape = RoundedCornerShape(50),
+                    spotColor = Color.Black.copy(alpha = 0.4f),
+                    ambientColor = Color.Black.copy(alpha = 0.3f)
+                )
+                .border(
+                    width = 1.5.dp,
+                    color = if (isDarkMode) {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                    } else {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                    },
+                    shape = RoundedCornerShape(50)
                 ),
             shape = RoundedCornerShape(50),
-            color = MaterialTheme.colorScheme.surface,
+            // Use a more distinct color to stand out from content
+            color = if (isDarkMode) {
+                // Dark mode: use a lighter, more distinct surface color
+                Slate.copy(alpha = 0.95f) // Use Slate color which is lighter than DarkNavy
+            } else {
+                // Light mode: use a slightly darker, more distinct surface
+                Color.White.copy(alpha = 0.98f) // Almost white but distinct
+            },
         ) {
             Row(
                 modifier = Modifier
@@ -597,7 +1092,10 @@ fun RowScope.BottomNavItem(screen: Screen, isSelected: Boolean, onSelected: () -
 }
 
 @Composable
-fun HorizontalForecastWidget(forecastItems: List<com.example.emergencycommunicationsystem.data.models.ForecastItem>) {
+fun HorizontalForecastWidget(
+    forecastItems: List<com.example.emergencycommunicationsystem.data.models.ForecastItem>,
+    useWhiteText: Boolean = false
+) {
     if (forecastItems.isEmpty()) return
 
     // Use legacy date APIs (Calendar/SimpleDateFormat) to support older Android API levels
@@ -631,13 +1129,31 @@ fun HorizontalForecastWidget(forecastItems: List<com.example.emergencycommunicat
 
     if (dayPairs.isEmpty()) return
 
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
+    var translatedForecastLabel by remember { mutableStateOf("6-Day Forecast") }
+    
+    // Translate forecast label
+    LaunchedEffect(currentLanguage) {
+        if (currentLanguage != "en") {
+            coroutineScope.launch {
+                translatedForecastLabel = TranslationService.translate("6-Day Forecast", currentLanguage)
+            }
+        } else {
+            translatedForecastLabel = "6-Day Forecast"
+        }
+    }
+    
     val dayNameFormat = java.text.SimpleDateFormat("EEE", Locale.getDefault())
+    val labelColor = if (useWhiteText) Color.White else MaterialTheme.colorScheme.onSurface
+    
     Column {
         Text(
-            text = "6-Day Forecast",
+            text = translatedForecastLabel,
             fontWeight = FontWeight.SemiBold,
             fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = labelColor,
             modifier = Modifier.padding(bottom = 12.dp)
         )
 
@@ -651,22 +1167,35 @@ fun HorizontalForecastWidget(forecastItems: List<com.example.emergencycommunicat
                 val repDate = java.util.Date(item.dt * 1000)
                 val dayName = dayNameFormat.format(repDate) // e.g. "Tue"
 
-                val iconCode = item.weather.firstOrNull()?.icon ?: "01d"
-                val iconUrl = "https://openweathermap.org/img/wn/$iconCode@2x.png"
                 val tempStr = "${String.format(Locale.US, "%.0f", item.main.temp)}°"
+                val conditionMain = item.weather.firstOrNull()?.main ?: "Clear"
 
-                ForecastDay(dayName = dayName, iconUrl = iconUrl, temp = tempStr)
+                ForecastDay(
+                    dayName = dayName,
+                    conditionMain = conditionMain,
+                    temp = tempStr,
+                    useWhiteText = useWhiteText
+                )
             }
         }
     }
 }
 
 @Composable
-fun ForecastDay(dayName: String, iconUrl: String, temp: String) {
+fun ForecastDay(
+    dayName: String,
+    conditionMain: String,
+    temp: String,
+    useWhiteText: Boolean = false
+) {
+    val textColor = if (useWhiteText) Color.White else MaterialTheme.colorScheme.onSurface
+    val subTextColor = if (useWhiteText) Color.White.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
+    val bgAlpha = if (useWhiteText) 0.2f else 0.5f
+
     Column(
         modifier = Modifier
             .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                color = if (useWhiteText) Color.White.copy(alpha = bgAlpha) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = bgAlpha),
                 shape = RoundedCornerShape(12.dp)
             )
             .padding(12.dp),
@@ -676,25 +1205,33 @@ fun ForecastDay(dayName: String, iconUrl: String, temp: String) {
         Text(
             text = dayName,
             fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = subTextColor,
             fontWeight = FontWeight.Medium
         )
 
-        AsyncImage(
-            model = iconUrl,
-            contentDescription = null,
-            modifier = Modifier.size(40.dp)
-        )
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.Transparent),
+            contentAlignment = Alignment.Center
+        ) {
+            AsyncImage(
+                model = WeatherIconUtils.getWeatherAnimation(conditionMain),
+                contentDescription = null,
+                modifier = Modifier.size(36.dp),
+                contentScale = ContentScale.Fit
+            )
+        }
 
         Text(
             text = temp,
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
+            color = textColor
         )
     }
 }
-
 /**
  * Compact Alert Card for Dashboard
  */
@@ -707,26 +1244,83 @@ fun CompactAlertCard(
     modifier: Modifier = Modifier
 ) {
     val localeContext = getLocaleContext()
-    val severityColor = com.example.emergencycommunicationsystem.ui.screens.getSeverityColor(severity)
+    val context = LocalContext.current
+    val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
+    
+    // Dynamic translation
+    var translatedTitle by remember(alert.title) { mutableStateOf(alert.title ?: "") }
+    var translatedCategory by remember(alert.category) { mutableStateOf("") }
+    
+    LaunchedEffect(alert.title, alert.category, currentLanguage) {
+        val title = alert.title ?: "No Title"
+        val categoryBase = getCategoryDisplayName(alert)
+        
+        if (currentLanguage != "en") {
+            launch {
+                translatedTitle = TranslationService.translate(title, currentLanguage)
+            }
+            launch {
+                translatedCategory = TranslationService.translate(categoryBase, currentLanguage)
+            }
+        } else {
+            translatedTitle = title
+            translatedCategory = categoryBase
+        }
+    }
+    
+    val displayTitle = if (translatedTitle.isEmpty()) localeContext.getString(R.string.no_title) else translatedTitle
+    val displayCategory = if (translatedCategory.isEmpty()) localeContext.getString(R.string.general) else translatedCategory
+
+    val severityColor = getSeverityColor(severity)
+    val categoryColor = getColorForCategory(alert)
+    val bgColor = MaterialTheme.colorScheme.background
+    val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
     
     Card(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = if (isDarkMode) 8.dp else 4.dp,
+                shape = RoundedCornerShape(18.dp),
+                spotColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.08f),
+                ambientColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.05f)
+            ),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = if (isDarkMode) {
+                MaterialTheme.colorScheme.surface
+            } else {
+                Color.White // Pure white in light mode for better contrast
+            }
         ),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(
+            width = if (isDarkMode) 1.dp else 0.5.dp,
+            color = if (isDarkMode) {
+                Color.Black.copy(alpha = 0.1f)
+            } else {
+                severityColor.copy(alpha = 0.2f) // Subtle colored border in light mode
+            }
+        )
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Severity indicator bar
+            // Severity indicator bar - enhanced for light mode
             Box(
                 modifier = Modifier
-                    .width(4.dp)
-                    .height(60.dp)
-                    .background(severityColor, RoundedCornerShape(2.dp))
+                    .width(if (isDarkMode) 6.dp else 5.dp)
+                    .height(64.dp)
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                            colors = listOf(
+                                severityColor,
+                                severityColor.copy(alpha = 0.8f)
+                            )
+                        ),
+                        shape = RoundedCornerShape(if (isDarkMode) 3.dp else 2.5.dp)
+                    )
             )
             
             Spacer(modifier = Modifier.width(12.dp))
@@ -736,7 +1330,7 @@ fun CompactAlertCard(
                 imageVector = getIconForCategory(alert),
                 contentDescription = alert.category,
                 modifier = Modifier.size(32.dp),
-                tint = severityColor
+                tint = categoryColor
             )
             
             Spacer(modifier = Modifier.width(12.dp))
@@ -749,19 +1343,20 @@ fun CompactAlertCard(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = (alert.category ?: localeContext.getString(R.string.general)).uppercase(),
+                        text = displayCategory.uppercase(),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = severityColor
+                        color = categoryColor
                     )
+                    // Semi-transparent badge styling
                     Box(
                         modifier = Modifier
-                            .background(severityColor.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .background(severityColor.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
                             text = severity,
-                            fontSize = 9.sp,
+                            fontSize = 10.sp, // Slightly larger
                             fontWeight = FontWeight.Bold,
                             color = severityColor
                         )
@@ -772,15 +1367,15 @@ fun CompactAlertCard(
                 
                 // Title
                 Text(
-                    text = alert.title ?: localeContext.getString(R.string.no_title),
-                    fontSize = 14.sp,
+                    text = displayTitle,
+                    fontSize = 15.sp, // Increased size
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     modifier = Modifier.fillMaxWidth()
                 )
                 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 
                 // Distance and location
                 Row(
@@ -791,13 +1386,14 @@ fun CompactAlertCard(
                         Icon(
                             imageVector = AppIcons.Location,
                             contentDescription = "Distance",
-                            modifier = Modifier.size(12.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            modifier = Modifier.size(14.dp),
+                            tint = Color.Gray // Medium gray
                         )
                         Text(
                             text = com.example.emergencycommunicationsystem.util.LocationUtils.formatDistance(distanceKm),
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            fontSize = 13.sp, // Increased font size
+                            color = Color.Gray, // Medium gray
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
@@ -818,6 +1414,11 @@ fun EmergencyInstructions(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val currentLanguage by com.example.emergencycommunicationsystem.data.UserPrefs.getLanguage(context)
+        .collectAsState(initial = "en")
+    
     val currentHour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
     val timeOfDay = when (currentHour) {
         in 5..11 -> "morning"
@@ -828,7 +1429,49 @@ fun EmergencyInstructions(
     
     // Determine primary alert type from active alerts
     val primaryAlertType = getPrimaryAlertType(alerts)
-    val instructions = getEmergencyInstructions(primaryAlertType, timeOfDay, userLat != null && userLon != null)
+    val instructionsEn = getEmergencyInstructions(primaryAlertType, timeOfDay, userLat != null && userLon != null)
+    
+    // Translated strings
+    var translatedHeader by remember { mutableStateOf("🧠 Emergency Instructions") }
+    var translatedMain by remember { mutableStateOf(instructionsEn.main) }
+    var translatedSteps by remember { mutableStateOf(instructionsEn.steps) }
+    var translatedContextNote by remember { mutableStateOf(instructionsEn.contextNote) }
+    
+    // Translate all instruction text
+    LaunchedEffect(primaryAlertType, timeOfDay, currentLanguage) {
+        if (currentLanguage != "en") {
+            coroutineScope.launch {
+                translatedHeader = com.example.emergencycommunicationsystem.util.TranslationService.translate(
+                    "🧠 Emergency Instructions",
+                    currentLanguage
+                )
+                translatedMain = com.example.emergencycommunicationsystem.util.TranslationService.translate(
+                    instructionsEn.main,
+                    currentLanguage
+                )
+                translatedSteps = com.example.emergencycommunicationsystem.util.TranslationService.translateBatch(
+                    instructionsEn.steps,
+                    currentLanguage
+                )
+                if (instructionsEn.contextNote.isNotEmpty()) {
+                    translatedContextNote = com.example.emergencycommunicationsystem.util.TranslationService.translate(
+                        instructionsEn.contextNote,
+                        currentLanguage
+                    )
+                } else {
+                    translatedContextNote = ""
+                }
+            }
+        } else {
+            translatedHeader = "🧠 Emergency Instructions"
+            translatedMain = instructionsEn.main
+            translatedSteps = instructionsEn.steps
+            translatedContextNote = instructionsEn.contextNote
+        }
+    }
+    
+    val bgColor = MaterialTheme.colorScheme.background
+    val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
     
     Card(
         modifier = modifier
@@ -839,11 +1482,29 @@ fun EmergencyInstructions(
                 } else {
                     Modifier
                 }
+            )
+            .shadow(
+                elevation = if (isDarkMode) 8.dp else 6.dp,
+                shape = RoundedCornerShape(18.dp),
+                spotColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.1f),
+                ambientColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.06f)
             ),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = if (isDarkMode) {
+                MaterialTheme.colorScheme.surface
+            } else {
+                Color.White
+            }
         ),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(
+            width = if (isDarkMode) 1.dp else 0.5.dp,
+            color = if (isDarkMode) {
+                Color.Black.copy(alpha = 0.1f)
+            } else {
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+            }
+        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -861,7 +1522,7 @@ fun EmergencyInstructions(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "🧠 Emergency Instructions",
+                    text = translatedHeader,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -881,7 +1542,7 @@ fun EmergencyInstructions(
             
             // Main instruction
             Text(
-                text = instructions.main,
+                text = translatedMain,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -891,7 +1552,7 @@ fun EmergencyInstructions(
             Spacer(modifier = Modifier.height(12.dp))
             
             // Additional steps
-            instructions.steps.forEachIndexed { index, step ->
+            translatedSteps.forEachIndexed { index, step ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -914,7 +1575,7 @@ fun EmergencyInstructions(
             }
             
             // Context note
-            if (instructions.contextNote.isNotEmpty()) {
+            if (translatedContextNote.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Surface(
                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
@@ -922,7 +1583,7 @@ fun EmergencyInstructions(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = instructions.contextNote,
+                        text = translatedContextNote,
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(10.dp)

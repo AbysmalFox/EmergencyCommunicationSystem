@@ -14,7 +14,7 @@ data class Main(
     @SerializedName("feels_like") val feelsLike: Double,
     val humidity: Int
 )
-data class Weather(val main: String, val icon: String)
+data class Weather(val id: Int, val main: String, val icon: String)
 data class Wind(val speed: Double)
 
 data class ForecastResponse(
@@ -62,7 +62,21 @@ data class Alert(
     val longitude: Double?,
 
     @SerializedName("timestamp")
-    val timestamp: String?
+    val timestamp: String?,
+
+    @SerializedName("is_acknowledged")
+    val isAcknowledged: Boolean = false,
+
+    @SerializedName("severity")
+    val severity: String? = "Low"
+)
+
+data class Poll(
+    val id: Int,
+    val title: String,
+    val description: String,
+    @SerializedName("is_active") val isActive: Boolean,
+    @SerializedName("created_at") val createdAt: String
 )
 
 sealed interface WeatherState {
@@ -80,7 +94,8 @@ sealed interface WeatherState {
         val windSpeed: String,
         val visibility: String,
         val forecastData: List<ForecastItem> = emptyList(),
-        var address: String? = null // Added mutable address property
+        var address: String? = null,
+        val isOffline: Boolean = false 
     ) : WeatherState
     data class Error(val message: String) : WeatherState
 }

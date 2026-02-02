@@ -28,6 +28,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -49,206 +50,430 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.util.GoogleSignInHelper
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
 
 @Composable
+
 fun LoginScreen(
+
     onLoginSuccess: (userId: Int, username: String, email: String, phone: String, token: String) -> Unit, // Corrected callback
+
     onSignUpClick: () -> Unit,
+
     onBackPressed: () -> Unit,
+
     viewModel: LoginViewModel = viewModel()
+
 ) {
+
+    val localeContext = com.example.emergencycommunicationsystem.util.getLocaleContext()
+
     var emailOrPhone by remember { mutableStateOf("") }
+
     var password by remember { mutableStateOf("") }
+
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+
+
     val context = LocalContext.current
+
     val loginState by viewModel.loginState.collectAsState()
+
     
-    // Google Sign-In launcher with enhanced error handling for debugging
+
+    // Google Sign-In launcher
     val googleSignInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-        try {
-            // This will throw an exception if the sign-in failed
-            task.getResult(ApiException::class.java)
-            viewModel.handleGoogleSignInResult(result.data)
-        } catch (e: ApiException) {
-            // This will tell you the ACTUAL error code
-            // Code 10 = Developer Error (SHA-1 or Package Name mismatch)
-            // Code 12500 = Configuration Error
-            errorMessage = "Google Error (${e.statusCode}): ${e.statusMessage ?: "Check SHA-1 in Console"}"
-            android.util.Log.e("GoogleSignIn", "Status code: ${e.statusCode}")
-        } catch (e: Exception) {
-            errorMessage = "Google Sign-In failed: ${e.localizedMessage}"
-            android.util.Log.e("GoogleSignIn", "Exception", e)
-        }
+        // Pass the intent data directly to the ViewModel to handle
+        // The ViewModel uses GoogleSignInHelper to extract the account and handle errors
+        viewModel.handleGoogleSignInResult(result.data)
     }
+
+
 
     LaunchedEffect(loginState) {
+
         when (val state = loginState) {
+
             is LoginState.Success -> {
+
                 Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
+
                 viewModel.resetLoginState()
+
                 // Pass all 5 arguments to the callback
+
                 onLoginSuccess(state.userId, state.username, state.email, state.phone, state.token)
+
             }
+
             is LoginState.Error -> {
+
                 errorMessage = state.message
+
                 viewModel.resetLoginState()
+
             }
+
             else -> {}
+
         }
+
     }
 
+
+
     Scaffold(containerColor = MaterialTheme.colorScheme.background) {
+
         Column(
+
             modifier = Modifier
+
                 .fillMaxSize()
+
                 .padding(it)
+
                 .padding(16.dp),
+
             horizontalAlignment = Alignment.CenterHorizontally,
+
             verticalArrangement = Arrangement.Center
+
         ) {
+
             IconButton(onClick = onBackPressed, modifier = Modifier.align(Alignment.Start)) {
-                Icon(AppIcons.ArrowBack, contentDescription = "Back")
+
+                Icon(AppIcons.ArrowBack, contentDescription = localeContext.getString(R.string.language_settings_back), tint = MaterialTheme.colorScheme.onBackground)
+
             }
+
             Text(
-                text = "Login to Account",
+
+                text = localeContext.getString(R.string.login_title),
+
                 style = MaterialTheme.typography.headlineLarge,
+
                 color = MaterialTheme.colorScheme.onBackground
+
             )
+
             Spacer(modifier = Modifier.height(32.dp))
+
             OutlinedTextField(
+
                 value = emailOrPhone,
+
                 onValueChange = {
+
                     emailOrPhone = it
+
                     errorMessage = null
+
                 },
-                label = { Text("Email/Phone Number:") },
+
+                label = { Text(localeContext.getString(R.string.email_phone_label)) },
+
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+
                 modifier = Modifier.fillMaxWidth(),
-                enabled = loginState !is LoginState.Loading
+
+                enabled = loginState !is LoginState.Loading,
+
+                colors = OutlinedTextFieldDefaults.colors(
+
+                    focusedTextColor = MaterialTheme.colorScheme.onBackground,
+
+                    unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+
+                    focusedContainerColor = Color.Transparent,
+
+                    unfocusedContainerColor = Color.Transparent,
+
+                    cursorColor = MaterialTheme.colorScheme.onBackground,
+
+                    focusedLabelColor = MaterialTheme.colorScheme.onBackground,
+
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+
+                    focusedBorderColor = MaterialTheme.colorScheme.onBackground,
+
+                    unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+
+                )
+
             )
-            Spacer(modifier = Modifier.height(16.dp))
-            OutlinedTextField(
-                value = password,
-                onValueChange = {
-                    password = it
-                    errorMessage = null
-                },
-                label = { Text("Password") },
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                modifier = Modifier.fillMaxWidth(),
-                enabled = loginState !is LoginState.Loading
-            )
+
             Spacer(modifier = Modifier.height(16.dp))
 
-            AnimatedVisibility(
-                visible = errorMessage != null,
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
-                Text(
-                    text = errorMessage ?: "",
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                    textAlign = TextAlign.Center
+            OutlinedTextField(
+
+                value = password,
+
+                onValueChange = {
+
+                    password = it
+
+                    errorMessage = null
+
+                },
+
+                label = { Text(localeContext.getString(R.string.password_label)) },
+
+                visualTransformation = PasswordVisualTransformation(),
+
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+
+                modifier = Modifier.fillMaxWidth(),
+
+                enabled = loginState !is LoginState.Loading,
+
+                colors = OutlinedTextFieldDefaults.colors(
+
+                    focusedTextColor = MaterialTheme.colorScheme.onBackground,
+
+                    unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+
+                    focusedContainerColor = Color.Transparent,
+
+                    unfocusedContainerColor = Color.Transparent,
+
+                    cursorColor = MaterialTheme.colorScheme.onBackground,
+
+                    focusedLabelColor = MaterialTheme.colorScheme.onBackground,
+
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+
+                    focusedBorderColor = MaterialTheme.colorScheme.onBackground,
+
+                    unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+
                 )
+
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+
+
+            AnimatedVisibility(
+
+                visible = errorMessage != null,
+
+                enter = fadeIn(),
+
+                exit = fadeOut()
+
+            ) {
+
+                Text(
+
+                    text = errorMessage ?: "",
+
+                    color = MaterialTheme.colorScheme.error,
+
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+
+                    textAlign = TextAlign.Center
+
+                )
+
             }
+
+
 
             Spacer(modifier = Modifier.height(8.dp))
 
+
+
             Button(
+
                 onClick = {
+
                     viewModel.login(emailOrPhone, password)
+
                 },
+
                 modifier = Modifier.fillMaxWidth(),
-                enabled = loginState !is LoginState.Loading
-            ) {
-                if (loginState is LoginState.Loading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                } else {
-                    Text("Login")
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Divider with "OR"
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(1.dp)
-                        .padding(horizontal = 8.dp)
-                        .background(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
-                )
-                Text(
-                    text = "OR",
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    fontSize = 14.sp
-                )
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(1.dp)
-                        .padding(horizontal = 8.dp)
-                        .background(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Google Sign-In Button
-            OutlinedButton(
-                onClick = {
-                    val signInIntent = GoogleSignInHelper.getSignInIntent(context)
-                    googleSignInLauncher.launch(signInIntent)
-                },
-                modifier = Modifier.fillMaxWidth(),
+
                 enabled = loginState !is LoginState.Loading,
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.onSurface
+
+                colors = ButtonDefaults.buttonColors(
+
+                    containerColor = MaterialTheme.colorScheme.secondary,
+
+                    contentColor = MaterialTheme.colorScheme.onSecondary
+
                 )
+
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    // Google icon (using account circle as placeholder)
-                    Icon(
-                        imageVector = AppIcons.AccountCircle,
-                        contentDescription = "Google",
+
+                if (loginState is LoginState.Loading) {
+
+                    CircularProgressIndicator(
+
                         modifier = Modifier.size(20.dp),
-                        tint = Color.Unspecified
+
+                        color = MaterialTheme.colorScheme.onSecondary
+
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Continue with Google",
-                        fontWeight = FontWeight.Medium
-                    )
+
+                } else {
+
+                    Text(localeContext.getString(R.string.login))
+
                 }
+
             }
+
             
+
             Spacer(modifier = Modifier.height(16.dp))
-            TextButton(
-                onClick = onSignUpClick,
-                enabled = loginState !is LoginState.Loading
+
+            
+
+            // Divider with "OR"
+
+            Row(
+
+                modifier = Modifier.fillMaxWidth(),
+
+                verticalAlignment = Alignment.CenterVertically
+
             ) {
-                Text("Don't have an account? Sign Up", color = MaterialTheme.colorScheme.primary)
+
+                Box(
+
+                    modifier = Modifier
+
+                        .weight(1f)
+
+                        .height(1.dp)
+
+                        .padding(horizontal = 8.dp)
+
+                        .background(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f))
+
+                )
+
+                Text(
+
+                    text = localeContext.getString(R.string.or_label),
+
+                    modifier = Modifier.padding(horizontal = 16.dp),
+
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+
+                    fontSize = 14.sp
+
+                )
+
+                Box(
+
+                    modifier = Modifier
+
+                        .weight(1f)
+
+                        .height(1.dp)
+
+                        .padding(horizontal = 8.dp)
+
+                        .background(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f))
+
+                )
+
             }
+
+            
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            
+
+            // Google Sign-In Button
+
+            OutlinedButton(
+
+                onClick = {
+
+                    val signInIntent = GoogleSignInHelper.getSignInIntent(context)
+
+                    googleSignInLauncher.launch(signInIntent)
+
+                },
+
+                modifier = Modifier.fillMaxWidth(),
+
+                enabled = loginState !is LoginState.Loading,
+
+                colors = ButtonDefaults.outlinedButtonColors(
+
+                    contentColor = MaterialTheme.colorScheme.onBackground
+
+                ),
+
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
+
+            ) {
+
+                Row(
+
+                    verticalAlignment = Alignment.CenterVertically,
+
+                    horizontalArrangement = Arrangement.Center
+
+                ) {
+
+                    // Google icon (using account circle as placeholder)
+
+                    Icon(
+
+                        imageVector = AppIcons.AccountCircle,
+
+                        contentDescription = "Google",
+
+                        modifier = Modifier.size(20.dp),
+
+                        tint = Color.Unspecified
+
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+
+                        text = localeContext.getString(R.string.google_login_label),
+
+                        fontWeight = FontWeight.Medium
+
+                    )
+
+                }
+
+            }
+
+            
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextButton(
+
+                onClick = onSignUpClick,
+
+                enabled = loginState !is LoginState.Loading
+
+            ) {
+
+                Text(localeContext.getString(R.string.dont_have_account), color = MaterialTheme.colorScheme.primary)
+
+            }
+
         }
+
     }
+
 }
