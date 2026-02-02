@@ -28,8 +28,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.emergencycommunicationsystem.AuthManager
 import com.example.emergencycommunicationsystem.data.models.CallMessage
+import com.example.emergencycommunicationsystem.ui.components.MessageBubble
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 import com.example.emergencycommunicationsystem.viewmodel.InternetCallViewModel
 import kotlinx.coroutines.delay
@@ -38,7 +39,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun InternetCallScreen(
     onEndCall: () -> Unit,
-    viewModel: InternetCallViewModel = viewModel()
+    viewModel: InternetCallViewModel
 ) {
     val context = LocalContext.current
     val localeContext = getLocaleContext()
@@ -55,7 +56,9 @@ fun InternetCallScreen(
     ) { isGranted ->
         hasAudioPermission = isGranted
         if (isGranted) {
-            startCall()
+            val userId = AuthManager.getUserId()
+            val roomName = "emergency-room-${System.currentTimeMillis()}"
+            viewModel.startCall(userId, roomName)
         }
     }
     
@@ -68,7 +71,7 @@ fun InternetCallScreen(
         
         if (hasAudioPermission) {
             // Start call with current user
-            val userId = com.example.emergencycommunicationsystem.AuthManager.getUserId()
+            val userId = AuthManager.getUserId()
             val roomName = "emergency-room-${System.currentTimeMillis()}"
             viewModel.startCall(userId, roomName)
         } else {
