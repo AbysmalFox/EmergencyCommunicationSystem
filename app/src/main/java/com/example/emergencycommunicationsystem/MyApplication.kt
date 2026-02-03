@@ -8,6 +8,7 @@ import coil.ImageLoaderFactory
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import org.osmdroid.config.Configuration
+import org.webrtc.PeerConnectionFactory
 
 import com.example.emergencycommunicationsystem.util.NotificationChannels
 
@@ -69,6 +70,13 @@ class MyApplication : Application(), ImageLoaderFactory {
             // Some properties might not be available in all OSMDroid versions
         }
         // --- END OSMDROID CONFIGURATION ---
+
+        // --- WEBRTC INITIALIZATION ---
+        PeerConnectionFactory.initialize(
+            PeerConnectionFactory.InitializationOptions.builder(this)
+                .createInitializationOptions()
+        )
+        // --- END WEBRTC INITIALIZATION ---
 
         // The ApiClient is now initialized in MainActivity to prevent race conditions.
         AuthManager.initialize(this)

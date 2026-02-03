@@ -3,11 +3,12 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.example.emergencycommunicationsystem">
 
-    <!-- Permissions for Internet, Network State, and Location -->
+    <!-- Permissions for Internet, Network State, Location, and Audio -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" /> 
 
     <!-- Permissions for Floating Magnifier Bubble (if service is used) -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>

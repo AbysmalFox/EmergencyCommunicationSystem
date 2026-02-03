@@ -55,6 +55,7 @@ import com.example.emergencycommunicationsystem.data.models.WeatherState
 import com.example.emergencycommunicationsystem.ui.components.SafeOverlay
 import com.example.emergencycommunicationsystem.ui.components.CompactAlertCard
 import com.example.emergencycommunicationsystem.ui.components.EmergencyCallButton
+import com.example.emergencycommunicationsystem.ui.components.InternetCallSlider
 import com.example.emergencycommunicationsystem.ui.components.WeatherWidget
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import com.example.emergencycommunicationsystem.ui.theme.StatusDanger
@@ -86,6 +87,7 @@ val AlertaraTealAccent = Color(0xFFB2DFDB)
 @Composable
 fun HomeScreen(
     onEmergencyCallClick: () -> Unit,
+    onInternetCallClick: () -> Unit,
     onReportIncidentClick: () -> Unit,
     onMessageClick: () -> Unit = {},
     onAlertClick: (Int) -> Unit = {},
@@ -210,6 +212,20 @@ fun HomeScreen(
                                 slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(durationMillis = 500, delayMillis = 100))
                     ) {
                         EmergencyCallButton(onClick = onEmergencyCallClick)
+                    }
+                }
+
+                // Internet Call Slider
+                item {
+                    AnimatedVisibility(
+                        visibleState = animationState,
+                        enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = 150)) +
+                                slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(durationMillis = 500, delayMillis = 150))
+                    ) {
+                        InternetCallSlider(
+                            onCallInitiated = onInternetCallClick,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
                 

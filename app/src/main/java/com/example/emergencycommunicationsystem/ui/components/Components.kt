@@ -147,6 +147,7 @@ import com.example.emergencycommunicationsystem.util.getCategoryDisplayName
 import com.example.emergencycommunicationsystem.util.getSeverityColor
 import com.example.emergencycommunicationsystem.util.getAlertSeverity
 import kotlinx.coroutines.delay
+import com.example.emergencycommunicationsystem.ui.components.InternetCallSlider
 import java.util.Locale
 
 @Composable
@@ -475,6 +476,7 @@ fun EmergencyCallButton(onClick: () -> Unit) {
 @Composable
 fun ActionGrid(
     onEmergencyCallClick: () -> Unit,
+    onInternetCallClick: () -> Unit,
     onReportClick: () -> Unit,
     onSafeClick: () -> Unit,
     onMessageClick: () -> Unit = {}
@@ -482,6 +484,12 @@ fun ActionGrid(
     val localeContext = getLocaleContext()
     Column(verticalArrangement = Arrangement.spacedBy(15.dp)) {
         EmergencyCallButton(onClick = onEmergencyCallClick)
+        
+        // Internet Call Slider
+        InternetCallSlider(
+            onCallInitiated = onInternetCallClick,
+            modifier = Modifier.fillMaxWidth()
+        )
         
         // Stacked actions
         Column(verticalArrangement = Arrangement.spacedBy(15.dp)) {

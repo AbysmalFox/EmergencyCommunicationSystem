@@ -45,6 +45,12 @@ import com.example.emergencycommunicationsystem.util.LocaleManager
 import com.example.emergencycommunicationsystem.util.GeminiWeatherService
 import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModel
 import com.example.emergencycommunicationsystem.viewmodel.ProfileViewModelFactory
+import com.example.emergencycommunicationsystem.ui.screens.SignUpViewModel
+import com.example.emergencycommunicationsystem.ui.screens.SignUpState
+import com.example.emergencycommunicationsystem.ui.screens.InternetCallScreen
+import com.example.emergencycommunicationsystem.ui.screens.CallHistoryScreen
+import com.example.emergencycommunicationsystem.ui.screens.MyReportsScreen
+import com.example.emergencycommunicationsystem.data.repository.CallRepository
 import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -179,6 +185,7 @@ fun EmergencyApp(
                 composable(Screen.Home.route) {
                     HomeScreen(
                         onEmergencyCallClick = { navController.navigate(Screen.EmergencyContacts.route) },
+                        onInternetCallClick = { navController.navigate(Screen.InternetCall.route) },
                         onReportIncidentClick = { navController.navigate(Screen.ReportIncident.route) },
                         onMessageClick = {
                             navigateToMessaging(alertId = 999, alertTitle = "General Inquiry")
@@ -378,6 +385,21 @@ fun EmergencyApp(
                             navController.popBackStack()
                         }
                     }
+                }
+                composable(Screen.InternetCall.route) {
+                    val callRepository = remember { CallRepository(context) }
+                    val viewModel: InternetCallViewModel = viewModel(
+                        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+                            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                                @Suppress("UNCHECKED_CAST")
+                                return InternetCallViewModel(callRepository) as T
+                            }
+                        }
+                    )
+                    InternetCallScreen(
+                        onEndCall = { navController.popBackStack() },
+                        viewModel = viewModel
+                    )
                 }
             }
 

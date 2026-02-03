@@ -21,6 +21,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
     data object EmergencyGuideDetail : Screen("emergency_guide_detail/{guideId}", "Emergency Guide Detail", null) {
         fun createRoute(guideId: String) = "emergency_guide_detail/$guideId"
     }
+    data object InternetCall : Screen("internet_call", "Internet Call", null)
     data object MyReports : Screen("my_reports", "My Reports", null)
     data object CallHistory : Screen("call_history", "Call History", null)
 
@@ -41,6 +42,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
                 "auto_reply_chat" -> AutoReplyChat
                 "emergency_contacts" -> EmergencyContacts
                 "emergency_guides" -> EmergencyGuides
+                "internet_call" -> InternetCall
                 "my_reports" -> MyReports
                 "call_history" -> CallHistory
                 else -> {
