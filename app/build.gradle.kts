@@ -146,7 +146,7 @@ dependencies {
     implementation("org.osmdroid:osmdroid-android:6.1.14")
 
     // WebRTC
-    implementation("org.webrtc:google-webrtc:1.0.+")
+    implementation("io.github.webrtc-sdk:android:104.5112.09")
     
     // Socket.IO
     implementation("io.socket:socket.io-client:2.1.0") {
