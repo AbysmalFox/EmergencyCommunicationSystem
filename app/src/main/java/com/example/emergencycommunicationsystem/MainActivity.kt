@@ -151,22 +151,18 @@ fun EmergencyApp(
     }
 
     fun navigateToMessaging(alertId: Int, alertTitle: String) {
-        if (isLoggedIn) {
-            if (alertId <= 0) {
-                Toast.makeText(context, "Invalid Alert Data", Toast.LENGTH_SHORT).show()
-                return
-            }
-
-            val userId = AuthManager.getUserId()
-            val userName = AuthManager.getUsername() ?: "User"
-            val encodedTitle = URLEncoder.encode(alertTitle, "UTF-8")
-
-            navController.navigate(
-                "${Screen.Messaging.route}?alertId=$alertId&alertTitle=$encodedTitle&userId=$userId&userName=$userName"
-            )
-        } else {
-            Toast.makeText(context, "Please log in to send a message", Toast.LENGTH_SHORT).show()
+        if (alertId <= 0) {
+            Toast.makeText(context, "Invalid Alert Data", Toast.LENGTH_SHORT).show()
+            return
         }
+
+        val userId = if (isLoggedIn) AuthManager.getUserId() else -1
+        val userName = if (isLoggedIn) (AuthManager.getUsername() ?: "User") else "Guest"
+        val encodedTitle = URLEncoder.encode(alertTitle, "UTF-8")
+
+        navController.navigate(
+            "${Screen.Messaging.route}?alertId=$alertId&alertTitle=$encodedTitle&userId=$userId&userName=$userName"
+        )
     }
 
     Scaffold(
@@ -206,15 +202,11 @@ fun EmergencyApp(
                     AlertsScreen(
                         onMessageClick = { alertId, alertTitle ->
                             try {
-                                val userId = AuthManager.getUserId()
-                                if (userId > 0) {
-                                    val alertIdInt = alertId.toInt()
-                                    val encodedTitle = URLEncoder.encode(alertTitle, "UTF-8")
-                                    val userName = AuthManager.getUsername() ?: "User"
-                                    navController.navigate("${Screen.Messaging.route}?alertId=$alertIdInt&alertTitle=$encodedTitle&userId=$userId&userName=$userName")
-                                } else {
-                                    Toast.makeText(context, "Please log in to send a message", Toast.LENGTH_SHORT).show()
-                                }
+                                val userId = if (isLoggedIn) AuthManager.getUserId() else -1
+                                val alertIdInt = alertId.toInt()
+                                val encodedTitle = URLEncoder.encode(alertTitle, "UTF-8")
+                                val userName = if (isLoggedIn) (AuthManager.getUsername() ?: "User") else "Guest"
+                                navController.navigate("${Screen.Messaging.route}?alertId=$alertIdInt&alertTitle=$encodedTitle&userId=$userId&userName=$userName")
                             } catch (e: Exception) {
                                 Log.e("NavigationError", "Error navigating to messaging", e)
                             }
@@ -359,11 +351,11 @@ fun EmergencyApp(
                     val alertId = backStackEntry.arguments?.getInt("alertId") ?: -1
                     val userId = backStackEntry.arguments?.getInt("userId") ?: -1
                     val alertTitle = URLDecoder.decode(backStackEntry.arguments?.getString("alertTitle") ?: "Chat", "UTF-8")
-                    val userName = backStackEntry.arguments?.getString("userName") ?: ""
+                    val userName = backStackEntry.arguments?.getString("userName") ?: "Guest"
                     
                     val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
 
-                    if (alertId > 0 && userId > 0) {
+                    if (alertId > 0) {
                         val factory = MessagingViewModelFactory(alertId, userId, alertTitle, messagingRepository, currentLanguage)
                         val messagingViewModel: MessagingViewModel = viewModel(key = "messaging_${alertId}_$currentLanguage", factory = factory)
 

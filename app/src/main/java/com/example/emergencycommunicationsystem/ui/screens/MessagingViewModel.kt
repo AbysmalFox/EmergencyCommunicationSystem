@@ -61,7 +61,7 @@ class MessagingViewModel(
     private val _navigationChannel = Channel<NavigationRequest>()
     val navigationChannel = _navigationChannel.receiveAsFlow()
 
-    private val isTemporaryChat = (alertId != 999)
+    private val isTemporaryChat = (alertId != 999) || (userId <= 0)
 
     init {
         if (isTemporaryChat) {
@@ -244,7 +244,7 @@ class MessagingViewModel(
     }
 
     fun sendPersistentMessage(userName: String) {
-        val convId = _conversationId.value ?: return
+        if (_conversationId.value == null) return
         
         if (messageInput.value.isBlank()) return
 

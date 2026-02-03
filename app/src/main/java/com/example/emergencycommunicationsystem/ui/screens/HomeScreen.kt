@@ -13,11 +13,15 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Air
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.MicOff
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -39,7 +43,6 @@ import androidx.compose.ui.res.painterResource
 import com.example.emergencycommunicationsystem.util.localizedStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -58,7 +61,6 @@ import com.example.emergencycommunicationsystem.ui.theme.StatusDanger
 import com.example.emergencycommunicationsystem.ui.theme.StatusSafe
 import com.example.emergencycommunicationsystem.util.Resource
 import com.example.emergencycommunicationsystem.util.getLocaleContext
-import com.example.emergencycommunicationsystem.util.LocationUtils
 import com.example.emergencycommunicationsystem.util.getAlertSeverity
 import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
 import com.example.emergencycommunicationsystem.viewmodel.AlertWithDistance
@@ -68,12 +70,9 @@ import com.example.emergencycommunicationsystem.ui.theme.themeShadow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
-import kotlin.math.max
-import kotlin.math.min
 
 import com.example.emergencycommunicationsystem.util.WeatherIconUtils
 import com.example.emergencycommunicationsystem.util.TextToSpeechHelper
@@ -238,11 +237,15 @@ fun HomeScreen(
                         enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = 300)) +
                                 slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(durationMillis = 500, delayMillis = 300))
                     ) {
-                        ModernAlertsSection(
-                            alertsState = alertsState,
-                            onAlertClick = onAlertClick,
-                            isDarkMode = isDarkMode
-                        )
+                        Column {
+                            HorizontalRule()
+                            ModernAlertsSection(
+                                alertsState = alertsState,
+                                onAlertClick = onAlertClick,
+                                isDarkMode = isDarkMode
+                            )
+                            HorizontalRule()
+                        }
                     }
                 }
                 
@@ -281,6 +284,20 @@ fun HomeScreen(
         // Overlay is drawn on top
         SafeOverlay(visible = showSafeOverlay, onDismiss = { showSafeOverlay = false })
     }
+}
+
+/**
+ * Custom Horizontal Rule
+ */
+@Composable
+fun HorizontalRule(modifier: Modifier = Modifier) {
+    HorizontalDivider(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        thickness = 1.dp,
+        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
+    )
 }
 
 /**
@@ -936,7 +953,7 @@ fun CompactWeatherCard(
                                 modifier = Modifier.size(24.dp)
                             ) {
                                 Icon(
-                                    imageVector = if (isSpeaking) AppIcons.MicOff else AppIcons.VolumeUp, // Using VolumeUp/MicOff as placeholder
+                                    imageVector = if (isSpeaking) Icons.Default.MicOff else Icons.Default.VolumeUp,
                                     contentDescription = "Read Aloud",
                                     tint = primaryColor,
                                     modifier = Modifier.size(16.dp)
