@@ -1,8 +1,8 @@
 package com.example.emergencycommunicationsystem.socket
 
 import android.util.Log
-import com.github.nkzawa.socketio.client.IO
-import com.github.nkzawa.socketio.client.Socket
+import io.socket.client.IO
+import io.socket.client.Socket
 import org.json.JSONObject
 import java.net.URISyntaxException
 
@@ -12,7 +12,8 @@ class SocketManager {
     
     companion object {
         private const val TAG = "SocketManager"
-        private const val SERVER_URL = "http://localhost:3000" // Update with your server URL
+        // 10.0.2.2 is the special IP to reach your computer's localhost from the Android Emulator
+        private const val SERVER_URL = "http://10.0.2.2:3000" 
     }
     
     fun connect() {
@@ -28,19 +29,27 @@ class SocketManager {
             }
             
             socket?.on("offer") { args ->
-                Log.d(TAG, "Received offer: ${args[0]}")
+                if (args.isNotEmpty()) {
+                    Log.d(TAG, "Received offer: ${args[0]}")
+                }
             }
             
             socket?.on("answer") { args ->
-                Log.d(TAG, "Received answer: ${args[0]}")
+                if (args.isNotEmpty()) {
+                    Log.d(TAG, "Received answer: ${args[0]}")
+                }
             }
             
             socket?.on("candidate") { args ->
-                Log.d(TAG, "Received ICE candidate: ${args[0]}")
+                if (args.isNotEmpty()) {
+                    Log.d(TAG, "Received ICE candidate: ${args[0]}")
+                }
             }
             
             socket?.on("hangup") { args ->
-                Log.d(TAG, "Received hangup: ${args[0]}")
+                if (args.isNotEmpty()) {
+                    Log.d(TAG, "Received hangup: ${args[0]}")
+                }
             }
             
             socket?.connect()

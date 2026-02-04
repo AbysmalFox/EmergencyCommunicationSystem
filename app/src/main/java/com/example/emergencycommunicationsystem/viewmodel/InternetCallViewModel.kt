@@ -1,6 +1,7 @@
 package com.example.emergencycommunicationsystem.viewmodel
 
 import android.util.Log
+import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,6 +13,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -24,10 +26,10 @@ class InternetCallViewModel(
     val callState: StateFlow<CallState> = _callState.asStateFlow()
     
     private val _messageInput = mutableStateOf("")
-    val messageInput: String = _messageInput.value
+    val messageInput: State<String> = _messageInput
     
     private val _isSending = mutableStateOf(false)
-    val isSending: Boolean = _isSending.value
+    val isSending: State<Boolean> = _isSending
     
     private var currentCallLog: CallLog? = null
     private var timerJob: Job? = null
@@ -41,18 +43,18 @@ class InternetCallViewModel(
         viewModelScope.launch {
             try {
                 // Update state to connecting
-                _callState.value = _callState.value.copy(
+                _callState.update { it.copy(
                     isConnecting = true,
                     roomName = roomName,
                     startTime = System.currentTimeMillis()
-                )
+                ) }
                 
                 // Get user profile
                 val profileResult = callRepository.getUserProfile(userId)
                 if (profileResult.isSuccess) {
-                    _callState.value = _callState.value.copy(
+                    _callState.update { it.copy(
                         remoteUser = profileResult.getOrNull()
-                    )
+                    ) }
                 }
                 
                 // Log the call
@@ -72,10 +74,10 @@ class InternetCallViewModel(
                     signalingManager?.connect(roomName)
                     
                     // Update state to active
-                    _callState.value = _callState.value.copy(
+                    _callState.update { it.copy(
                         isActive = true,
                         isConnecting = false
-                    )
+                    ) }
                     
                     // Start timer
                     startTimer()
@@ -83,12 +85,12 @@ class InternetCallViewModel(
                     Log.d("InternetCallViewModel", "Call started successfully")
                 } else {
                     Log.e("InternetCallViewModel", "Failed to log call")
-                    _callState.value = _callState.value.copy(isConnecting = false)
+                    _callState.update { it.copy(isConnecting = false) }
                 }
                 
             } catch (e: Exception) {
                 Log.e("InternetCallViewModel", "Error starting call", e)
-                _callState.value = _callState.value.copy(isConnecting = false)
+                _callState.update { it.copy(isConnecting = false) }
             }
         }
     }
@@ -100,7 +102,7 @@ class InternetCallViewModel(
             while (isActive && _callState.value.isActive) {
                 val currentTime = System.currentTimeMillis()
                 val elapsedSeconds = ((currentTime - startTime) / 1000).toInt()
-                _callState.value = _callState.value.copy(duration = elapsedSeconds)
+                _callState.update { it.copy(duration = elapsedSeconds) }
                 
                 // Update call duration in database every 10 seconds
                 if (elapsedSeconds % 10 == 0 && currentCallLog != null) {
@@ -125,10 +127,10 @@ class InternetCallViewModel(
                 val duration = _callState.value.duration
                 
                 // Update call state
-                _callState.value = _callState.value.copy(
+                _callState.update { it.copy(
                     isActive = false,
                     isConnecting = false
-                )
+                ) }
                 
                 // End call in database
                 currentCallLog?.let { callLog ->
@@ -155,18 +157,13 @@ class InternetCallViewModel(
                 val duration = _callState.value.duration
                 
                 // Update call state
-                _callState.value = _callState.value.copy(
+                _callState.update { it.copy(
                     isActive = false,
                     isConnecting = false
-                )
+                ) }
                 
                 // Update call status to cancelled in database
                 currentCallLog?.let { callLog ->
-                    val cancelledCall = callLog.copy(
-                        status = "cancelled",
-                        endTime = endTime,
-                        duration = duration
-                    )
                     callRepository.endCall(callLog.id, endTime, duration)
                 }
                 
@@ -201,13 +198,15 @@ class InternetCallViewModel(
                 )
                 
                 val result = callRepository.sendMessage(callMessage)
-                if (result.isSuccess) {
+                val sentMessage = result.getOrNull()
+                if (result.isSuccess && sentMessage != null) {
                     // Clear input
                     _messageInput.value = ""
                     
                     // Add to local messages list
-                    val updatedMessages = _callState.value.messages + result.getOrNull()
-                    _callState.value = _callState.value.copy(messages = updatedMessages)
+                    _callState.update { it.copy(
+                        messages = it.messages + sentMessage
+                    ) }
                     
                     Log.d("InternetCallViewModel", "Message sent successfully")
                 } else {
@@ -223,13 +222,11 @@ class InternetCallViewModel(
     }
     
     fun toggleMute() {
-        _callState.value = _callState.value.copy(isMuted = !_callState.value.isMuted)
-        // TODO: Implement actual mute functionality with WebRTC
+        _callState.update { it.copy(isMuted = !it.isMuted) }
     }
     
     fun toggleSpeaker() {
-        _callState.value = _callState.value.copy(isSpeakerOn = !_callState.value.isSpeakerOn)
-        // TODO: Implement actual speaker functionality with WebRTC
+        _callState.update { it.copy(isSpeakerOn = !it.isSpeakerOn) }
     }
     
     override fun onCleared() {

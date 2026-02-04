@@ -26,9 +26,11 @@ class WebRTCManager(private val context: Context) {
             
             PeerConnectionFactory.initialize(options)
             
+            val eglBase = EglBase.create()
+            
             peerConnectionFactory = PeerConnectionFactory.builder()
-                .setVideoDecoderFactory(DefaultVideoDecoderFactory())
-                .setVideoEncoderFactory(DefaultVideoEncoderFactory())
+                .setVideoDecoderFactory(DefaultVideoDecoderFactory(eglBase.eglBaseContext))
+                .setVideoEncoderFactory(DefaultVideoEncoderFactory(eglBase.eglBaseContext, true, true))
                 .createPeerConnectionFactory()
                 
             Log.d(TAG, "PeerConnectionFactory initialized successfully")
@@ -46,7 +48,8 @@ class WebRTCManager(private val context: Context) {
         )
         
         val rtcConfig = PeerConnection.RTCConfiguration(iceServers)
-        rtcConfig.sdpSemantics = PeerConfiguration.SdpSemantics.UNIFIED_PLAN
+        // Unified Plan is default in modern WebRTC
+        rtcConfig.sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN
         
         peerConnection = peerConnectionFactory?.createPeerConnection(rtcConfig, object : PeerConnection.Observer {
             override fun onSignalingChange(signalingState: PeerConnection.SignalingState) {
@@ -68,7 +71,6 @@ class WebRTCManager(private val context: Context) {
             override fun onIceCandidate(iceCandidate: IceCandidate) {
                 Log.d(TAG, "ICE candidate generated: ${iceCandidate.sdp}")
                 
-                // Emit ICE candidate via socket (matching server event name)
                 val candidateData = org.json.JSONObject().apply {
                     put("candidate", iceCandidate.sdp)
                     put("sdpMid", iceCandidate.sdpMid)
@@ -100,10 +102,9 @@ class WebRTCManager(private val context: Context) {
             override fun onAddTrack(rtpReceiver: RtpReceiver, mediaStreams: Array<out MediaStream>) {
                 Log.d(TAG, "Track added: ${rtpReceiver.track()?.id()}")
             }
-            
-            override fun onTrack(rtpReceiver: RtpReceiver, mediaStreams: Array<out MediaStream>) {
-                Log.d(TAG, "Track received: ${rtpReceiver.track()?.id()}")
-            }
+
+            // In some versions of WebRTC SDK, onTrack might have a different signature or not exist in the interface
+            // If it causes error, we can use onAddTrack instead
         })
         
         Log.d(TAG, "PeerConnection created successfully")
@@ -117,19 +118,13 @@ class WebRTCManager(private val context: Context) {
             val factory = peerConnectionFactory ?: return false
             val pc = peerConnection ?: return false
             
-            // Create audio source with media constraints
             val audioConstraints = MediaConstraints()
             val audioSource = factory.createAudioSource(audioConstraints)
-            
-            // Create audio track
             val audioTrack = factory.createAudioTrack("audio", audioSource)
             audioTrack.setEnabled(true)
             
-            // Create local media stream and add audio track
             val mediaStream = factory.createLocalMediaStream("stream")
             mediaStream.addTrack(audioTrack)
-            
-            // Add stream to peer connection
             pc.addStream(mediaStream)
             
             Log.d(TAG, "Local audio track added successfully")

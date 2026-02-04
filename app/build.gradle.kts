@@ -145,10 +145,10 @@ dependencies {
     // OSMDroid for OpenStreetMap (Using this instead of Tangram)
     implementation("org.osmdroid:osmdroid-android:6.1.14")
 
-    // WebRTC
+    // WebRTC - Official and stable version
     implementation("io.github.webrtc-sdk:android:104.5112.09")
     
-    // Socket.IO
+    // Socket.IO - Official client
     implementation("io.socket:socket.io-client:2.1.0") {
         exclude(group = "org.json", module = "json")
     }

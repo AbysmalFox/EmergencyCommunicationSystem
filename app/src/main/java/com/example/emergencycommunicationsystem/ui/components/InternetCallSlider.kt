@@ -25,12 +25,15 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 import kotlinx.coroutines.delay
-import kotlin.math.absoluteValue
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @Composable
 fun InternetCallSlider(
@@ -38,6 +41,8 @@ fun InternetCallSlider(
     modifier: Modifier = Modifier
 ) {
     val localeContext = getLocaleContext()
+    val scope = rememberCoroutineScope()
+    
     var isDragging by remember { mutableStateOf(false) }
     var offsetX by remember { mutableStateOf(0f) }
     var isCallActive by remember { mutableStateOf(false) }
@@ -45,7 +50,10 @@ fun InternetCallSlider(
     
     val sliderWidth = 300.dp
     val sliderHeight = 80.dp
-    val dragThreshold = with(LocalDensity.current) { sliderWidth * 0.7f }
+    
+    // Convert Dp threshold to Px for float comparison
+    val density = LocalDensity.current
+    val dragThresholdPx = with(density) { (sliderWidth * 0.7f).toPx() }
     
     // Animation for success state
     val successAnimation by animateFloatAsState(
@@ -54,9 +62,9 @@ fun InternetCallSlider(
         label = "successAnimation"
     )
     
-    // Reset animation
+    // Reset animation when not dragging
     LaunchedEffect(isDragging) {
-        if (!isDragging && offsetX < dragThreshold) {
+        if (!isDragging && offsetX < dragThresholdPx) {
             delay(100)
             offsetX = 0f
         }
@@ -109,14 +117,15 @@ fun InternetCallSlider(
                 color = Color.White,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
             )
         }
         
         // Draggable button
         Box(
             modifier = Modifier
-                .offset { IntOffset(offsetX.toInt(), 0) }
+                .offset { IntOffset(offsetX.roundToInt(), 0) }
                 .size(60.dp)
                 .padding(start = 10.dp)
                 .clip(CircleShape)
@@ -132,14 +141,14 @@ fun InternetCallSlider(
                         },
                         onDragEnd = {
                             isDragging = false
-                            if (offsetX >= dragThreshold) {
+                            if (offsetX >= dragThresholdPx) {
                                 // Trigger call
                                 isCallActive = true
                                 showSuccess = true
                                 onCallInitiated()
                                 
-                                // Reset after delay
-                                kotlinx.coroutines.GlobalScope.launch {
+                                // Reset after delay using local scope
+                                scope.launch {
                                     delay(2000)
                                     offsetX = 0f
                                     isCallActive = false
@@ -151,11 +160,10 @@ fun InternetCallSlider(
                             }
                         }
                     ) { change, dragAmount ->
-                        if (dragAmount.x > 0) { // Only allow right drag
-                            val newOffset = offsetX + dragAmount.x
-                            val maxOffset = with(LocalDensity.current) { sliderWidth - 70.dp }.toPx()
-                            offsetX = newOffset.coerceIn(0f, maxOffset)
-                        }
+                        change.consume()
+                        val newOffset = offsetX + dragAmount.x
+                        val maxOffset = with(density) { (sliderWidth - 70.dp).toPx() }
+                        offsetX = newOffset.coerceIn(0f, maxOffset)
                     }
                 }
                 .graphicsLayer(

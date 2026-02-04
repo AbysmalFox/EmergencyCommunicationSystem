@@ -52,6 +52,7 @@ import com.example.emergencycommunicationsystem.ui.screens.CallHistoryScreen
 import com.example.emergencycommunicationsystem.ui.screens.MyReportsScreen
 import com.example.emergencycommunicationsystem.data.repository.CallRepository
 import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
+import com.example.emergencycommunicationsystem.viewmodel.InternetCallViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
