@@ -225,6 +225,7 @@ fun HomeScreen(
                             onReportClick = onReportIncidentClick,
                             onSafeClick = { if (!showSafeOverlay) showSafeOverlay = true },
                             onMessageClick = onMessageClick,
+                            onEmergencyCallPageClick = onEmergencyCallClick,
                             isDarkMode = isDarkMode,
                             currentLanguage = currentLanguage
                         )
@@ -599,6 +600,7 @@ fun QuickActionsGrid(
     onReportClick: () -> Unit,
     onSafeClick: () -> Unit,
     onMessageClick: () -> Unit,
+    onEmergencyCallPageClick: () -> Unit,
     isDarkMode: Boolean,
     currentLanguage: String = "en"
 ) {
@@ -634,17 +636,35 @@ fun QuickActionsGrid(
             )
         }
         
-        // Row 2: I Am Safe (Full Width)
-        QuickActionCard(
-            title = localizedStringResource(R.string.i_am_safe),
-            icon = R.drawable.ic_tabler_shield_check,
-            containerColor = if (isDarkMode) Color(0xFF388E3C).copy(alpha = 0.85f) else Color(0xFF81C784),
-            contentColor = Color.White,
-            onClick = onSafeClick,
+        // Row 2: I Am Safe & Emergency Call Menu
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            isDarkMode = isDarkMode,
-            isFullWidth = true
-        )
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // I Am Safe Card
+            QuickActionCard(
+                title = localizedStringResource(R.string.i_am_safe),
+                icon = R.drawable.ic_tabler_shield_check,
+                containerColor = if (isDarkMode) Color(0xFF388E3C).copy(alpha = 0.85f) else Color(0xFF81C784),
+                contentColor = Color.White,
+                onClick = onSafeClick,
+                modifier = Modifier.weight(1f),
+                isDarkMode = isDarkMode,
+                isFullWidth = false
+            )
+
+            // Emergency Call Menu Card
+            QuickActionCard(
+                title = "EMERGENCY CONTACTS", 
+                icon = R.drawable.ic_tabler_phone, 
+                containerColor = if (isDarkMode) Color(0xFFF57C00).copy(alpha = 0.85f) else Color(0xFFFFB74D),
+                contentColor = Color.White,
+                onClick = onEmergencyCallPageClick,
+                modifier = Modifier.weight(1f),
+                isDarkMode = isDarkMode,
+                isFullWidth = false
+            )
+        }
     }
 }
 

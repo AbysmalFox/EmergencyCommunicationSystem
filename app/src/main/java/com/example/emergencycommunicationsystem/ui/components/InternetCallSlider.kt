@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CellTower
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -146,12 +148,24 @@ fun InternetCallSlider(
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "Internet Call",
-                        fontSize = 12.sp,
-                        fontWeight = if (isInternetCall) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isInternetCall) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Language,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = if (isInternetCall) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Internet Call",
+                            fontSize = 11.sp,
+                            fontWeight = if (isInternetCall) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isInternetCall) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
                 }
                 
                 // Greenish divider for light mode, white for dark mode
@@ -177,12 +191,24 @@ fun InternetCallSlider(
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "Cellular Call",
-                        fontSize = 12.sp,
-                        fontWeight = if (!isInternetCall) FontWeight.Bold else FontWeight.Medium,
-                        color = if (!isInternetCall) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CellTower,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = if (!isInternetCall) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Cellular Call",
+                            fontSize = 11.sp,
+                            fontWeight = if (!isInternetCall) FontWeight.Bold else FontWeight.Medium,
+                            color = if (!isInternetCall) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
                 }
             }
         }
