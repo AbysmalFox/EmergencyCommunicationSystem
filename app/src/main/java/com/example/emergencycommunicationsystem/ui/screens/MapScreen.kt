@@ -97,6 +97,15 @@ fun MapScreen() {
     var mapView by remember { mutableStateOf<MapView?>(null) }
     var locationOverlay by remember { mutableStateOf<MyLocationNewOverlay?>(null) }
     var currentRoutePolyline by remember { mutableStateOf<Polyline?>(null) }
+
+    // QC boundary reference (moved to top-level so DisposableEffect can clean it up)
+    var qcBoundaryRef by remember { mutableStateOf<Polygon?>(null) }
+
+    // QC-first initialization flag
+    var hasInitialCameraSet by remember { mutableStateOf(false) }
+
+    // Session flag: track if the user explicitly activated camera lock in this session
+    var userActivatedCameraLock by remember { mutableStateOf(false) }
     
     // Map State from ViewModel
     val routeDestination by mapViewModel.routeDestination.collectAsState()
@@ -124,7 +133,26 @@ fun MapScreen() {
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            mapView?.onDetach()
+            try {
+                // Ensure we stop location updates and clear overlays to avoid leaked resources
+                locationOverlay?.disableMyLocation()
+            } catch (e: Exception) {
+                // Swallow to avoid crashing during teardown
+            }
+
+            try {
+                // Remove overlays and detach the MapView safely
+                mapView?.overlays?.clear()
+                mapView?.onDetach()
+            } catch (e: Exception) {
+                // Ignore errors during cleanup
+            }
+
+            // Null out references to allow GC and prevent using stale objects after returning
+            mapView = null
+            locationOverlay = null
+            qcBoundaryRef = null
+            currentRoutePolyline = null
         }
     }
 
@@ -191,7 +219,10 @@ fun MapScreen() {
 
     Box(modifier = Modifier.fillMaxSize()) {
         val qcPoints = getQuezonCityBoundaryPoints()
-        var qcBoundaryRef by remember { mutableStateOf<Polygon?>(null) }
+
+        // QC-first camera defaults
+        val qcCenter = GeoPoint(14.6760, 121.0437)
+        val initialZoom = 12.0
 
         AndroidView(
             modifier = Modifier.fillMaxSize(),
@@ -250,10 +281,13 @@ fun MapScreen() {
                     val maxLon = qcPoints.maxOf { it.longitude }
                     val boundingBox = BoundingBox(maxLat, maxLon, minLat, minLon)
                     
-                    post { 
-                        // Only zoom to QC if we don't have a specific target
-                        if (routeDestination == null && (!isCameraLocked || userLocation == null)) {
-                            zoomToBoundingBox(boundingBox, true)
+                    post {
+                        // Only zoom to QC once on first load (QC-first view)
+                        if (!hasInitialCameraSet && routeDestination == null) {
+                            // This forces the map to show the entire city boundary
+                            zoomToBoundingBox(boundingBox, false)
+                            controller.setZoom(12.0)
+                            hasInitialCameraSet = true
                         }
                     }
 
@@ -653,6 +687,7 @@ fun MapScreen() {
                 // Toggle lock state
                 val newState = !isCameraLocked
                 mapViewModel.setCameraLocked(newState)
+                userActivatedCameraLock = newState // Mark explicitly if user toggled lock
                 
                 if (newState) {
                     if (userLocation != null) {
@@ -678,7 +713,9 @@ fun MapScreen() {
         // Camera Lock Logic - Restore position when map becomes available or location updates
         LaunchedEffect(userLocation, isCameraLocked, mapView) {
             val map = mapView
-            if (isCameraLocked && userLocation != null && map != null) {
+            // Only auto-follow when the camera is locked AND initial camera has been set
+            // AND when the user explicitly activated the lock this session (prevents unexpected auto-follow)
+            if (isCameraLocked && userActivatedCameraLock && userLocation != null && map != null && hasInitialCameraSet) {
                 map.controller.animateTo(userLocation)
                 if (map.zoomLevelDouble < 15.0) {
                      map.controller.setZoom(18.0)

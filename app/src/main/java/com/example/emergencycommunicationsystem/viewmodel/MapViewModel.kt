@@ -37,7 +37,8 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     val routeDestination: StateFlow<SafeZone?> = _routeDestination.asStateFlow()
 
     // Map UI State
-    private val _isCameraLocked = MutableStateFlow(true)
+    // Default to NOT locked so the map remains QC-first on initial load
+    private val _isCameraLocked = MutableStateFlow(false)
     val isCameraLocked: StateFlow<Boolean> = _isCameraLocked.asStateFlow()
 
     private val _isCalculatingRoute = MutableStateFlow(false)
