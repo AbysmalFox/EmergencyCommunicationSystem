@@ -617,7 +617,7 @@ fun QuickActionsGrid(
             QuickActionCard(
                 title = localizedStringResource(R.string.report_incident),
                 icon = R.drawable.ic_tabler_file_alert,
-                containerColor = StatusDanger,
+                containerColor = if (isDarkMode) Color(0xFFD32F2F).copy(alpha = 0.85f) else Color(0xFFE57373),
                 contentColor = Color.White,
                 onClick = onReportClick,
                 modifier = Modifier.weight(1f),
@@ -638,7 +638,7 @@ fun QuickActionsGrid(
         QuickActionCard(
             title = localizedStringResource(R.string.i_am_safe),
             icon = R.drawable.ic_tabler_shield_check,
-            containerColor = StatusSafe,
+            containerColor = if (isDarkMode) Color(0xFF388E3C).copy(alpha = 0.85f) else Color(0xFF81C784),
             contentColor = Color.White,
             onClick = onSafeClick,
             modifier = Modifier.fillMaxWidth(),
