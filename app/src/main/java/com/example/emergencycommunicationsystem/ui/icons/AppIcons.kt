@@ -53,6 +53,7 @@ object AppIcons {
     val Visibility: ImageVector = Icons.Filled.Visibility
     val Wind: ImageVector = Icons.Filled.Air
     val Humidity: ImageVector = Icons.Filled.WaterDrop
+    val CloudOff: ImageVector = Icons.Filled.CloudOff
     
     // Other Icons
     val Person: ImageVector = Icons.Filled.Person

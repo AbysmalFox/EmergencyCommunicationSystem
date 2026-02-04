@@ -16,11 +16,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Air
-import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MicOff
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -54,7 +51,6 @@ import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.data.models.WeatherState
 import com.example.emergencycommunicationsystem.ui.components.SafeOverlay
 import com.example.emergencycommunicationsystem.ui.components.CompactAlertCard
-import com.example.emergencycommunicationsystem.ui.components.EmergencyCallButton
 import com.example.emergencycommunicationsystem.ui.components.InternetCallSlider
 import com.example.emergencycommunicationsystem.ui.components.WeatherWidget
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
@@ -204,18 +200,7 @@ fun HomeScreen(
                     }
                 }
                 
-                // Emergency Call Button - Prominent
-                item {
-                    AnimatedVisibility(
-                        visibleState = animationState,
-                        enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = 100)) +
-                                slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(durationMillis = 500, delayMillis = 100))
-                    ) {
-                        EmergencyCallButton(onClick = onEmergencyCallClick)
-                    }
-                }
-
-                // Internet Call Slider
+                // Primary Emergency Call Slider (Blue) - Removed the upper white slider as requested
                 item {
                     AnimatedVisibility(
                         visibleState = animationState,
@@ -969,7 +954,7 @@ fun CompactWeatherCard(
                                 modifier = Modifier.size(24.dp)
                             ) {
                                 Icon(
-                                    imageVector = if (isSpeaking) Icons.Default.MicOff else Icons.Default.VolumeUp,
+                                    imageVector = if (isSpeaking) AppIcons.MicOff else AppIcons.VolumeUp,
                                     contentDescription = "Read Aloud",
                                     tint = primaryColor,
                                     modifier = Modifier.size(16.dp)
@@ -1042,7 +1027,7 @@ fun CompactWeatherCard(
             ) {
                 WeatherDetailItem(Icons.Default.LightMode, localizedStringResource(R.string.feels_like), "${weatherState.feelsLike.substringBefore(".")}°", false, isDarkMode)
                 WeatherDetailItem(Icons.Default.WaterDrop, localizedStringResource(R.string.humidity), weatherState.humidity, false, isDarkMode)
-                WeatherDetailItem(Icons.Default.Air, localizedStringResource(R.string.wind), weatherState.windSpeed, false, isDarkMode)
+                WeatherDetailItem(AppIcons.Wind, localizedStringResource(R.string.wind), weatherState.windSpeed, false, isDarkMode)
             }
             
             Spacer(modifier = Modifier.height(16.dp))
@@ -1099,7 +1084,7 @@ fun CompactWeatherCard(
                             
                             if (weatherState.isOffline) {
                                 Icon(
-                                    imageVector = Icons.Default.CloudOff,
+                                    imageVector = AppIcons.CloudOff,
                                     contentDescription = "Offline",
                                     tint = Color.Red,
                                     modifier = Modifier
