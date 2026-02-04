@@ -10,6 +10,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -189,6 +190,9 @@ fun MapScreen() {
     val isDarkMode = ThemeManager.isDarkMode()
 
     Box(modifier = Modifier.fillMaxSize()) {
+        val qcPoints = getQuezonCityBoundaryPoints()
+        var qcBoundaryRef by remember { mutableStateOf<Polygon?>(null) }
+
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
@@ -225,14 +229,19 @@ fun MapScreen() {
                     }
 
                     // QC Boundary
-                    val qcPoints = getQuezonCityBoundaryPoints()
+                    val boundaryColor = if (isDarkMode) {
+                        Color.White.copy(alpha = 0.6f).toArgb()
+                    } else {
+                        Color(0xFF008080).copy(alpha = 0.7f).toArgb()
+                    }
                     val qcBoundary = Polygon().apply {
                         setPoints(qcPoints)
                         fillPaint.color = Color(0.2f, 0.2f, 1.0f, 0.2f).toArgb()
-                        outlinePaint.color = Color.Blue.toArgb()
+                        outlinePaint.color = boundaryColor
                         outlinePaint.strokeWidth = 2.0f
                     }
                     overlays.add(qcBoundary)
+                    qcBoundaryRef = qcBoundary
 
                     // Zoom to QC initially ONLY if not restoring a state
                     val minLat = qcPoints.minOf { it.latitude }
@@ -256,6 +265,15 @@ fun MapScreen() {
                 }
             }
         )
+
+        // Update QC boundary color when theme changes
+        LaunchedEffect(isDarkMode) {
+            qcBoundaryRef?.let { boundary ->
+                val color = if (isDarkMode) Color.White.copy(alpha = 0.6f).toArgb() else Color(0xFF008080).copy(alpha = 0.7f).toArgb()
+                boundary.outlinePaint.color = color
+                mapView?.invalidate()
+            }
+        }
         
         // Load alerts when screen is displayed
         LaunchedEffect(Unit) {
@@ -772,6 +790,7 @@ fun MapLegend(
     val backgroundColor = if (isDarkMode) Color(0xFF1E1E1E).copy(alpha = 0.95f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
     val contentColor = if (isDarkMode) Color.White else MaterialTheme.colorScheme.onSurface
     val localeContext = com.example.emergencycommunicationsystem.util.getLocaleContext()
+    val borderColor = if (isDarkMode) Color.White.copy(alpha = 0.2f) else BrandTealAccent.copy(alpha = 0.5f)
     
     val translatedLegend = localeContext.getString(R.string.map_legend)
     val translatedAlert = localeContext.getString(R.string.map_alert)
@@ -780,10 +799,11 @@ fun MapLegend(
     
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(4.dp),
+        shape = RoundedCornerShape(8.dp),
         color = backgroundColor,
-        shadowElevation = 4.dp
-    ) {
+        shadowElevation = 4.dp,
+        border = BorderStroke(1.dp, borderColor)
+    ) { 
         Column(
             modifier = Modifier.padding(8.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -898,6 +918,8 @@ fun DirectionsCard(
     onClose: () -> Unit
 ) {
     val localeContext = com.example.emergencycommunicationsystem.util.getLocaleContext()
+    val isDarkMode = ThemeManager.isDarkMode()
+    val borderColor = if (isDarkMode) Color.White.copy(alpha = 0.2f) else BrandTealAccent.copy(alpha = 0.3f)
     
     val translatedDirections = localeContext.getString(R.string.map_directions)
     val translatedTo = localeContext.getString(R.string.map_to)
@@ -924,8 +946,9 @@ fun DirectionsCard(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 8.dp
-    ) {
+        shadowElevation = 8.dp,
+        border = BorderStroke(1.dp, borderColor)
+    ) { 
         Column(
             modifier = Modifier.padding(10.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -982,6 +1005,8 @@ fun NavigationCard(
     onClose: () -> Unit
 ) {
     val localeContext = com.example.emergencycommunicationsystem.util.getLocaleContext()
+    val isDarkMode = ThemeManager.isDarkMode()
+    val borderColor = if (isDarkMode) Color.White.copy(alpha = 0.2f) else BrandTealAccent.copy(alpha = 0.3f)
     
     val translatedNavLabel = localeContext.getString(R.string.map_navigation)
     val translatedRemaining = localeContext.getString(R.string.map_remaining)
@@ -1012,7 +1037,8 @@ fun NavigationCard(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 8.dp
+        shadowElevation = 8.dp,
+        border = BorderStroke(1.dp, borderColor)
     ) {
         Column(modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
