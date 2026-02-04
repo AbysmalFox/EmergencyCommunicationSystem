@@ -37,10 +37,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.compose.animation.animateContentSize
 import com.example.emergencycommunicationsystem.ui.theme.ThemeManager
-import com.example.emergencycommunicationsystem.ui.theme.BrandTealAccent
-import com.example.emergencycommunicationsystem.ui.theme.BrandDeepTeal
 import androidx.compose.ui.graphics.Color
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 
@@ -82,7 +79,7 @@ fun BottomNavigationBar(
             )
             .border(
                 width = 1.dp,
-                color = if (isDark) Color.White.copy(alpha = 0.1f) else Color(0xFFE2E8F0),
+                color = if (isDark) Color.White.copy(alpha = 0.4f) else Color(0xFFE2E8F0),
                 shape = RoundedCornerShape(32.dp)
             )
     ) {
