@@ -41,6 +41,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
+// Alertara Green-ish Theme Colors
+private val AlertaraTeal = Color(0xFF508684)
+private val AlertaraTealDark = Color(0xFF34635D)
+private val AlertaraTealLight = Color(0xFF669997)
+private val AlertaraTealAccent = Color(0xFFB2DFDB)
+private val AlertaraSuccess = Color(0xFF43A047)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InternetCallSlider(
@@ -59,8 +66,8 @@ fun InternetCallSlider(
     var isInternetCall by remember { mutableStateOf(true) }
     
     val sliderWidth = 320.dp
-    val sliderHeight = 64.dp
-    val thumbSize = 56.dp
+    val sliderHeight = 60.dp 
+    val thumbSize = 52.dp 
     val thumbPadding = 4.dp
     
     val density = LocalDensity.current
@@ -72,36 +79,27 @@ fun InternetCallSlider(
     
     val progress = (offsetX / maxOffset).coerceIn(0f, 1f)
 
-    // Colors
-    val blueColor = Color(0xFF2196F3)
-    val purpleColor = Color(0xFF9C27B0)
-    val orangeColor = Color(0xFFFF9800)
-    val pinkColor = Color(0xFFE91E63)
-    val successColor = Color(0xFF4CAF50)
-
-    val primaryGradient = Brush.linearGradient(
-        colors = if (isInternetCall) listOf(blueColor, purpleColor) else listOf(orangeColor, pinkColor)
-    )
-
-    val backgroundColor = if (isDarkMode) {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    // Adjusted gradient for dark mode to provide better visibility and vibrance
+    val primaryGradient = if (isDarkMode) {
+        if (isInternetCall) {
+            Brush.linearGradient(listOf(AlertaraTealLight, AlertaraTeal))
+        } else {
+            Brush.linearGradient(listOf(AlertaraTealAccent, AlertaraTealLight))
+        }
     } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        if (isInternetCall) {
+            Brush.linearGradient(listOf(AlertaraTeal, AlertaraTealDark))
+        } else {
+            Brush.linearGradient(listOf(AlertaraTealLight, AlertaraTeal))
+        }
     }
 
-    // Idle pulse animation
-    val infiniteTransition = rememberInfiniteTransition(label = "idle")
-    val idleScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.05f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulse"
-    )
+    val backgroundColor = if (isDarkMode) {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+    } else {
+        Color(0xFFF1F5F4) 
+    }
 
-    // Reset animation
     LaunchedEffect(isDragging) {
         if (!isDragging && offsetX < maxOffset) {
             animate(
@@ -113,49 +111,83 @@ fun InternetCallSlider(
     }
 
     Column(
-        modifier = modifier.padding(vertical = 12.dp),
+        modifier = modifier
+            .width(sliderWidth + 12.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(if (isDarkMode) Color.Black.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.5f))
+            .padding(6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // Modern Segmented Selector
+        // Muted Segmented Selector with clearer Divider
         Surface(
             modifier = Modifier
-                .width(220.dp)
-                .height(40.dp),
-            shape = CircleShape,
+                .fillMaxWidth()
+                .height(44.dp),
+            shape = RoundedCornerShape(16.dp),
             color = backgroundColor,
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+            border = BorderStroke(1.dp, if (isDarkMode) Color.White.copy(alpha = 0.1f) else AlertaraTeal.copy(alpha = 0.1f))
         ) {
-            Row(modifier = Modifier.fillMaxSize()) {
-                listOf(true, false).forEach { isInternet ->
-                    val selected = isInternetCall == isInternet
-                    val label = if (isInternet) "Internet" else "Cellular"
-                    
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .padding(2.dp)
-                            .clip(CircleShape)
-                            .background(if (selected) primaryGradient else SolidColor(Color.Transparent))
-                            .clickable { 
-                                isInternetCall = isInternet
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = label,
-                            fontSize = 12.sp,
-                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Option 1: Internet
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .padding(2.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(if (isInternetCall) primaryGradient else SolidColor(Color.Transparent))
+                        .clickable { 
+                            isInternetCall = true
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Internet Call",
+                        fontSize = 12.sp,
+                        fontWeight = if (isInternetCall) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isInternetCall) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
+                
+                // Greenish divider for light mode, white for dark mode
+                val dividerColor = if (isDarkMode) Color.White.copy(alpha = 0.4f) else AlertaraTeal.copy(alpha = 0.4f)
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(20.dp)
+                        .background(dividerColor)
+                )
+
+                // Option 2: Cellular
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .padding(2.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(if (!isInternetCall) primaryGradient else SolidColor(Color.Transparent))
+                        .clickable { 
+                            isInternetCall = false
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Cellular Call",
+                        fontSize = 12.sp,
+                        fontWeight = if (!isInternetCall) FontWeight.Bold else FontWeight.Medium,
+                        color = if (!isInternetCall) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
                 }
             }
         }
 
-        // The Slider
+        // The Slider Track
         Box(
             modifier = Modifier
                 .width(sliderWidth)
@@ -164,11 +196,10 @@ fun InternetCallSlider(
                 .background(backgroundColor)
                 .border(
                     width = 1.dp,
-                    color = if (isDragging) blueColor.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.1f),
+                    color = if (isDarkMode) Color.White.copy(alpha = 0.2f) else AlertaraTeal.copy(alpha = 0.2f),
                     shape = CircleShape
                 )
                 .drawBehind {
-                    // Path highlight
                     if (progress > 0.01f) {
                         drawRoundRect(
                             brush = primaryGradient,
@@ -179,7 +210,6 @@ fun InternetCallSlider(
                 },
             contentAlignment = Alignment.CenterStart
         ) {
-            // Placeholder Text
             androidx.compose.animation.AnimatedVisibility(
                 visible = !showSuccess,
                 enter = fadeIn(),
@@ -188,16 +218,15 @@ fun InternetCallSlider(
             ) {
                 Text(
                     text = "Slide to Call".uppercase(),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = (1f - progress).coerceIn(0.2f, 1f)),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = (1f - progress).coerceIn(0.2f, 0.6f)),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Black,
                     letterSpacing = 2.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(start = thumbSize)
                 )
             }
 
-            // Success State
             androidx.compose.animation.AnimatedVisibility(
                 visible = showSuccess,
                 enter = fadeIn() + scaleIn(),
@@ -205,33 +234,28 @@ fun InternetCallSlider(
                 modifier = Modifier.align(Alignment.Center)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Phone, null, tint = successColor, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.Phone, null, tint = AlertaraSuccess, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "CONNECTING...",
-                        color = successColor,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
+                        color = AlertaraSuccess,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Black,
                         letterSpacing = 1.sp
                     )
                 }
             }
 
-            // The Thumb
             Box(
                 modifier = Modifier
-                    .padding(thumbPadding)
-                    .offset { IntOffset(offsetX.roundToInt(), 0) }
+                    .offset { IntOffset(x = (offsetX + thumbPaddingPx).roundToInt(), y = 0) }
+                    .align(Alignment.CenterStart)
                     .size(thumbSize)
-                    .graphicsLayer {
-                        scaleX = if (!isDragging && !showSuccess) idleScale else 1f
-                        scaleY = if (!isDragging && !showSuccess) idleScale else 1f
-                    }
                     .shadow(
-                        elevation = if (isDragging) 12.dp else 4.dp,
+                        elevation = if (isDragging) 8.dp else 2.dp,
                         shape = CircleShape,
-                        ambientColor = if (isInternetCall) blueColor else orangeColor,
-                        spotColor = if (isInternetCall) purpleColor else pinkColor
+                        ambientColor = AlertaraTeal,
+                        spotColor = AlertaraTealDark
                     )
                     .clip(CircleShape)
                     .background(Color.White)
@@ -248,7 +272,7 @@ fun InternetCallSlider(
                                         animate(
                                             initialValue = offsetX,
                                             targetValue = maxOffset,
-                                            animationSpec = spring()
+                                            animationSpec = spring(stiffness = Spring.StiffnessMedium)
                                         ) { value, _ -> offsetX = value }
                                         
                                         showSuccess = true
@@ -260,7 +284,7 @@ fun InternetCallSlider(
                                         animate(
                                             initialValue = maxOffset,
                                             targetValue = 0f,
-                                            animationSpec = spring()
+                                            animationSpec = spring(stiffness = Spring.StiffnessLow)
                                         ) { value, _ -> offsetX = value }
                                     }
                                 }
@@ -270,8 +294,7 @@ fun InternetCallSlider(
                             val newOffset = offsetX + dragAmount.x
                             offsetX = newOffset.coerceIn(0f, maxOffset)
                             
-                            // Subtle haptic during drag
-                            if ((offsetX % 40).toInt() == 0) {
+                            if ((offsetX % 50).toInt() == 0) {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             }
                         }
@@ -281,9 +304,9 @@ fun InternetCallSlider(
                 Icon(
                     imageVector = Icons.Default.Phone,
                     contentDescription = null,
-                    tint = if (isInternetCall) blueColor else orangeColor,
+                    tint = if (isDarkMode) AlertaraTealDark else AlertaraTeal,
                     modifier = Modifier
-                        .size(24.dp)
+                        .size(22.dp)
                         .graphicsLayer {
                             rotationZ = progress * 360f
                         }
