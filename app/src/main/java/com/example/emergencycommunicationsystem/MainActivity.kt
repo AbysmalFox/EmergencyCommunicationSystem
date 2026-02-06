@@ -53,6 +53,7 @@ import com.example.emergencycommunicationsystem.ui.screens.MyReportsScreen
 import com.example.emergencycommunicationsystem.data.repository.CallRepository
 import com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel
 import com.example.emergencycommunicationsystem.viewmodel.InternetCallViewModel
+import com.example.emergencycommunicationsystem.webrtc.SignalingManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -389,11 +390,12 @@ fun EmergencyApp(
                 }
                 composable(Screen.InternetCall.route) {
                     val callRepository = remember { CallRepository(context) }
+                    val signalingManager = remember { SignalingManager(context.applicationContext) }
                     val viewModel: InternetCallViewModel = viewModel(
                         factory = object : androidx.lifecycle.ViewModelProvider.Factory {
                             override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
                                 @Suppress("UNCHECKED_CAST")
-                                return InternetCallViewModel(callRepository) as T
+                                return InternetCallViewModel(callRepository, signalingManager) as T
                             }
                         }
                     )

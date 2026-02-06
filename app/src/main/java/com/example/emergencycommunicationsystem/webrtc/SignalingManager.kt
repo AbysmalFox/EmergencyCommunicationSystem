@@ -10,84 +10,104 @@ class SignalingManager(private val context: Context) {
     
     private val webRTCManager = WebRTCManager(context)
     private val socketManager = SocketManager()
-    private var currentRoom: String? = null
+    private var currentCallId: String? = null
+    private var currentUserId: String? = null
+    private var currentUserName: String? = null
     
     companion object {
         private const val TAG = "SignalingManager"
     }
     
-    fun connect(room: String) {
-        currentRoom = room
-        
-        // Connect to Socket.IO server
-        socketManager.connect()
-        
-        // Join the specified room
-        socketManager.joinRoom(room)
-        
-        // Set up Socket.IO event listeners
-        setupSocketListeners()
-        
-        // Create PeerConnection after socket is connected
-        socketManager.getSocket()?.let { socket ->
-            webRTCManager.createPeerConnection(socket)
-            webRTCManager.addLocalAudioTrack()
+    fun connect(callId: String? = null, userId: String? = null, userName: String? = null) {
+        if (!callId.isNullOrBlank()) {
+            currentCallId = callId
         }
+        currentUserId = userId
+        currentUserName = userName
+
+        socketManager.connect(
+            onConnected = {
+                currentCallId = currentCallId ?: "call_${System.currentTimeMillis()}"
+
+                setupSocketListeners()
+
+                webRTCManager.createPeerConnection(
+                    onIceCandidate = { iceCandidate ->
+                        val callId = currentCallId ?: return@createPeerConnection
+                        val payload = JSONObject().apply {
+                            put(
+                                "candidate",
+                                JSONObject().apply {
+                                    put("sdpMid", iceCandidate.sdpMid)
+                                    put("sdpMLineIndex", iceCandidate.sdpMLineIndex)
+                                    put("candidate", iceCandidate.sdp)
+                                }
+                            )
+                            put("callId", callId)
+                        }
+                        socketManager.sendCandidate(payload)
+                    }
+                )
+
+                webRTCManager.addLocalAudioTrack()
+
+                // This is what makes it “pop” in admin: emit offer as soon as we connect.
+                createOffer()
+            },
+            onConnectError = { err ->
+                Log.e(TAG, "Socket connect error: $err")
+            },
+            onDisconnected = { reason ->
+                Log.w(TAG, "Socket disconnected: $reason")
+            }
+        )
     }
     
     private fun setupSocketListeners() {
-        val socket = socketManager.getSocket() ?: return
-        
-        // Handle incoming offers
-        socket.on("offer") { args ->
-            if (args.isNotEmpty()) {
-                val offerData = args[0] as JSONObject
-                handleRemoteOffer(offerData)
-            }
+        socketManager.onOffer { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@onOffer
+            handleRemoteOffer(payload)
         }
-        
-        // Handle incoming answers
-        socket.on("answer") { args ->
-            if (args.isNotEmpty()) {
-                val answerData = args[0] as JSONObject
-                handleRemoteAnswer(answerData)
-            }
+
+        socketManager.onAnswer { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@onAnswer
+            handleRemoteAnswer(payload)
         }
-        
-        // Handle incoming ICE candidates
-        socket.on("candidate") { args ->
-            if (args.isNotEmpty()) {
-                val candidateData = args[0] as JSONObject
-                handleRemoteIceCandidate(candidateData)
-            }
+
+        socketManager.onCandidate { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@onCandidate
+            handleRemoteIceCandidate(payload)
         }
-        
-        // Handle hangup
-        socket.on("hangup") { args ->
-            if (args.isNotEmpty()) {
-                val hangupData = args[0] as JSONObject
-                handleHangup(hangupData)
-            }
+
+        socketManager.onHangup { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@onHangup
+            handleHangup(payload)
         }
     }
     
     fun createOffer() {
         val peerConnection = webRTCManager.getPeerConnection() ?: return
+        val callId = currentCallId ?: "call_${System.currentTimeMillis()}".also { currentCallId = it }
         
         peerConnection.createOffer(object : SdpObserver {
             override fun onCreateSuccess(sessionDescription: SessionDescription) {
                 peerConnection.setLocalDescription(object : SdpObserver {
                     override fun onCreateSuccess(p0: SessionDescription?) {}
                     override fun onSetSuccess() {
-                        // Send offer to remote peer
-                        val offerData = JSONObject().apply {
-                            put("type", sessionDescription.type.canonicalForm())
-                            put("sdp", sessionDescription.description)
-                            put("callId", "emergency-call-${System.currentTimeMillis()}")
+                        val payload = JSONObject().apply {
+                            put(
+                                "sdp",
+                                JSONObject().apply {
+                                    put("type", sessionDescription.type.canonicalForm())
+                                    put("sdp", sessionDescription.description)
+                                }
+                            )
+                            put("callId", callId)
+                            currentUserId?.let { put("userId", it) }
+                            currentUserName?.let { put("userName", it) }
                         }
-                        currentRoom?.let { room ->
-                            socketManager.sendOffer(offerData, room)
-                        }
+
+                        socketManager.sendOffer(payload)
                     }
                     override fun onCreateFailure(p0: String?) {}
                     override fun onSetFailure(p0: String?) {}
@@ -108,8 +128,15 @@ class SignalingManager(private val context: Context) {
         val peerConnection = webRTCManager.getPeerConnection() ?: return
         
         try {
-            val type = SessionDescription.Type.fromCanonicalForm(offerData.getString("type"))
-            val sdp = offerData.getString("sdp")
+            val callId = offerData.optString("callId", "")
+            if (callId.isNotBlank()) currentCallId = callId
+
+            val sdpObj = offerData.optJSONObject("sdp")
+            val typeStr = sdpObj?.optString("type", null)
+            val sdp = sdpObj?.optString("sdp", null)
+            if (typeStr.isNullOrBlank() || sdp.isNullOrBlank()) return
+
+            val type = SessionDescription.Type.fromCanonicalForm(typeStr)
             val sessionDescription = SessionDescription(type, sdp)
             
             peerConnection.setRemoteDescription(object : SdpObserver {
@@ -129,21 +156,25 @@ class SignalingManager(private val context: Context) {
     
     private fun createAnswer() {
         val peerConnection = webRTCManager.getPeerConnection() ?: return
+        val callId = currentCallId ?: return
         
         peerConnection.createAnswer(object : SdpObserver {
             override fun onCreateSuccess(sessionDescription: SessionDescription) {
                 peerConnection.setLocalDescription(object : SdpObserver {
                     override fun onCreateSuccess(p0: SessionDescription?) {}
                     override fun onSetSuccess() {
-                        // Send answer to remote peer
-                        val answerData = JSONObject().apply {
-                            put("type", sessionDescription.type.canonicalForm())
-                            put("sdp", sessionDescription.description)
-                            put("callId", "emergency-call-${System.currentTimeMillis()}")
+                        val payload = JSONObject().apply {
+                            put(
+                                "sdp",
+                                JSONObject().apply {
+                                    put("type", sessionDescription.type.canonicalForm())
+                                    put("sdp", sessionDescription.description)
+                                }
+                            )
+                            put("callId", callId)
                         }
-                        currentRoom?.let { room ->
-                            socketManager.sendAnswer(answerData, room)
-                        }
+
+                        socketManager.sendAnswer(payload)
                     }
                     override fun onCreateFailure(p0: String?) {}
                     override fun onSetFailure(p0: String?) {}
@@ -164,8 +195,15 @@ class SignalingManager(private val context: Context) {
         val peerConnection = webRTCManager.getPeerConnection() ?: return
         
         try {
-            val type = SessionDescription.Type.fromCanonicalForm(answerData.getString("type"))
-            val sdp = answerData.getString("sdp")
+            val callId = answerData.optString("callId", "")
+            if (callId.isNotBlank()) currentCallId = callId
+
+            val sdpObj = answerData.optJSONObject("sdp")
+            val typeStr = sdpObj?.optString("type", null)
+            val sdp = sdpObj?.optString("sdp", null)
+            if (typeStr.isNullOrBlank() || sdp.isNullOrBlank()) return
+
+            val type = SessionDescription.Type.fromCanonicalForm(typeStr)
             val sessionDescription = SessionDescription(type, sdp)
             
             peerConnection.setRemoteDescription(object : SdpObserver {
@@ -186,9 +224,14 @@ class SignalingManager(private val context: Context) {
         val peerConnection = webRTCManager.getPeerConnection() ?: return
         
         try {
-            val candidate = candidateData.getString("candidate")
-            val sdpMid = candidateData.getString("sdpMid")
-            val sdpMLineIndex = candidateData.getInt("sdpMLineIndex")
+            val callId = candidateData.optString("callId", "")
+            if (callId.isNotBlank()) currentCallId = callId
+
+            val candObj = candidateData.optJSONObject("candidate")
+            val sdpMid = candObj?.optString("sdpMid", null)
+            val sdpMLineIndex = candObj?.optInt("sdpMLineIndex", -1) ?: -1
+            val candidate = candObj?.optString("candidate", null)
+            if (sdpMid.isNullOrBlank() || sdpMLineIndex < 0 || candidate.isNullOrBlank()) return
             
             val iceCandidate = IceCandidate(sdpMid, sdpMLineIndex, candidate)
             peerConnection.addIceCandidate(iceCandidate)
@@ -204,12 +247,11 @@ class SignalingManager(private val context: Context) {
     }
     
     fun hangup() {
+        val callId = currentCallId ?: "call_${System.currentTimeMillis()}"
         val hangupData = JSONObject().apply {
-            put("callId", "emergency-call-${System.currentTimeMillis()}")
+            put("callId", callId)
         }
-        currentRoom?.let { room ->
-            socketManager.sendHangup(hangupData, room)
-        }
+        socketManager.sendHangup(hangupData)
         endCall()
     }
     

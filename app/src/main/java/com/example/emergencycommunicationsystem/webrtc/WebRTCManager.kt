@@ -3,13 +3,11 @@ package com.example.emergencycommunicationsystem.webrtc
 import android.content.Context
 import android.util.Log
 import org.webrtc.*
-import io.socket.client.Socket
 
 class WebRTCManager(private val context: Context) {
     
     private var peerConnectionFactory: PeerConnectionFactory? = null
     private var peerConnection: PeerConnection? = null
-    private var socket: Socket? = null
     
     companion object {
         private const val TAG = "WebRTCManager"
@@ -39,9 +37,9 @@ class WebRTCManager(private val context: Context) {
         }
     }
     
-    fun createPeerConnection(socket: Socket): PeerConnection? {
-        this.socket = socket
-        
+    fun createPeerConnection(
+        onIceCandidate: (IceCandidate) -> Unit,
+    ): PeerConnection? {
         val iceServers = listOf(
             PeerConnection.IceServer.builder("stun:stun.l.google.com:19302")
                 .createIceServer()
@@ -70,13 +68,8 @@ class WebRTCManager(private val context: Context) {
             
             override fun onIceCandidate(iceCandidate: IceCandidate) {
                 Log.d(TAG, "ICE candidate generated: ${iceCandidate.sdp}")
-                
-                val candidateData = org.json.JSONObject().apply {
-                    put("candidate", iceCandidate.sdp)
-                    put("sdpMid", iceCandidate.sdpMid)
-                    put("sdpMLineIndex", iceCandidate.sdpMLineIndex)
-                }
-                socket.emit("candidate", candidateData)
+
+                onIceCandidate(iceCandidate)
             }
             
             override fun onIceCandidatesRemoved(iceCandidates: Array<out IceCandidate>) {

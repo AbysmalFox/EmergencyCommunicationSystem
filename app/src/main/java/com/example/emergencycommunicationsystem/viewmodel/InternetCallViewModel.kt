@@ -5,6 +5,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.emergencycommunicationsystem.AuthManager
 import com.example.emergencycommunicationsystem.data.models.*
 import com.example.emergencycommunicationsystem.data.repository.CallRepository
 import com.example.emergencycommunicationsystem.webrtc.SignalingManager
@@ -71,7 +72,12 @@ class InternetCallViewModel(
                     currentCallLog = logResult.getOrNull()
                     
                     // Start WebRTC connection
-                    signalingManager?.connect(roomName)
+                    val userName = AuthManager.getUsername()
+                    signalingManager?.connect(
+                        callId = roomName,
+                        userId = userId.toString(),
+                        userName = userName
+                    )
                     
                     // Update state to active
                     _callState.update { it.copy(
