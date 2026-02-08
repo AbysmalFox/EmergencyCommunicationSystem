@@ -1029,11 +1029,11 @@ fun AppBottomNavigation(selectedScreen: Screen, onScreenSelected: (Screen) -> Un
 
 @Composable
 fun RowScope.BottomNavItem(screen: Screen, isSelected: Boolean, onSelected: () -> Unit) {
-    val icon = when (screen) {
-        Screen.Home -> AppIcons.Home
-        Screen.Alerts -> AppIcons.Alerts
-        Screen.Profile -> AppIcons.Profile
-        else -> AppIcons.Error // Should not happen
+    val iconRes = when (screen) {
+        Screen.Home -> R.drawable.ic_tabler_home
+        Screen.Alerts -> R.drawable.ic_tabler_bell
+        Screen.Profile -> R.drawable.ic_tabler_user
+        else -> null
     }
     val iconColor by animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1067,12 +1067,22 @@ fun RowScope.BottomNavItem(screen: Screen, isSelected: Boolean, onSelected: () -
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = screen.title,
-                tint = iconColor,
-                modifier = Modifier.size(24.dp)
-            )
+            if (iconRes != null) {
+                Icon(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = screen.title,
+                    tint = iconColor,
+                    modifier = Modifier.size(24.dp)
+                )
+            } else {
+                // Fallback or Error icon if needed
+                Icon(
+                    imageVector = AppIcons.Error,
+                    contentDescription = screen.title,
+                    tint = iconColor,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
         }
         Spacer(modifier = Modifier.height(4.dp))
         val localeContext = getLocaleContext()

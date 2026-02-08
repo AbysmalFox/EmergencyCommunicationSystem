@@ -118,6 +118,7 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
                 humidity = cached.humidity,
                 windSpeed = cached.windSpeed,
                 visibility = cached.visibility,
+                forecastData = cached.forecastData,
                 isOffline = true
             )
             hasLoadedData = true
@@ -228,7 +229,8 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
                     feelsLike = successState.feelsLike,
                     humidity = successState.humidity,
                     windSpeed = successState.windSpeed,
-                    visibility = successState.visibility
+                    visibility = successState.visibility,
+                    forecastData = successState.forecastData
                 ))
             }
 

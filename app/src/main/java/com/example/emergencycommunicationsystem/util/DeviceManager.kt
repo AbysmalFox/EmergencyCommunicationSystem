@@ -38,14 +38,11 @@ object DeviceManager {
     }
 
     /**
-     * For now, this returns a placeholder push token.
-     * TODO: Replace this with the actual token retrieval logic after implementing Firebase Cloud Messaging (FCM).
+     * Retrieves a unique identifier for the current session or device for real-time communication.
      *
-     * @return A placeholder FCM token.
+     * @return A unique identifier string.
      */
     fun getPushToken(): String {
-        // In a real app, you would get this from the Firebase SDK:
-        // FirebaseMessaging.getInstance().token.addOnCompleteListener { task -> ... }
-        return "placeholder_fcm_token_for_device_${(1000..9999).random()}"
+        return "socket_comm_id_${(1000..9999).random()}_${System.currentTimeMillis()}"
     }
 }

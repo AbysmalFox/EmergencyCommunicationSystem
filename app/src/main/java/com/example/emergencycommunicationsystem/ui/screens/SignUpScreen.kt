@@ -125,7 +125,7 @@ fun SignUpScreen(
 
                     Icon(
 
-                        imageVector = AppIcons.CheckCircle,
+                        painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_tabler_shield_check),
 
                         contentDescription = "Success",
 

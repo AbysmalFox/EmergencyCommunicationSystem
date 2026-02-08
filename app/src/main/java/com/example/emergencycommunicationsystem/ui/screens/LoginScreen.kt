@@ -152,14 +152,11 @@ fun LoginScreen(
 
             }
 
-            Text(
-
-                text = localeContext.getString(R.string.login_title),
-
-                style = MaterialTheme.typography.headlineLarge,
-
-                color = MaterialTheme.colorScheme.onBackground
-
+            Icon(
+                painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_tabler_user),
+                contentDescription = localeContext.getString(R.string.login),
+                modifier = Modifier.size(100.dp),
+                tint = MaterialTheme.colorScheme.primary
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -430,18 +427,12 @@ fun LoginScreen(
 
                     // Google icon (using account circle as placeholder)
 
-                    Icon(
-
-                        imageVector = AppIcons.AccountCircle,
-
-                        contentDescription = "Google",
-
-                        modifier = Modifier.size(20.dp),
-
-                        tint = Color.Unspecified
-
-                    )
-
+                                Icon(
+                                    painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_tabler_user),
+                                    contentDescription = "Google",
+                                    modifier = Modifier.size(20.dp),
+                                    tint = Color.Unspecified
+                                )
                     Spacer(modifier = Modifier.width(8.dp))
 
                     Text(
