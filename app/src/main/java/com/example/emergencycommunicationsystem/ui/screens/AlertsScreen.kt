@@ -1,6 +1,7 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -91,10 +92,15 @@ fun AlertItem(
         }
     }
 
+    var isExpanded by remember { mutableStateOf(false) }
+    val content = alert.content ?: ""
+    val isLongContent = content.length > 150
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .themeShadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp)),
+            .themeShadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp))
+            .clickable { if (isLongContent) isExpanded = !isExpanded },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
@@ -153,25 +159,40 @@ fun AlertItem(
                         )
                     }
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = alert.content ?: "",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-                        lineHeight = 18.sp,
-                        maxLines = 3,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
+                    
+                    Column(modifier = Modifier.animateContentSize()) {
+                        Text(
+                            text = content,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                            lineHeight = 18.sp,
+                            maxLines = if (isExpanded) Int.MAX_VALUE else 3,
+                            overflow = if (isExpanded) androidx.compose.ui.text.style.TextOverflow.Clip else androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                        
+                        if (isLongContent) {
+                            Text(
+                                text = if (isExpanded) "See less" else "See more",
+                                color = MaterialTheme.colorScheme.primary,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .padding(top = 4.dp)
+                                    .clickable { isExpanded = !isExpanded }
+                            )
+                        }
+                    }
                 }
             }
             
             Spacer(modifier = Modifier.height(12.dp))
             
             // Acknowledge Section
-            if (alert.severity == "High" && !alert.isAcknowledged) {
+            if (!alert.isAcknowledged) {
                 Button(
                     onClick = { onAcknowledge(alert.id) },
                     modifier = Modifier.fillMaxWidth().height(36.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = StatusDanger),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -179,7 +200,7 @@ fun AlertItem(
                     Text("I RECEIVED THIS ALERT", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-            } else if (alert.isAcknowledged) {
+            } else {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     horizontalArrangement = Arrangement.End,
