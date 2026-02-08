@@ -105,140 +105,148 @@ fun AlertItem(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.Top) {
                 Box(
                     modifier = Modifier
-                        .size(32.dp)
+                        .size(36.dp)
                         .clip(RoundedCornerShape(8.dp))
                         .background(categoryColor.copy(alpha = 0.1f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    CategoryIcon(alert = alert, modifier = Modifier.size(18.dp), tint = categoryColor)
+                    CategoryIcon(alert = alert, modifier = Modifier.size(20.dp), tint = categoryColor)
                 }
-                Spacer(modifier = Modifier.width(12.dp))
+                
+                Spacer(modifier = Modifier.width(10.dp))
+                
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Top
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            var categoryName by remember { mutableStateOf("") }
-                            val baseCategory = getCategoryDisplayName(alert)
-                            
-                            LaunchedEffect(baseCategory, currentLanguage) {
-                                categoryName = if (currentLanguage != "en") {
-                                    TranslationService.translate(baseCategory, currentLanguage)
-                                } else {
-                                    baseCategory
-                                }
-                            }
-                            
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    text = "${categoryName.uppercase()} • ${alert.category?.uppercase() ?: ""}",
-                                    color = categoryColor,
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 10.sp,
-                                    letterSpacing = 0.5.sp
-                                )
-                                
-                                // Severity Badge
-                                val severity = getAlertSeverity(alert)
-                                val severityColor = getSeverityColor(severity)
-                                Surface(
-                                    color = severityColor.copy(alpha = 0.15f),
-                                    shape = RoundedCornerShape(4.dp)
-                                ) {
-                                    Text(
-                                        text = severity.uppercase(),
-                                        color = severityColor,
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Black,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
-                                }
-                            }
-                            Text(
-                                text = alert.title ?: localeContext.getString(R.string.no_title),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                lineHeight = 20.sp
-                            )
-                            
-                            if (!alert.area.isNullOrBlank()) {
-                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_tabler_map_pin),
-                                        contentDescription = null,
-                                        tint = categoryColor.copy(alpha = 0.7f),
-                                        modifier = Modifier.size(12.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = alert.area,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = categoryColor.copy(alpha = 0.8f)
-                                    )
-                                }
+                        var categoryName by remember { mutableStateOf("") }
+                        val baseCategory = getCategoryDisplayName(alert)
+                        
+                        LaunchedEffect(baseCategory, currentLanguage) {
+                            categoryName = if (currentLanguage != "en") {
+                                TranslationService.translate(baseCategory, currentLanguage)
+                            } else {
+                                baseCategory
                             }
                         }
+                        
+                        Text(
+                            text = "${categoryName.uppercase()} • ${alert.category?.uppercase() ?: ""}",
+                            color = categoryColor,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 10.sp,
+                            letterSpacing = 0.5.sp,
+                            modifier = Modifier.weight(1f)
+                        )
+                        
                         Text(
                             text = alert.timestamp ?: "",
                             fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                            textAlign = TextAlign.End,
-                            modifier = Modifier.padding(start = 8.dp)
+                            textAlign = TextAlign.End
                         )
                     }
-                    Spacer(modifier = Modifier.height(4.dp))
                     
-                    Column(modifier = Modifier.animateContentSize()) {
-                        val displayContent = if (!alert.message.isNullOrBlank()) {
-                            "${alert.message}\n\n${alert.content ?: ""}"
-                        } else {
-                            alert.content ?: ""
-                        }
-
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            text = displayContent,
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                            text = alert.title ?: localeContext.getString(R.string.no_title),
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurface,
                             lineHeight = 18.sp,
-                            maxLines = if (isExpanded) Int.MAX_VALUE else 3,
-                            overflow = if (isExpanded) androidx.compose.ui.text.style.TextOverflow.Clip else androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            modifier = Modifier.weight(1f)
                         )
                         
-                        if (isLongContent) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        
+                        val severity = getAlertSeverity(alert)
+                        val severityColor = getSeverityColor(severity)
+                        Surface(
+                            color = severityColor.copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
                             Text(
-                                text = if (isExpanded) "See less" else "See more",
-                                color = MaterialTheme.colorScheme.primary,
-                                fontSize = 12.sp,
+                                text = severity.uppercase(),
+                                color = severityColor,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Black,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                    
+                    if (!alert.area.isNullOrBlank()) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 1.dp)) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_tabler_map_pin),
+                                contentDescription = null,
+                                tint = categoryColor.copy(alpha = 0.7f),
+                                modifier = Modifier.size(10.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = alert.area,
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier
-                                    .padding(top = 4.dp)
-                                    .clickable { isExpanded = !isExpanded }
+                                color = categoryColor.copy(alpha = 0.8f)
                             )
                         }
                     }
                 }
             }
             
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             
-            // Acknowledge Section
+            Column(modifier = Modifier.animateContentSize()) {
+                val displayContent = if (!alert.message.isNullOrBlank()) {
+                    "${alert.message}\n\n${alert.content ?: ""}"
+                } else {
+                    alert.content ?: ""
+                }
+
+                Text(
+                    text = displayContent,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                    lineHeight = 17.sp,
+                    maxLines = if (isExpanded) Int.MAX_VALUE else 3,
+                    overflow = if (isExpanded) androidx.compose.ui.text.style.TextOverflow.Clip else androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+                
+                if (isLongContent) {
+                    Text(
+                        text = if (isExpanded) "See less" else "See more",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .padding(top = 4.dp)
+                            .clickable { isExpanded = !isExpanded }
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(10.dp))
+            
             if (!alert.isAcknowledged) {
                 Button(
                     onClick = { onAcknowledge(alert.id) },
                     modifier = Modifier.fillMaxWidth().height(36.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                    shape = RoundedCornerShape(8.dp)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AlertaraBackground,
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(0.dp)
                 ) {
                     Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(8.dp))
@@ -247,13 +255,13 @@ fun AlertItem(
                 Spacer(modifier = Modifier.height(8.dp))
             } else {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Check, contentDescription = null, tint = StatusSafe, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Default.Check, contentDescription = null, tint = StatusSafe, modifier = Modifier.size(12.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Acknowledged", color = StatusSafe, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text("Acknowledged", color = StatusSafe, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -263,10 +271,10 @@ fun AlertItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = alert.source ?: localeContext.getString(R.string.unknown_source),
-                    fontSize = 11.sp,
+                    text = "Source: ${alert.source ?: localeContext.getString(R.string.unknown_source)}",
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )
                 
                 val isDark = ThemeManager.isDarkMode()
@@ -286,7 +294,7 @@ fun AlertItem(
                 ) {
                     Icon(imageVector = AppIcons.Message, contentDescription = null, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = buttonText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(text = buttonText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -296,6 +304,7 @@ fun AlertItem(
 @Composable
 fun AlertItemLine(
     alert: Alert,
+    onAcknowledge: (Int) -> Unit,
     onMessageClick: (id: String, title: String) -> Unit
 ) {
     val categoryColor = getColorForCategory(alert)
@@ -305,39 +314,67 @@ fun AlertItemLine(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onMessageClick(alert.id.toString(), alert.title ?: "Chat") }
-            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
-            .padding(horizontal = 12.dp, vertical = 12.dp),
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+            .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(24.dp)
-                .clip(RoundedCornerShape(6.dp))
+                .size(28.dp)
+                .clip(RoundedCornerShape(8.dp))
                 .background(categoryColor.copy(alpha = 0.1f)),
             contentAlignment = Alignment.Center
         ) {
-            CategoryIcon(alert = alert, modifier = Modifier.size(14.dp), tint = categoryColor)
+            CategoryIcon(alert = alert, modifier = Modifier.size(16.dp), tint = categoryColor)
         }
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = alert.title ?: localeContext.getString(R.string.no_title),
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
-        )
-        if (alert.isAcknowledged) {
-            Icon(Icons.Default.Check, contentDescription = null, tint = StatusSafe, modifier = Modifier.size(14.dp))
-            Spacer(modifier = Modifier.width(4.dp))
+        
+        Spacer(modifier = Modifier.width(10.dp))
+        
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = alert.title ?: localeContext.getString(R.string.no_title),
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+            Text(
+                text = alert.timestamp?.substringAfter(" ")?.substringBeforeLast(":") ?: alert.timestamp ?: "",
+                fontSize = 10.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+            )
         }
-        Text(
-            text = alert.timestamp?.substringAfter(" ")?.substringBeforeLast(":") ?: alert.timestamp ?: "",
-            fontSize = 11.sp,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-            fontWeight = FontWeight.Medium
+
+        if (!alert.isAcknowledged) {
+            androidx.compose.material3.IconButton(
+                onClick = { onAcknowledge(alert.id) },
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Acknowledge",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        } else {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = "Acknowledged",
+                tint = StatusSafe,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+        
+        Spacer(modifier = Modifier.width(4.dp))
+        
+        Icon(
+            imageVector = AppIcons.Message,
+            contentDescription = "Chat",
+            tint = MaterialTheme.colorScheme.secondary,
+            modifier = Modifier.size(16.dp)
         )
     }
 }
@@ -443,7 +480,10 @@ fun AlertsScreen(
                                         label = "size_transition"
                                     ) { compact ->
                                         if (compact) {
-                                            AlertItemLine(alert = alert) { id, title ->
+                                            AlertItemLine(
+                                                alert = alert,
+                                                onAcknowledge = { viewModel.acknowledgeAlert(it) }
+                                            ) { id, title ->
                                                 onMessageClick?.invoke(id, title)
                                             }
                                         } else {
