@@ -81,9 +81,16 @@ fun getStaticColorForCategory(alert: Alert, isDark: Boolean): Color {
 }
 
 fun getAlertSeverity(alert: Alert): String {
-    val categoryId = try { alert.category?.toIntOrNull() ?: 0 } catch (_: Exception) { 0 }
+    // 1. Priority: Use the severity field from database if available
+    if (!alert.severity.isNullOrBlank()) {
+        return alert.severity.lowercase(Locale.getDefault())
+            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+    }
+
+    // 2. Fallback: Calculate based on keywords/category (Legacy logic)
+    val categoryId = alert.categoryId ?: try { alert.category?.toIntOrNull() ?: 0 } catch (_: Exception) { 0 }
     val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
-    val content = alert.content?.lowercase(Locale.getDefault()) ?: ""
+    val content = (alert.content ?: alert.message ?: "").lowercase(Locale.getDefault())
     val allText = "$title $content"
     
     return when {
@@ -118,10 +125,10 @@ fun getCategoryDisplayName(alert: Alert): String {
 
 @Composable
 fun getSeverityColor(severity: String): Color {
-    return when (severity) {
-        "High" -> MaterialTheme.colorScheme.error
-        "Medium" -> SafetyOrange
-        "Low" -> StatusWarning
+    return when (severity.lowercase(Locale.getDefault())) {
+        "high" -> MaterialTheme.colorScheme.error
+        "medium" -> SafetyOrange
+        "low" -> StatusWarning
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 }

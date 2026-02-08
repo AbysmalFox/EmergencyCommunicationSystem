@@ -135,13 +135,34 @@ fun AlertItem(
                                 }
                             }
                             
-                            Text(
-                                text = categoryName.uppercase(),
-                                color = categoryColor,
-                                fontWeight = FontWeight.Black,
-                                fontSize = 10.sp,
-                                letterSpacing = 0.5.sp
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = "${categoryName.uppercase()} • ${alert.category?.uppercase() ?: ""}",
+                                    color = categoryColor,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 10.sp,
+                                    letterSpacing = 0.5.sp
+                                )
+                                
+                                // Severity Badge
+                                val severity = getAlertSeverity(alert)
+                                val severityColor = getSeverityColor(severity)
+                                Surface(
+                                    color = severityColor.copy(alpha = 0.15f),
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        text = severity.uppercase(),
+                                        color = severityColor,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Black,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
                             Text(
                                 text = alert.title ?: localeContext.getString(R.string.no_title),
                                 fontWeight = FontWeight.Bold,
@@ -149,6 +170,24 @@ fun AlertItem(
                                 color = MaterialTheme.colorScheme.onSurface,
                                 lineHeight = 20.sp
                             )
+                            
+                            if (!alert.area.isNullOrBlank()) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_tabler_map_pin),
+                                        contentDescription = null,
+                                        tint = categoryColor.copy(alpha = 0.7f),
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = alert.area,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = categoryColor.copy(alpha = 0.8f)
+                                    )
+                                }
+                            }
                         }
                         Text(
                             text = alert.timestamp ?: "",
@@ -161,8 +200,14 @@ fun AlertItem(
                     Spacer(modifier = Modifier.height(4.dp))
                     
                     Column(modifier = Modifier.animateContentSize()) {
+                        val displayContent = if (!alert.message.isNullOrBlank()) {
+                            "${alert.message}\n\n${alert.content ?: ""}"
+                        } else {
+                            alert.content ?: ""
+                        }
+
                         Text(
-                            text = content,
+                            text = displayContent,
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                             lineHeight = 18.sp,

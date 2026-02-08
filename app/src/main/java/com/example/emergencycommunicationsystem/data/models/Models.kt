@@ -40,11 +40,20 @@ data class Alert(
     @SerializedName("id")
     val id: Int,
 
+    @SerializedName("category_id")
+    val categoryId: Int? = 0,
+
     @SerializedName("category")
     val category: String?,
 
     @SerializedName("title")
     val title: String?,
+
+    @SerializedName("message")
+    val message: String? = null,
+
+    @SerializedName("area")
+    val area: String? = null,
 
     @SerializedName("content")
     val content: String?,
@@ -55,14 +64,20 @@ data class Alert(
     @SerializedName("location")
     val location: String?,
 
+    @SerializedName("status")
+    val status: String? = null,
+
     @SerializedName("latitude")
     val latitude: Double?,
 
     @SerializedName("longitude")
     val longitude: Double?,
 
-    @SerializedName("timestamp")
+    @SerializedName("created_at")
     val timestamp: String?,
+
+    @SerializedName("is_viewed")
+    val isViewed: Int = 0,
 
     @SerializedName("is_acknowledged")
     val isAcknowledged: Boolean = false,
