@@ -16,4 +16,7 @@ interface AlertDao {
 
     @Query("DELETE FROM alerts")
     suspend fun clearAlerts()
+
+    @Query("UPDATE alerts SET isAcknowledged = 1 WHERE id = :alertId")
+    suspend fun updateAcknowledgeStatus(alertId: Int)
 }

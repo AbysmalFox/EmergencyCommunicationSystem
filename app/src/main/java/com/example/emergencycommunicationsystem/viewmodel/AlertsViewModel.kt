@@ -74,11 +74,15 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
     fun acknowledgeAlert(alertId: Int) {
         viewModelScope.launch {
             val userId = AuthManager.getUserId()
+            android.util.Log.d("AlertsViewModel", "Attempting to acknowledge alert $alertId for user $userId")
             if (userId > 0) {
                 val success = repository.acknowledgeAlert(alertId, userId)
+                android.util.Log.d("AlertsViewModel", "Acknowledgement success: $success")
                 if (success) {
                     loadAlerts() // Refresh list to update UI state
                 }
+            } else {
+                android.util.Log.e("AlertsViewModel", "Invalid User ID: $userId. Cannot acknowledge.")
             }
         }
     }

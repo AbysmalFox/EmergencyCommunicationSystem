@@ -63,13 +63,25 @@ class AlertsRepository(
     }
 
     suspend fun acknowledgeAlert(alertId: Int, userId: Int): Boolean {
+        // Optimistically update local DB first for instant UI response
+        try {
+            alertDao.updateAcknowledgeStatus(alertId)
+            android.util.Log.d("AlertsRepository", "Locally acknowledged alert $alertId")
+        } catch (e: Exception) {
+            android.util.Log.e("AlertsRepository", "Failed to update local status", e)
+        }
+
         return try {
+            android.util.Log.d("AlertsRepository", "Sending acknowledgement to server for alert $alertId")
             val response = ApiClient.alertsApiService().acknowledgeAlert(
                 mapOf("alert_id" to alertId, "user_id" to userId)
             )
+            android.util.Log.d("AlertsRepository", "Server response: ${response.code()} - ${response.message()}")
             response.isSuccessful
         } catch (e: Exception) {
-            false
+            android.util.Log.e("AlertsRepository", "Network error during acknowledgement", e)
+            // Still return true because we've updated it locally (optimistic)
+            true 
         }
     }
 
