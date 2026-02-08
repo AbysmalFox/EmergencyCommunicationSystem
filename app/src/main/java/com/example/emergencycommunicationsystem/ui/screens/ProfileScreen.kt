@@ -807,10 +807,17 @@ fun ProfileHeader(
         Button(
             onClick = onEditClick,
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.secondary,
+                contentColor = Color.White
+            ),
             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp)
         ) {
-            Text(localeContext.getString(R.string.edit_profile), fontWeight = FontWeight.Bold)
+            Text(
+                text = localeContext.getString(R.string.edit_profile), 
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
         }
     }
 }
