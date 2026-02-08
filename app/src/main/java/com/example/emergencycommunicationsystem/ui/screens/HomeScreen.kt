@@ -518,7 +518,7 @@ fun DashboardHeroSection(
                 StatCard(
                     label = localizedStringResource(R.string.active_alerts_title),
                     value = alertCount.toString(),
-                    icon = AppIcons.Alerts,
+                    icon = painterResource(id = R.drawable.ic_tabler_bell_ringing),
                     color = Color.White,
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                     onTeal = true
@@ -527,7 +527,7 @@ fun DashboardHeroSection(
                 StatCard(
                     label = localizedStringResource(R.string.urgency_high),
                     value = highPriorityCount.toString(),
-                    icon = AppIcons.Warning,
+                    icon = painterResource(id = R.drawable.ic_tabler_file_alert),
                     color = Color(0xFFFFD54F), // Amber for high priority
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                     onTeal = true
@@ -536,7 +536,7 @@ fun DashboardHeroSection(
                 StatCard(
                     label = localizedStringResource(R.string.temp),
                     value = "$temperature°",
-                    icon = AppIcons.Thermostat,
+                    icon = painterResource(id = R.drawable.ic_tabler_thermometer),
                     color = Color(0xFF81D4FA), // Light blue for temp
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                     onTeal = true
@@ -550,7 +550,7 @@ fun DashboardHeroSection(
 fun StatCard(
     label: String,
     value: String,
-    icon: ImageVector,
+    icon: androidx.compose.ui.graphics.painter.Painter,
     color: Color,
     modifier: Modifier = Modifier,
     onTeal: Boolean = false
@@ -570,7 +570,7 @@ fun StatCard(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
-            imageVector = icon,
+            painter = icon,
             contentDescription = label,
             tint = color,
             modifier = Modifier.size(20.dp)
@@ -1214,7 +1214,7 @@ fun CompactInstructionsCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = AppIcons.Info,
+                            painter = painterResource(id = R.drawable.ic_tabler_message_2_exclamation),
                             contentDescription = null,
                             tint = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF34635D),
                             modifier = Modifier.size(20.dp)
