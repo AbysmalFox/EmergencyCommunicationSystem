@@ -158,7 +158,14 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
             loginData["device_name"] = com.example.emergencycommunicationsystem.util.DeviceManager.getDeviceName()
             loginData["push_token"] = com.example.emergencycommunicationsystem.util.DeviceManager.getPushToken()
             
-            Log.d("LoginViewModel", "Google Login Attempt: $email")
+            Log.d("LoginViewModel", "====================================================")
+            Log.d("LoginViewModel", "🚀 SENDING GOOGLE LOGIN TO BACKEND")
+            Log.d("LoginViewModel", "Email: $email")
+            Log.d("LoginViewModel", "Name: $displayName")
+            Log.d("LoginViewModel", "Token Length: ${idToken.length}")
+            Log.d("LoginViewModel", "Token Prefix: ${idToken.take(10)}...")
+            Log.d("LoginViewModel", "Device ID: ${loginData["device_id"]}")
+            Log.d("LoginViewModel", "====================================================")
             
             val response = authRepository.loginWithGoogle(getApplication(), loginData)
             
@@ -187,19 +194,24 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
             
             val backendMsg = try {
                 if (errorBody != null) {
-                    JSONObject(errorBody).optString("message", null)
+                    val json = JSONObject(errorBody)
+                    json.optString("message", json.optString("error", "Unknown error"))
                 } else null
             } catch (_: Exception) {
                 null
             }
 
-            Log.e("LoginViewModel", "Google Login HttpException: $errorCode | Body: $errorBody")
+            Log.e("LoginViewModel", "====================================================")
+            Log.e("LoginViewModel", "❌ BACKEND HTTP ERROR ($errorCode)")
+            Log.e("LoginViewModel", "Body: $errorBody")
+            Log.e("LoginViewModel", "URL: ${e.response()?.raw()?.request?.url}")
+            Log.e("LoginViewModel", "====================================================")
             
             if (errorCode == 400 && backendMsg?.contains("password", ignoreCase = true) == true) {
-                Log.e("LoginViewModel", "BACKEND ERROR: Server requires password for Google Login. Update 'login.php'.")
-                _loginState.value = LoginState.Error("Server configuration error for Google Login.")
+                Log.e("LoginViewModel", "CRITICAL: Backend is demanding a password for a Google Login. Fix the backend login.php.")
+                _loginState.value = LoginState.Error("Server error: Google Auth requires backend fix.")
             } else {
-                _loginState.value = LoginState.Error(backendMsg ?: "HTTP Error $errorCode")
+                _loginState.value = LoginState.Error(backendMsg ?: "Server Error $errorCode")
             }
         } catch (e: IOException) {
             Log.e("LoginViewModel", "Network Error during Google login", e)
