@@ -63,7 +63,8 @@ data class UpdateProfileRequest(
 // Response for profile update
 data class UpdateProfileResponse(
     val success: Boolean,
-    val message: String?
+    val message: String?,
+    val data: Any? = null
 )
 
 // Request for changing password

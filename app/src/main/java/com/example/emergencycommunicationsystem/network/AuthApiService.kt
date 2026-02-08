@@ -13,14 +13,14 @@ interface AuthApiService {
     @POST("login.php")
     suspend fun loginUser(@Body body: Map<String, @JvmSuppressWildcards Any>): Response<AuthResponse>
 
-    @POST("profile_data.php")
+    @POST("user/profile_data.php")
     suspend fun getProfileData(@Body request: ProfileDataRequest): ProfileDataResponse
 
     @POST("logout.php")
     suspend fun logout(@Body request: LogoutRequest): Response<AuthResponse>
 
     @Multipart
-    @POST("update_profile.php")
+    @POST("user/update_profile.php")
     suspend fun updateProfile(
         @Part("user_id") userId: RequestBody,
         @Part("username") username: RequestBody,
@@ -29,6 +29,6 @@ interface AuthApiService {
         @Part profilePic: MultipartBody.Part?
     ): UpdateProfileResponse
 
-    @POST("change_password.php")
+    @POST("user/change_password.php")
     suspend fun changePassword(@Body request: ChangePasswordRequest): Response<ChangePasswordResponse>
 }

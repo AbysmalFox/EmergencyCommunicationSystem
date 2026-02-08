@@ -107,6 +107,9 @@ class ProfileViewModel(
                 val response = authRepository.updateProfile(userIdBody, nameBody, emailBody, phoneBody, profilePicPart)
                 
                 if (response.success) {
+                    // Extract permanent URL from backend if available
+                    val permanentPicUrl = (response.data as? Map<*, *>)?.get("profile_pic_url") as? String
+                    
                     // Update AuthManager with new info
                     AuthManager.saveLoginState(
                         userId = userId,
@@ -114,7 +117,7 @@ class ProfileViewModel(
                         email = email,
                         phone = phone,
                         token = AuthManager.getToken() ?: "",
-                        profilePic = profilePicUri ?: AuthManager.getProfilePic()
+                        profilePic = permanentPicUrl ?: profilePicUri ?: AuthManager.getProfilePic()
                     )
                     _updateProfileResult.value = Result.success(response.message ?: "Profile updated successfully")
                 } else {

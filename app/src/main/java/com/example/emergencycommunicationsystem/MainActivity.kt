@@ -134,6 +134,10 @@ fun EmergencyApp(
     val settingsRepository = remember { SettingsRepository() }
 
     val isLoggedIn by AuthManager.isLoggedInFlow.collectAsState()
+    val username by AuthManager.usernameFlow.collectAsState()
+    val email by AuthManager.emailFlow.collectAsState()
+    val phone by AuthManager.phoneFlow.collectAsState()
+    val profilePic by AuthManager.profilePicFlow.collectAsState()
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -165,7 +169,7 @@ fun EmergencyApp(
         }
 
         val userId = if (isLoggedIn) AuthManager.getUserId() else -1
-        val userName = if (isLoggedIn) (AuthManager.getUsername() ?: "User") else "Guest"
+        val userName = if (isLoggedIn) (username ?: "User") else "Guest"
         val encodedTitle = URLEncoder.encode(alertTitle, "UTF-8")
 
         navController.navigate(
@@ -214,7 +218,7 @@ fun EmergencyApp(
                                 val userId = if (isLoggedIn) AuthManager.getUserId() else -1
                                 val alertIdInt = alertId.toInt()
                                 val encodedTitle = URLEncoder.encode(alertTitle, "UTF-8")
-                                val userName = if (isLoggedIn) (AuthManager.getUsername() ?: "User") else "Guest"
+                                val userName = if (isLoggedIn) (username ?: "User") else "Guest"
                                 navController.navigate("${Screen.Messaging.route}?alertId=$alertIdInt&alertTitle=$encodedTitle&userId=$userId&userName=$userName")
                             } catch (e: Exception) {
                                 Log.e("NavigationError", "Error navigating to messaging", e)
@@ -235,10 +239,10 @@ fun EmergencyApp(
                     
                     ProfileScreen(
                         isLoggedIn = isLoggedIn,
-                        username = if (isLoggedIn) AuthManager.getUsername() else null,
-                        email = if (isLoggedIn) AuthManager.getEmail() else null,
-                        phone = if (isLoggedIn) AuthManager.getPhone() else null,
-                        profilePic = if (isLoggedIn) AuthManager.getProfilePic() else null,
+                        username = if (isLoggedIn) username else null,
+                        email = if (isLoggedIn) email else null,
+                        phone = if (isLoggedIn) phone else null,
+                        profilePic = if (isLoggedIn) profilePic else null,
                         currentTheme = currentTheme,
                         onThemeChange = onThemeChange,
                         onLoginClick = { navController.navigate(Screen.Login.route) },

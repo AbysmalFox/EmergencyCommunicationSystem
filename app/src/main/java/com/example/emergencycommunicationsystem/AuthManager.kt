@@ -23,12 +23,31 @@ object AuthManager {
     private val _isLoggedIn = MutableStateFlow(false)
     val isLoggedInFlow: StateFlow<Boolean> get() = _isLoggedIn
     
+    private val _username = MutableStateFlow<String?>(null)
+    val usernameFlow: StateFlow<String?> = _username
+
+    private val _email = MutableStateFlow<String?>(null)
+    val emailFlow: StateFlow<String?> = _email
+
+    private val _phone = MutableStateFlow<String?>(null)
+    val phoneFlow: StateFlow<String?> = _phone
+
+    private val _profilePic = MutableStateFlow<String?>(null)
+    val profilePicFlow: StateFlow<String?> = _profilePic
+
     // Flow to notify subscribers of user data changes
     val userDataFlow = MutableSharedFlow<Unit>(replay = 1)
 
     fun initialize(context: Context) {
         sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        _isLoggedIn.value = sharedPrefs.getBoolean(KEY_IS_LOGGED_IN, false)
+        val loggedIn = sharedPrefs.getBoolean(KEY_IS_LOGGED_IN, false)
+        _isLoggedIn.value = loggedIn
+        if (loggedIn) {
+            _username.value = sharedPrefs.getString(KEY_USERNAME, null)
+            _email.value = sharedPrefs.getString(KEY_EMAIL, null)
+            _phone.value = sharedPrefs.getString(KEY_PHONE, null)
+            _profilePic.value = sharedPrefs.getString(KEY_PROFILE_PIC, null)
+        }
         userDataFlow.tryEmit(Unit)
     }
 
@@ -43,12 +62,18 @@ object AuthManager {
             putString(KEY_TOKEN, token)
             apply()
         }
+        _username.value = username
+        _email.value = email
+        _phone.value = phone
+        if (profilePic != null) _profilePic.value = profilePic
+        
         _isLoggedIn.value = true
         userDataFlow.tryEmit(Unit)
     }
 
     fun saveProfilePic(uri: String) {
         sharedPrefs.edit().putString(KEY_PROFILE_PIC, uri).apply()
+        _profilePic.value = uri
         userDataFlow.tryEmit(Unit)
     }
 
@@ -62,6 +87,10 @@ object AuthManager {
             }
         }
         sharedPrefs.edit().clear().apply()
+        _username.value = null
+        _email.value = null
+        _phone.value = null
+        _profilePic.value = null
         _isLoggedIn.value = false
     }
 

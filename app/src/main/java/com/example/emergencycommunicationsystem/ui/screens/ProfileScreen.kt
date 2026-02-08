@@ -475,10 +475,10 @@ fun EditProfileSheet(
     onCancel: () -> Unit
 ) {
     val localeContext = getLocaleContext()
-    var name by remember { mutableStateOf(currentName) }
-    var email by remember { mutableStateOf(currentEmail) }
-    var phone by remember { mutableStateOf(currentPhone) }
-    var profilePicUri by remember { mutableStateOf<Uri?>(if (currentProfilePic != null) Uri.parse(currentProfilePic) else null) }
+    var name by remember(currentName) { mutableStateOf(currentName) }
+    var email by remember(currentEmail) { mutableStateOf(currentEmail) }
+    var phone by remember(currentPhone) { mutableStateOf(currentPhone) }
+    var profilePicUri by remember(currentProfilePic) { mutableStateOf<Uri?>(if (currentProfilePic != null) Uri.parse(currentProfilePic) else null) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
@@ -563,7 +563,16 @@ fun EditProfileSheet(
             onValueChange = { name = it },
             label = { Text(localeContext.getString(R.string.full_name)) },
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black,
+                focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                unfocusedLabelColor = Color.Gray,
+                cursorColor = MaterialTheme.colorScheme.secondary
+            )
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -574,18 +583,49 @@ fun EditProfileSheet(
             label = { Text(localeContext.getString(R.string.email_address)) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black,
+                focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                unfocusedLabelColor = Color.Gray,
+                cursorColor = MaterialTheme.colorScheme.secondary
+            )
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Phone field with fixed prefix logic
         OutlinedTextField(
-            value = phone,
-            onValueChange = { phone = it },
+            value = if (phone.startsWith("+63")) phone.removePrefix("+63") else phone,
+            onValueChange = { newNumber ->
+                val digits = newNumber.filter { it.isDigit() }
+                if (digits.length <= 10) {
+                    phone = "+63$digits"
+                }
+            },
             label = { Text(localeContext.getString(R.string.phone_number)) },
+            leadingIcon = {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 12.dp)) {
+                    Text("+63", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
+            },
+            placeholder = { Text("9123456789") },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black,
+                focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                unfocusedLabelColor = Color.Gray,
+                cursorColor = MaterialTheme.colorScheme.secondary
+            )
         )
 
         Spacer(modifier = Modifier.height(32.dp))
