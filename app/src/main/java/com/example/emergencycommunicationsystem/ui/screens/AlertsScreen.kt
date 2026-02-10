@@ -382,7 +382,8 @@ fun AlertItemLine(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun AlertsScreen(
-    viewModel: AlertsViewModel = viewModel(), 
+    viewModel: AlertsViewModel = viewModel(),
+    weatherViewModel: com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel = viewModel(),
     onMessageClick: ((alertId: String, alertTitle: String) -> Unit)? = null
 ) {
     val localeContext = getLocaleContext()
@@ -391,6 +392,34 @@ fun AlertsScreen(
     val isRefreshing = state is Resource.Loading
     var isCompactMode by remember { mutableStateOf(false) }
     val currentLanguage by UserPrefs.getLanguage(LocalContext.current).collectAsState(initial = "en")
+    
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Sync location from WeatherViewModel
+    val weatherState by weatherViewModel.weatherState.collectAsState()
+    LaunchedEffect(weatherState) {
+        if (weatherState is com.example.emergencycommunicationsystem.data.models.WeatherState.Success) {
+            val success = weatherState as com.example.emergencycommunicationsystem.data.models.WeatherState.Success
+            viewModel.updateUserLocation(success.lat, success.lon)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is com.example.emergencycommunicationsystem.viewmodel.AlertsEvent.ShowUndoSnackbar -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = event.message,
+                        actionLabel = "UNDO",
+                        duration = SnackbarDuration.Short
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        viewModel.undoAcknowledge(event.alertId)
+                    }
+                }
+            }
+        }
+    }
 
     val pullRefreshState = rememberPullRefreshState(
         refreshing = isRefreshing, 
@@ -423,6 +452,7 @@ fun AlertsScreen(
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Box(
                 modifier = Modifier

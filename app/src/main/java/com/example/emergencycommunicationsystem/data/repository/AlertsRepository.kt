@@ -11,6 +11,7 @@ import com.example.emergencycommunicationsystem.data.network.ApiClient
 import com.example.emergencycommunicationsystem.util.Resource
 import com.example.emergencycommunicationsystem.util.TranslationService
 import com.example.emergencycommunicationsystem.util.NetworkUtils
+import com.example.emergencycommunicationsystem.util.LogFilter
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
@@ -38,15 +39,34 @@ class AlertsRepository(
 
         if (NetworkUtils.isNetworkAvailable(context)) {
             try {
+                LogFilter.d("AlertsRepository", "Fetching alerts from server for userId: $userId")
                 val response = ApiClient.alertsApiService().getAlerts(userId)
                 
                 if (response.isSuccessful && response.body()?.success == true) {
                     val networkAlerts = response.body()?.alerts ?: emptyList()
+                    LogFilter.d("AlertsRepository", "Successfully fetched ${networkAlerts.size} alerts from server")
                     
-                    alertDao.clearAlerts()
-                    alertDao.insertAlerts(networkAlerts.map { it.toEntity() })
+                    // Get current cached alerts to preserve local-only state if necessary
+                    val currentCache = alertDao.getAllAlerts().first()
+                    val acknowledgedIds = currentCache.filter { it.isAcknowledged }.map { it.id }.toSet()
+                    
+                    val entitiesToInsert = networkAlerts.map { alert ->
+                        val entity = alert.toEntity()
+                        // If locally acknowledged but server says false, keep it true for now (optimistic)
+                        if (alert.id in acknowledgedIds && !alert.isAcknowledged) {
+                            entity.copy(isAcknowledged = true)
+                        } else {
+                            entity
+                        }
+                    }
+                    
+                    alertDao.insertAlerts(entitiesToInsert)
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    LogFilter.e("AlertsRepository", "Failed to fetch alerts. Code: ${response.code()}, Error: $errorBody")
                 }
             } catch (e: Exception) {
+                LogFilter.e("AlertsRepository", "Network exception fetching alerts", e)
                 if (cache.isEmpty()) {
                     emit(Resource.Error("Could not connect to server and no cached data found."))
                 }
@@ -62,50 +82,110 @@ class AlertsRepository(
         })
     }
 
-    suspend fun acknowledgeAlert(alertId: Int, userId: Int): Boolean {
+    suspend fun acknowledgeAlert(alertId: Int, userId: Int, latitude: Double? = null, longitude: Double? = null): Result<Unit> {
         // Optimistically update local DB first for instant UI response
         try {
             alertDao.updateAcknowledgeStatus(alertId)
-            android.util.Log.d("AlertsRepository", "Locally acknowledged alert $alertId")
+            LogFilter.d("AlertsRepository", "Locally acknowledged alert $alertId")
         } catch (e: Exception) {
-            android.util.Log.e("AlertsRepository", "Failed to update local status", e)
+            LogFilter.e("AlertsRepository", "Failed to update local status for alert $alertId", e)
         }
 
         return try {
-            android.util.Log.d("AlertsRepository", "Sending acknowledgement to server for alert $alertId")
-            val response = ApiClient.alertsApiService().acknowledgeAlert(
-                mapOf("alert_id" to alertId, "user_id" to userId)
+            LogFilter.d("AlertsRepository", "Sending acknowledgement to server: alertId=$alertId, userId=$userId, lat=$latitude, lon=$longitude")
+            
+            val request = com.example.emergencycommunicationsystem.network.AcknowledgeRequest(
+                alertId = alertId,
+                userId = userId,
+                status = "received",
+                latitude = latitude,
+                longitude = longitude
             )
-            android.util.Log.d("AlertsRepository", "Server response: ${response.code()} - ${response.message()}")
-            response.isSuccessful
+
+            val response = ApiClient.alertsApiService().acknowledgeAlert(request)
+            
+            if (response.isSuccessful) {
+                LogFilter.d("AlertsRepository", "Server successfully acknowledged alert $alertId. Response: ${response.body()}")
+                Result.success(Unit)
+            } else {
+                val errorBody = response.errorBody()?.string()
+                val errorMessage = "Server error ${response.code()}: $errorBody"
+                LogFilter.e("AlertsRepository", "Failed to acknowledge alert $alertId on server: $errorMessage")
+                Result.failure(Exception(errorMessage))
+            }
         } catch (e: Exception) {
-            android.util.Log.e("AlertsRepository", "Network error during acknowledgement", e)
-            // Still return true because we've updated it locally (optimistic)
-            true 
+            LogFilter.e("AlertsRepository", "Network exception during acknowledgement for alert $alertId", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun unacknowledgeAlert(alertId: Int, userId: Int): Result<Unit> {
+        try {
+            alertDao.revertAcknowledgeStatus(alertId)
+            LogFilter.d("AlertsRepository", "Locally un-acknowledged alert $alertId")
+        } catch (e: Exception) {
+            LogFilter.e("AlertsRepository", "Failed to revert local status for alert $alertId", e)
+        }
+
+        // Note: Backend might not have a specific un-acknowledge endpoint yet.
+        // If it doesn't, we still return success because the local state is reverted.
+        return try {
+            // Placeholder: Replace with actual endpoint if available in future
+            // val response = ApiClient.alertsApiService().unacknowledgeAlert(...)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            LogFilter.e("AlertsRepository", "Error during server un-acknowledgement for alert $alertId", e)
+            Result.success(Unit) // Still success as local state is what matters for UI undo
         }
     }
 
     suspend fun getActivePoll(userId: Int?): Poll? {
         return try {
+            LogFilter.d("AlertsRepository", "Fetching active poll for userId: $userId")
             val response = ApiClient.alertsApiService().getActivePoll(userId)
             if (response.isSuccessful && response.body()?.success == true) {
-                response.body()?.poll
+                val poll = response.body()?.poll
+                LogFilter.d("AlertsRepository", "Active poll found: ${poll?.id}")
+                poll
             } else {
+                if (!response.isSuccessful) {
+                    val errorBody = response.errorBody()?.string()
+                    LogFilter.e("AlertsRepository", "Failed to fetch active poll. Code: ${response.code()}, Error: $errorBody")
+                }
                 null
             }
         } catch (e: Exception) {
+            LogFilter.e("AlertsRepository", "Network exception fetching active poll", e)
             null
         }
     }
 
-    suspend fun respondToPoll(pollId: Int, userId: Int, status: String): Boolean {
+    suspend fun respondToPoll(pollId: Int, userId: Int, status: String, latitude: Double? = null, longitude: Double? = null): Result<Unit> {
         return try {
-            val response = ApiClient.alertsApiService().respondToSafePoll(
-                mapOf("poll_id" to pollId, "user_id" to userId, "status" to status)
+            LogFilter.d("AlertsRepository", "Sending poll response: pollId=$pollId, userId=$userId, status=$status, lat=$latitude, lon=$longitude")
+            
+            val request = com.example.emergencycommunicationsystem.network.PollResponseRequest(
+                pollId = pollId,
+                userId = userId,
+                status = status,
+                latitude = latitude,
+                longitude = longitude
             )
-            response.isSuccessful
+
+            val response = ApiClient.alertsApiService().respondToSafePoll(request)
+            
+            if (response.isSuccessful) {
+                LogFilter.d("AlertsRepository", "Successfully responded to poll $pollId. Response: ${response.body()}")
+                Result.success(Unit)
+            } else {
+                val errorBody = response.errorBody()?.string()
+                val errorMessage = "Server error ${response.code()}: $errorBody"
+                LogFilter.e("AlertsRepository", "Failed to respond to poll $pollId on server: $errorMessage")
+                Result.failure(Exception(errorMessage))
+            }
         } catch (e: Exception) {
-            false
+            LogFilter.e("AlertsRepository", "Network exception during poll response for poll $pollId", e)
+            Result.failure(e)
         }
     }
     

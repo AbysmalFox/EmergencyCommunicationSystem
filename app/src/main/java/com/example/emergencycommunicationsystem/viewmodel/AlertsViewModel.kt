@@ -12,15 +12,28 @@ import com.example.emergencycommunicationsystem.util.LocationUtils
 import com.example.emergencycommunicationsystem.util.Resource
 import com.example.emergencycommunicationsystem.data.UserPrefs
 import com.example.emergencycommunicationsystem.util.TranslationService
+import com.example.emergencycommunicationsystem.util.LogFilter
+import android.widget.Toast
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
+
 data class AlertWithDistance(
-    val alert: Alert,
+    val alert: com.example.emergencycommunicationsystem.data.models.Alert,
     val distanceKm: Double?
 )
+
+sealed class AlertsEvent {
+    data class ShowUndoSnackbar(val alertId: Int, val message: String) : AlertsEvent()
+}
 
 class AlertsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -28,10 +41,15 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
     private val _uiState = MutableStateFlow<Resource<List<AlertWithDistance>>>(Resource.Loading)
     val uiState: StateFlow<Resource<List<AlertWithDistance>>> = _uiState.asStateFlow()
 
+    private val _events = Channel<AlertsEvent>(Channel.BUFFERED)
+    val events = _events.receiveAsFlow()
+
     private val _activePoll = MutableStateFlow<Poll?>(null)
     val activePoll = _activePoll.asStateFlow()
 
     private val _userLocation = MutableStateFlow<Pair<Double, Double>?>(null)
+    
+    private var loadAlertsJob: Job? = null
 
     init {
         val database = AppDatabase.getDatabase(application)
@@ -44,13 +62,13 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun loadAlerts() {
-        viewModelScope.launch {
+        loadAlertsJob?.cancel()
+        loadAlertsJob = viewModelScope.launch {
             val userId = AuthManager.getUserId().takeIf { it > 0 }
-            val context = getApplication<Application>().applicationContext
             
             repository.getAlerts(userId).collect { resource ->
                 when (resource) {
-                    is Resource.Success -> {
+                    is com.example.emergencycommunicationsystem.util.Resource.Success<List<com.example.emergencycommunicationsystem.data.models.Alert>> -> {
                         val location = _userLocation.value
                         val alertsWithDistance = withContext(Dispatchers.Default) {
                             resource.data.map { alert ->
@@ -62,10 +80,10 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
                                 AlertWithDistance(alert, distance)
                             }
                         }
-                        _uiState.value = Resource.Success(alertsWithDistance)
+                        _uiState.value = com.example.emergencycommunicationsystem.util.Resource.Success(alertsWithDistance)
                     }
-                    is Resource.Error -> _uiState.value = Resource.Error(resource.message)
-                    is Resource.Loading -> _uiState.value = Resource.Loading
+                    is com.example.emergencycommunicationsystem.util.Resource.Error -> _uiState.value = com.example.emergencycommunicationsystem.util.Resource.Error(resource.message)
+                    is com.example.emergencycommunicationsystem.util.Resource.Loading -> _uiState.value = com.example.emergencycommunicationsystem.util.Resource.Loading
                 }
             }
         }
@@ -74,15 +92,47 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
     fun acknowledgeAlert(alertId: Int) {
         viewModelScope.launch {
             val userId = AuthManager.getUserId()
-            android.util.Log.d("AlertsViewModel", "Attempting to acknowledge alert $alertId for user $userId")
+            val location = _userLocation.value
+            LogFilter.d("AlertsViewModel", "Attempting to acknowledge alert $alertId for user $userId at $location")
             if (userId > 0) {
-                val success = repository.acknowledgeAlert(alertId, userId)
-                android.util.Log.d("AlertsViewModel", "Acknowledgement success: $success")
-                if (success) {
-                    loadAlerts() // Refresh list to update UI state
+                val result = repository.acknowledgeAlert(
+                    alertId = alertId,
+                    userId = userId,
+                    latitude = location?.first,
+                    longitude = location?.second
+                )
+                
+                withContext(Dispatchers.Main) {
+                    if (result.isSuccess) {
+                        LogFilter.i("AlertsViewModel", "Successfully acknowledged alert $alertId")
+                        _events.send(AlertsEvent.ShowUndoSnackbar(alertId, "Alert acknowledged"))
+                        loadAlerts() // Refresh list to update UI state
+                    } else {
+                        val error = result.exceptionOrNull()
+                        LogFilter.e("AlertsViewModel", "Failed to acknowledge alert $alertId on server", error)
+                        Toast.makeText(
+                            getApplication(), 
+                            "Server Error: ${error?.message ?: "Unknown error"}. Updated locally only.", 
+                            Toast.LENGTH_LONG
+                        ).show()
+                        loadAlerts() // Still refresh to show local update
+                    }
                 }
             } else {
-                android.util.Log.e("AlertsViewModel", "Invalid User ID: $userId. Cannot acknowledge.")
+                LogFilter.e("AlertsViewModel", "Invalid User ID: $userId. Cannot acknowledge.")
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(getApplication(), "Please log in to acknowledge alerts", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    fun undoAcknowledge(alertId: Int) {
+        viewModelScope.launch {
+            val userId = AuthManager.getUserId()
+            if (userId > 0) {
+                repository.unacknowledgeAlert(alertId, userId)
+                loadAlerts()
             }
         }
     }
@@ -98,10 +148,33 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
     fun respondToPoll(pollId: Int, status: String) {
         viewModelScope.launch {
             val userId = AuthManager.getUserId()
+            val location = _userLocation.value
             if (userId > 0) {
-                val success = repository.respondToPoll(pollId, userId, status)
-                if (success) {
-                    _activePoll.value = null // Close the dialog
+                val result = repository.respondToPoll(
+                    pollId = pollId,
+                    userId = userId,
+                    status = status,
+                    latitude = location?.first,
+                    longitude = location?.second
+                )
+                withContext(Dispatchers.Main) {
+                    if (result.isSuccess) {
+                        _activePoll.value = null // Close the dialog
+                        LogFilter.i("AlertsViewModel", "Successfully responded to poll $pollId")
+                        Toast.makeText(getApplication(), "Response sent successfully", Toast.LENGTH_SHORT).show()
+                    } else {
+                        val error = result.exceptionOrNull()
+                        LogFilter.e("AlertsViewModel", "Failed to respond to poll $pollId", error)
+                        Toast.makeText(
+                            getApplication(), 
+                            "Failed to send response: ${error?.message ?: "Unknown error"}", 
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(getApplication(), "Please log in to respond", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -115,7 +188,7 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
         _userLocation.value = Pair(latitude, longitude)
         viewModelScope.launch {
             val currentState = _uiState.value
-            if (currentState is Resource.Success) {
+            if (currentState is com.example.emergencycommunicationsystem.util.Resource.Success<List<AlertWithDistance>>) {
                 val alerts = currentState.data.map { it.alert }
                 val alertsWithDistance = withContext(Dispatchers.Default) {
                     alerts.map { alert ->
@@ -127,7 +200,7 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
                         AlertWithDistance(alert, distance)
                     }
                 }
-                _uiState.value = Resource.Success(alertsWithDistance)
+                _uiState.value = com.example.emergencycommunicationsystem.util.Resource.Success(alertsWithDistance)
             }
         }
     }

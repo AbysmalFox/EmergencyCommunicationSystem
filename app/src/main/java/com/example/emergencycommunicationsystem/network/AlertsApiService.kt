@@ -21,6 +21,22 @@ data class PollResponse(
     @SerializedName("poll") val poll: Poll? = null
 )
 
+data class AcknowledgeRequest(
+    @SerializedName("alert_id") val alertId: Int,
+    @SerializedName("user_id") val userId: Int,
+    @SerializedName("status") val status: String = "received",
+    @SerializedName("latitude") val latitude: Double? = null,
+    @SerializedName("longitude") val longitude: Double? = null
+)
+
+data class PollResponseRequest(
+    @SerializedName("poll_id") val pollId: Int,
+    @SerializedName("user_id") val userId: Int,
+    @SerializedName("status") val status: String,
+    @SerializedName("latitude") val latitude: Double? = null,
+    @SerializedName("longitude") val longitude: Double? = null
+)
+
 interface AlertsApiService {
 
     // Matches PHP endpoint: alerts.php
@@ -30,13 +46,13 @@ interface AlertsApiService {
     // 1. For the Acknowledge Button
     @POST("acknowledge_alert.php")
     suspend fun acknowledgeAlert(
-        @Body request: Map<String, Int> // e.g., {"alert_id": 1, "user_id": 123}
+        @Body request: AcknowledgeRequest
     ): Response<Map<String, Any>>
 
     // 2. For the "Are You Safe?" Poll
     @POST("respond_to_poll.php")
     suspend fun respondToSafePoll(
-        @Body request: Map<String, Any> // e.g., {"poll_id": 1, "user_id": 123, "status": "safe"}
+        @Body request: PollResponseRequest
     ): Response<Map<String, Any>>
 
     // 3. To fetch active poll

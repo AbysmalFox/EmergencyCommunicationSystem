@@ -19,4 +19,7 @@ interface AlertDao {
 
     @Query("UPDATE alerts SET isAcknowledged = 1 WHERE id = :alertId")
     suspend fun updateAcknowledgeStatus(alertId: Int)
+
+    @Query("UPDATE alerts SET isAcknowledged = 0 WHERE id = :alertId")
+    suspend fun revertAcknowledgeStatus(alertId: Int)
 }

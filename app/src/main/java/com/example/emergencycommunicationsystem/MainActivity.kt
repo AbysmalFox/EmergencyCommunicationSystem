@@ -213,6 +213,7 @@ fun EmergencyApp(
                 }
                 composable(Screen.Alerts.route) {
                     AlertsScreen(
+                        weatherViewModel = weatherViewModel,
                         onMessageClick = { alertId, alertTitle ->
                             try {
                                 val userId = if (isLoggedIn) AuthManager.getUserId() else -1
