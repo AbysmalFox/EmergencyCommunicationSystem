@@ -49,6 +49,11 @@ interface AlertsApiService {
         @Body request: AcknowledgeRequest
     ): Response<Map<String, Any>>
 
+    @POST("unacknowledge_alert.php")
+    suspend fun unacknowledgeAlert(
+        @Body request: Map<String, Int> // {"alert_id": 1, "user_id": 123}
+    ): Response<Map<String, Any>>
+
     // 2. For the "Are You Safe?" Poll
     @POST("respond_to_poll.php")
     suspend fun respondToSafePoll(

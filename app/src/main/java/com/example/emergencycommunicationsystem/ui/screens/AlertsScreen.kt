@@ -75,6 +75,7 @@ fun AlertItem(
     alert: Alert,
     currentLanguage: String = "en",
     onAcknowledge: (Int) -> Unit,
+    onUndo: (Int) -> Unit,
     onMessageClick: (id: String, title: String) -> Unit
 ) {
     val localeContext = getLocaleContext()
@@ -262,6 +263,18 @@ fun AlertItem(
                     Icon(Icons.Default.Check, contentDescription = null, tint = StatusSafe, modifier = Modifier.size(12.dp))
                     Spacer(Modifier.width(4.dp))
                     Text("Acknowledged", color = StatusSafe, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.width(4.dp))
+                    androidx.compose.material3.IconButton(
+                        onClick = { onUndo(alert.id) },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = AppIcons.Undo,
+                            contentDescription = "Undo",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
                 }
             }
 
@@ -305,6 +318,7 @@ fun AlertItem(
 fun AlertItemLine(
     alert: Alert,
     onAcknowledge: (Int) -> Unit,
+    onUndo: (Int) -> Unit,
     onMessageClick: (id: String, title: String) -> Unit
 ) {
     val categoryColor = getColorForCategory(alert)
@@ -360,12 +374,26 @@ fun AlertItemLine(
                 )
             }
         } else {
-            Icon(
-                imageVector = Icons.Default.Check,
-                contentDescription = "Acknowledged",
-                tint = StatusSafe,
-                modifier = Modifier.size(16.dp)
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Acknowledged",
+                    tint = StatusSafe,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(4.dp))
+                androidx.compose.material3.IconButton(
+                    onClick = { onUndo(alert.id) },
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = AppIcons.Undo,
+                        contentDescription = "Undo",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
         }
         
         Spacer(modifier = Modifier.width(4.dp))
@@ -512,7 +540,8 @@ fun AlertsScreen(
                                         if (compact) {
                                             AlertItemLine(
                                                 alert = alert,
-                                                onAcknowledge = { viewModel.acknowledgeAlert(it) }
+                                                onAcknowledge = { viewModel.acknowledgeAlert(it) },
+                                                onUndo = { viewModel.undoAcknowledge(it) }
                                             ) { id, title ->
                                                 onMessageClick?.invoke(id, title)
                                             }
@@ -520,7 +549,8 @@ fun AlertsScreen(
                                             AlertItem(
                                                 alert = alert, 
                                                 currentLanguage = currentLanguage,
-                                                onAcknowledge = { viewModel.acknowledgeAlert(it) }
+                                                onAcknowledge = { viewModel.acknowledgeAlert(it) },
+                                                onUndo = { viewModel.undoAcknowledge(it) }
                                             ) { id, title ->
                                                 onMessageClick?.invoke(id, title)
                                             }

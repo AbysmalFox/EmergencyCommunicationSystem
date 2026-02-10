@@ -127,15 +127,23 @@ class AlertsRepository(
             LogFilter.e("AlertsRepository", "Failed to revert local status for alert $alertId", e)
         }
 
-        // Note: Backend might not have a specific un-acknowledge endpoint yet.
-        // If it doesn't, we still return success because the local state is reverted.
         return try {
-            // Placeholder: Replace with actual endpoint if available in future
-            // val response = ApiClient.alertsApiService().unacknowledgeAlert(...)
-            Result.success(Unit)
+            LogFilter.d("AlertsRepository", "Sending un-acknowledgement to server: alertId=$alertId, userId=$userId")
+            val response = ApiClient.alertsApiService().unacknowledgeAlert(
+                mapOf("alert_id" to alertId, "user_id" to userId)
+            )
+            
+            if (response.isSuccessful) {
+                LogFilter.d("AlertsRepository", "Server successfully un-acknowledged alert $alertId")
+                Result.success(Unit)
+            } else {
+                val errorBody = response.errorBody()?.string()
+                LogFilter.e("AlertsRepository", "Failed to un-acknowledge on server: $errorBody")
+                Result.success(Unit) // Still return success because local state was reverted
+            }
         } catch (e: Exception) {
-            LogFilter.e("AlertsRepository", "Error during server un-acknowledgement for alert $alertId", e)
-            Result.success(Unit) // Still success as local state is what matters for UI undo
+            LogFilter.e("AlertsRepository", "Network exception during un-acknowledgement", e)
+            Result.success(Unit)
         }
     }
 
