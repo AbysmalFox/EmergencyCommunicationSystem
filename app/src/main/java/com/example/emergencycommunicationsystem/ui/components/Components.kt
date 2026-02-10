@@ -1251,7 +1251,10 @@ fun CompactAlertCard(
     distanceKm: Double?,
     severity: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    issuedText: String? = null,
+    containerColorOverride: Color? = null,
+    borderColorOverride: Color? = null
 ) {
     val localeContext = getLocaleContext()
     val context = LocalContext.current
@@ -1260,10 +1263,12 @@ fun CompactAlertCard(
     // Dynamic translation
     var translatedTitle by remember(alert.title) { mutableStateOf(alert.title ?: "") }
     var translatedCategory by remember(alert.category) { mutableStateOf("") }
+    var translatedLocation by remember(alert.location, alert.area) { mutableStateOf(alert.location ?: alert.area ?: "") }
     
-    LaunchedEffect(alert.title, alert.category, currentLanguage) {
+    LaunchedEffect(alert.title, alert.category, alert.location, alert.area, currentLanguage) {
         val title = alert.title ?: "No Title"
         val categoryBase = getCategoryDisplayName(alert)
+        val locationBase = alert.location ?: alert.area ?: ""
         
         if (currentLanguage != "en") {
             launch {
@@ -1272,9 +1277,15 @@ fun CompactAlertCard(
             launch {
                 translatedCategory = TranslationService.translate(categoryBase, currentLanguage)
             }
+            if (locationBase.isNotEmpty()) {
+                launch {
+                    translatedLocation = TranslationService.translate(locationBase, currentLanguage)
+                }
+            }
         } else {
             translatedTitle = title
             translatedCategory = categoryBase
+            translatedLocation = locationBase
         }
     }
     
@@ -1286,6 +1297,17 @@ fun CompactAlertCard(
     val bgColor = MaterialTheme.colorScheme.background
     val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
     
+    val cardContainer = containerColorOverride ?: if (isDarkMode) {
+        MaterialTheme.colorScheme.surface
+    } else {
+        Color.White
+    }
+    val cardBorder = borderColorOverride ?: if (isDarkMode) {
+        Color.Black.copy(alpha = 0.1f)
+    } else {
+        severityColor.copy(alpha = 0.2f)
+    }
+
     Card(
         onClick = onClick,
         modifier = modifier
@@ -1296,21 +1318,11 @@ fun CompactAlertCard(
                 spotColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.08f),
                 ambientColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.05f)
             ),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isDarkMode) {
-                MaterialTheme.colorScheme.surface
-            } else {
-                Color.White // Pure white in light mode for better contrast
-            }
-        ),
+        colors = CardDefaults.cardColors(containerColor = cardContainer),
         shape = RoundedCornerShape(18.dp),
         border = BorderStroke(
             width = if (isDarkMode) 1.dp else 0.5.dp,
-            color = if (isDarkMode) {
-                Color.Black.copy(alpha = 0.1f)
-            } else {
-                severityColor.copy(alpha = 0.2f) // Subtle colored border in light mode
-            }
+            color = cardBorder
         )
     ) {
         Row(
@@ -1347,28 +1359,45 @@ fun CompactAlertCard(
             
             // Content
             Column(modifier = Modifier.weight(1f)) {
-                // Category and Severity
+                // Category, Severity and Source
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = displayCategory.uppercase(),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = categoryColor
-                    )
-                    // Semi-transparent badge styling
-                    Box(
-                        modifier = Modifier
-                            .background(severityColor.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.weight(1f)
                     ) {
                         Text(
-                            text = severity,
-                            fontSize = 10.sp, // Slightly larger
+                            text = displayCategory.uppercase(),
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = severityColor
+                            color = categoryColor
+                        )
+                        // Semi-transparent badge styling
+                        Box(
+                            modifier = Modifier
+                                .background(severityColor.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                text = severity,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = severityColor
+                            )
+                        }
+                    }
+                    
+                    if (!alert.source.isNullOrBlank()) {
+                        Text(
+                            text = alert.source ?: "",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -1384,6 +1413,38 @@ fun CompactAlertCard(
                     maxLines = 1,
                     modifier = Modifier.fillMaxWidth()
                 )
+                
+                if (translatedLocation.isNotEmpty()) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 2.dp)
+                    ) {
+                        Icon(
+                            imageVector = AppIcons.Location,
+                            contentDescription = null,
+                            modifier = Modifier.size(10.dp),
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = translatedLocation,
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                if (!issuedText.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Issued $issuedText",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+                    )
+                }
                 
                 Spacer(modifier = Modifier.height(6.dp))
                 

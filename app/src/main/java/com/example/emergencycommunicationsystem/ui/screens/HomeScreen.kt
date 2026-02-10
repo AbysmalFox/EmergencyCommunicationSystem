@@ -1,6 +1,7 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
 import android.Manifest
+import android.os.Build
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -11,8 +12,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -28,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -70,6 +70,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 import com.example.emergencycommunicationsystem.util.WeatherIconUtils
 import com.example.emergencycommunicationsystem.util.TextToSpeechHelper
@@ -765,7 +768,35 @@ fun ModernAlertsSection(
     onAlertClick: (Int) -> Unit,
     isDarkMode: Boolean
 ) {
-    val primaryColor = MaterialTheme.colorScheme.primary
+    val activeAlertsBg = if (isDarkMode) Color(0xFF0B1A15) else Color(0xFFCE9A9A)
+    val activeAlertsCardBg = if (isDarkMode) Color(0xFF10251E) else Color(0xFFDAFFE7)
+    val activeAlertsCardBorder = if (isDarkMode) Color(0xFF244237) else Color(0xFF8FB0A3)
+    val cardStroke = MaterialTheme.colorScheme.outline.copy(alpha = if (isDarkMode) 0.2f else 0.08f)
+    val gold = Color(0xFFF4C55E)
+    val deepNavy = Color(0xFF0B1E2D)
+    val ocean = Color(0xFF0E6B6A)
+    val headerBrush = Brush.linearGradient(
+        colors = listOf(
+            if (isDarkMode) Color(0xFF0D2B26) else Color(0xFF1D6E63),
+            if (isDarkMode) Color(0xFF10352F) else Color(0xFF207C70)
+        )
+    )
+    val ambientBrush = Brush.linearGradient(
+        colors = listOf(
+            if (isDarkMode) Color(0xFF081611) else Color(0xFFA8C3B8),
+            if (isDarkMode) Color(0xFF0B1F19) else Color(0xFF397C64)
+        )
+    )
+    val arrowPulse = rememberInfiniteTransition(label = "arrowPulse")
+    val arrowAlpha by arrowPulse.animateFloat(
+        initialValue = 0.55f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "arrowAlpha"
+    )
 
     when (alertsState) {
         is Resource.Loading -> {
@@ -776,92 +807,200 @@ fun ModernAlertsSection(
         is Resource.Success -> {
             val alertsWithDistance = alertsState.data
             if (alertsWithDistance.isNotEmpty()) {
+                val totalAlerts = alertsWithDistance.size
+                val highPriorityCount = alertsWithDistance.count { getAlertSeverity(it.alert) == "High" }
+                val alertsToShow = alertsWithDistance.take(5)
+
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 2.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = AppIcons.Alerts,
-                                contentDescription = null,
-                                tint = primaryColor,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = localizedStringResource(R.string.active_alerts_title),
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                        }
-                        
-                        Text(
-                            text = localizedStringResource(R.string.view_all),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Black,
-                            color = primaryColor.copy(alpha = 0.7f),
-                            modifier = Modifier.clickable { onAlertClick(0) }
-                        )
-                    }
-                    
-                    val alertsToShow = alertsWithDistance.take(5)
-                    val pagerState = rememberPagerState(pageCount = { alertsToShow.size })
-                    
-                    LaunchedEffect(pagerState, alertsToShow.size) {
-                        if (alertsToShow.size > 1) {
-                            while (true) {
-                                delay(4000)
-                                if (!pagerState.isScrollInProgress) {
-                                    val nextPage = (pagerState.currentPage + 1) % alertsToShow.size
-                                    pagerState.animateScrollToPage(nextPage)
-                                }
-                            }
-                        }
-                    }
-                    
-                    HorizontalPager(
-                        state = pagerState,
-                        contentPadding = PaddingValues(horizontal = 48.dp),
-                        pageSpacing = 16.dp,
-                        modifier = Modifier.fillMaxWidth()
-                    ) { page ->
-                        val alertWithDistance = alertsToShow[page]
-                        CompactAlertCard(
-                            alert = alertWithDistance.alert,
-                            distanceKm = alertWithDistance.distanceKm,
-                            severity = getAlertSeverity(alertWithDistance.alert),
-                            onClick = { onAlertClick(alertWithDistance.alert.id) }
-                        )
-                    }
-                    
-                    // Pagination Dots
-                    Row(
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 12.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
+                            .themeShadow(
+                                elevation = if (isDarkMode) 14.dp else 10.dp,
+                                shape = RoundedCornerShape(28.dp)
+                            ),
+                        shape = RoundedCornerShape(28.dp),
+                        colors = CardDefaults.cardColors(containerColor = activeAlertsBg),
+                        border = BorderStroke(1.dp, cardStroke)
                     ) {
-                        repeat(alertsToShow.size) { iteration ->
-                            val isSelected = pagerState.currentPage == iteration
-                            val width = if (isSelected) 24.dp else 8.dp
-                            val height = 8.dp
-                            val color = if (isSelected) primaryColor else primaryColor.copy(alpha = 0.3f)
-                            
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(ambientBrush)
+                                .padding(12.dp)
+                        ) {
                             Box(
                                 modifier = Modifier
-                                    .padding(horizontal = 4.dp)
-                                    .height(height)
-                                    .width(width)
-                                    .clip(CircleShape)
-                                    .background(color)
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(22.dp))
+                                    .background(headerBrush)
+                                    .padding(horizontal = 14.dp, vertical = 12.dp)
+                            ) {
+                                Column {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(36.dp)
+                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .background(gold.copy(alpha = 0.2f)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = AppIcons.Alerts,
+                                                    contentDescription = null,
+                                                    tint = gold,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(10.dp))
+                                            Column {
+                                                Text(
+                                                    text = localizedStringResource(R.string.active_alerts_title),
+                                                    fontSize = 16.sp,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    letterSpacing = (-0.2).sp,
+                                                    color = Color.White
+                                                )
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(5.dp)
+                                                            .clip(CircleShape)
+                                                            .background(Color(0xFF2ECC71))
+                                                    )
+                                                    Spacer(modifier = Modifier.width(5.dp))
+                                                    Text(
+                                                        text = "Live monitoring",
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        color = Color.White.copy(alpha = 0.9f)
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Surface(
+                                                color = gold.copy(alpha = 0.2f),
+                                                shape = RoundedCornerShape(999.dp),
+                                                border = BorderStroke(1.dp, gold.copy(alpha = 0.4f))
+                                            ) {
+                                                Text(
+                                                    text = "$totalAlerts active",
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Black,
+                                                    color = gold,
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Surface(
+                                                color = gold,
+                                                shape = RoundedCornerShape(10.dp),
+                                                modifier = Modifier.clickable { onAlertClick(0) }
+                                            ) {
+                                                Text(
+                                                    text = localizedStringResource(R.string.view_all),
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Black,
+                                                    color = deepNavy,
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    // Issued timestamp moved into each alert card
+                                }
+                            }
+
+                            if (highPriorityCount > 0) {
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    val highChipBg = if (isDarkMode) Color(0xFF3A1212) else Color(0xFFFFE5E5)
+                                    val highChipBorder = Color(0xFFE53935).copy(alpha = if (isDarkMode) 0.4f else 0.35f)
+                                    Surface(
+                                        color = highChipBg,
+                                        shape = RoundedCornerShape(10.dp),
+                                        border = BorderStroke(1.dp, highChipBorder)
+                                    ) {
+                                        Text(
+                                            text = "$highPriorityCount high priority",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFFE53935),
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                        )
+                                    }
+
+                                    Text(
+                                        text = "Priority feed",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.CenterEnd
+                            ) {
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    contentPadding = PaddingValues(start = 8.dp, end = 40.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    items(alertsToShow) { alertWithDistance ->
+                                        val issued = alertWithDistance.alert.timestamp?.let { formatAlertRelativeTime(it) }
+                                        CompactAlertCard(
+                                            alert = alertWithDistance.alert,
+                                            distanceKm = alertWithDistance.distanceKm,
+                                            severity = getAlertSeverity(alertWithDistance.alert),
+                                            issuedText = issued,
+                                            onClick = { onAlertClick(alertWithDistance.alert.id) },
+                                            containerColorOverride = activeAlertsCardBg,
+                                            borderColorOverride = activeAlertsCardBorder,
+                                            modifier = Modifier.width(280.dp)
+                                        )
+                                    }
+                                }
+                                
+                                // Centered vertically with the cards
+                                Text(
+                                    text = ">>>",
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = (if (isDarkMode) Color(0xFF00B0FF) else Color.Black).copy(alpha = arrowAlpha),
+                                    modifier = Modifier
+                                        .padding(end = 12.dp)
+                                        .graphicsLayer {
+                                            shadowElevation = 12f
+                                        }
+                                )
+                            }
+
+                            Text(
+                                text = "Swipe to browse",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White.copy(alpha = 0.9f),
+                                modifier = Modifier.padding(top = 10.dp, start = 8.dp)
                             )
                         }
                     }
@@ -905,6 +1044,43 @@ fun TypewriterText(
         fontSize = fontSize,
         lineHeight = lineHeight
     )
+}
+
+private fun formatAlertRelativeTime(timestamp: String): String {
+    return try {
+        val nowMillis = System.currentTimeMillis()
+        val alertMillis = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val odt = OffsetDateTime.parse(timestamp.replace(" ", "T") + "Z")
+            odt.toInstant().toEpochMilli()
+        } else {
+            val parser = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            parser.timeZone = TimeZone.getTimeZone("UTC")
+            val date = parser.parse(timestamp)
+            date?.time ?: nowMillis
+        }
+
+        val diffMillis = (nowMillis - alertMillis).coerceAtLeast(0L)
+        val minutes = (diffMillis / 60000L).toInt()
+        val hours = (diffMillis / 3600000L).toInt()
+        val days = (diffMillis / 86400000L).toInt()
+
+        when {
+            minutes < 1 -> "just now"
+            minutes < 60 -> "$minutes min${if (minutes == 1) "" else "s"} ago"
+            hours < 24 -> "$hours hr${if (hours == 1) "" else "s"} ago"
+            days < 7 -> "$days d ago"
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O -> {
+                val formatter = DateTimeFormatter.ofPattern("MMM d").withZone(ZoneId.systemDefault())
+                formatter.format(java.time.Instant.ofEpochMilli(alertMillis))
+            }
+            else -> {
+                val formatter = SimpleDateFormat("MMM d", Locale.getDefault())
+                formatter.format(Date(alertMillis))
+            }
+        }
+    } catch (e: Exception) {
+        "recently"
+    }
 }
 
 /**
