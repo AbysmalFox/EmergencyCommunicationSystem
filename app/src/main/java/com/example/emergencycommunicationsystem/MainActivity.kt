@@ -68,18 +68,12 @@ class MainActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Set locale early in onCreate
-        lifecycleScope.launch(Dispatchers.IO) {
-            val lang = UserPrefs.getLanguage(this@MainActivity).first()
-            val locale = LocaleManager.getLocaleFromCode(lang)
-            Locale.setDefault(locale)
-        }
+        enableEdgeToEdge()
 
-        Configuration.getInstance().userAgentValue = packageName
-
+        // Initialize system in background
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                AuthManager.initialize(applicationContext)
+                // Initialize ApiClient first as others might depend on it
                 ApiClient.initializeAndCheckConnection(applicationContext)
                 Log.i("MainActivity", "System initialization completed successfully.")
             } catch (e: Exception) {
@@ -87,7 +81,7 @@ class MainActivity : BaseActivity() {
             }
         }
         
-        enableEdgeToEdge()
+        Configuration.getInstance().userAgentValue = packageName
 
         setContent {
             val context = LocalContext.current
