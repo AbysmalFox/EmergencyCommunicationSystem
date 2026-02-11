@@ -6,6 +6,7 @@ import com.example.emergencycommunicationsystem.data.models.ConversationsListRes
 import com.example.emergencycommunicationsystem.data.models.Message
 import com.example.emergencycommunicationsystem.data.models.MessageResponse
 import com.example.emergencycommunicationsystem.data.models.MessagesResponse
+import com.google.gson.annotations.SerializedName
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -13,22 +14,22 @@ import retrofit2.http.Query
 
 // Data classes to represent the JSON request bodies
 data class CreateConversationRequest(
-    val user_id: String,
-    val user_name: String,
-    val user_email: String? = null,
-    val user_phone: String? = null,
-    val user_location: String? = null,
-    val user_concern: String? = null,
-    val is_guest: Int = 1,
-    val device_info: String? = null
+    @SerializedName("user_id") val user_id: String,
+    @SerializedName("user_name") val user_name: String,
+    @SerializedName("user_email") val user_email: String? = null,
+    @SerializedName("user_phone") val user_phone: String? = null,
+    @SerializedName("user_location") val user_location: String? = null,
+    @SerializedName("user_concern") val user_concern: String? = null,
+    @SerializedName("is_guest") val is_guest: Int = 1,
+    @SerializedName("device_info") val device_info: String? = null
 )
 
 data class SendMessageRequest(
-    val conversation_id: Int,
-    val sender_id: String,
-    val sender_name: String,
-    val sender_type: String,
-    val message_text: String
+    @SerializedName("conversation_id") val conversation_id: Int,
+    @SerializedName("sender_id") val sender_id: String,
+    @SerializedName("sender_name") val sender_name: String,
+    @SerializedName("sender_type") val sender_type: String,
+    @SerializedName("message_text") val message_text: String
 )
 
 interface MessagingApiService {

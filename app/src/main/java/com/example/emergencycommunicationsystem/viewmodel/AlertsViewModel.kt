@@ -50,6 +50,9 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
     private val _userLocation = MutableStateFlow<Pair<Double, Double>?>(null)
     
     private var loadAlertsJob: Job? = null
+    
+    private val _serverStatus = MutableStateFlow<String>("Unknown")
+    val serverStatus: StateFlow<String> = _serverStatus.asStateFlow()
 
     init {
         val database = AppDatabase.getDatabase(application)
@@ -59,6 +62,24 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
         )
         loadAlerts()
         checkActivePoll()
+        checkServerConnection()
+    }
+
+    fun checkServerConnection() {
+        viewModelScope.launch {
+            try {
+                // We'll use the repository to check connection
+                val userId = AuthManager.getUserId().takeIf { it > 0 }
+                val response = com.example.emergencycommunicationsystem.data.network.ApiClient.alertsApiService().getAlerts(userId)
+                if (response.isSuccessful) {
+                    _serverStatus.value = "Online"
+                } else {
+                    _serverStatus.value = "Error: ${response.code()}"
+                }
+            } catch (e: Exception) {
+                _serverStatus.value = "Offline: ${e.message}"
+            }
+        }
     }
 
     fun loadAlerts() {

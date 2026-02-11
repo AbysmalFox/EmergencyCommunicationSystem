@@ -122,6 +122,10 @@ dependencies {
     // Google Sign-In
     implementation("com.google.android.gms:play-services-auth:21.0.0")
     
+    // Firebase Cloud Messaging
+    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
+    implementation("com.google.firebase:firebase-messaging-ktx")
+    
     // Google ML Kit Translation
     implementation("com.google.mlkit:translate:17.0.2")
     

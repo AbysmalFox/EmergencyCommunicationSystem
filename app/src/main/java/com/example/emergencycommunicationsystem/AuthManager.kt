@@ -69,6 +69,25 @@ object AuthManager {
         
         _isLoggedIn.value = true
         userDataFlow.tryEmit(Unit)
+
+        // Fetch and upload FCM token on login
+        uploadFcmToken(userId)
+    }
+
+    private fun uploadFcmToken(userId: Int) {
+        com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val fcmToken = task.result
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    try {
+                        val apiService = com.example.emergencycommunicationsystem.data.network.ApiClient.settingsApiService()
+                        apiService.updateFcmToken(com.example.emergencycommunicationsystem.network.FcmTokenRequest(userId, fcmToken))
+                    } catch (e: Exception) {
+                        android.util.Log.e("AuthManager", "Failed to upload FCM token", e)
+                    }
+                }
+            }
+        }
     }
 
     fun saveProfilePic(uri: String) {

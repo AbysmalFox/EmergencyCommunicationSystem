@@ -4,33 +4,33 @@ import com.google.gson.annotations.SerializedName
 
 // Request for user registration
 data class RegisterRequest(
-    val name: String,
-    val email: String,
-    val phone: String,
-    val password: String,
+    @SerializedName("name") val name: String,
+    @SerializedName("email") val email: String,
+    @SerializedName("phone") val phone: String,
+    @SerializedName("password") val password: String,
     @SerializedName("share_location") val shareLocation: Boolean,
-    val latitude: Double? = null,
-    val longitude: Double? = null,
-    val address: String? = null
+    @SerializedName("latitude") val latitude: Double? = null,
+    @SerializedName("longitude") val longitude: Double? = null,
+    @SerializedName("address") val address: String? = null
 )
 
 // Request for user login
 data class LoginRequest(
-    val email: String? = null,
-    val phone: String? = null,
-    val password: String
+    @SerializedName("email") val email: String? = null,
+    @SerializedName("phone") val phone: String? = null,
+    @SerializedName("password") val password: String
 )
 
 // Generic response for auth operations (Register, Login)
 data class AuthResponse(
-    val success: Boolean,
-    val message: String,
+    @SerializedName("success") val success: Boolean,
+    @SerializedName("message") val message: String,
     @SerializedName("user_id") val userId: Int? = null,
-    val token: String? = null,
-    val username: String? = null,
-    val email: String? = null,
-    val phone: String? = null, // Added phone to the response
-    val user: User? = null
+    @SerializedName("token") val token: String? = null,
+    @SerializedName("username") val username: String? = null,
+    @SerializedName("email") val email: String? = null,
+    @SerializedName("phone") val phone: String? = null, // Added phone to the response
+    @SerializedName("user") val user: User? = null
 )
 
 // Request to get user-specific data
@@ -40,31 +40,31 @@ data class ProfileDataRequest(
 
 // Response containing user profile data
 data class ProfileDataResponse(
-    val success: Boolean,
-    val message: String,
-    val user: User? = null
+    @SerializedName("success") val success: Boolean,
+    @SerializedName("message") val message: String,
+    @SerializedName("user") val user: User? = null
 )
 
 // Represents a user object.
 data class User(
-    val name: String,
-    val email: String,
-    val phone: String? = null
+    @SerializedName("name") val name: String,
+    @SerializedName("email") val email: String,
+    @SerializedName("phone") val phone: String? = null
 )
 
 // Request to update user profile
 data class UpdateProfileRequest(
     @SerializedName("user_id") val userId: Int,
-    val username: String,
-    val email: String,
-    val phone: String
+    @SerializedName("username") val username: String,
+    @SerializedName("email") val email: String,
+    @SerializedName("phone") val phone: String
 )
 
 // Response for profile update
 data class UpdateProfileResponse(
-    val success: Boolean,
-    val message: String?,
-    val data: Any? = null
+    @SerializedName("success") val success: Boolean,
+    @SerializedName("message") val message: String?,
+    @SerializedName("data") val data: Any? = null
 )
 
 // Request for changing password
@@ -76,6 +76,6 @@ data class ChangePasswordRequest(
 
 // Response for changing password
 data class ChangePasswordResponse(
-    val success: Boolean,
-    val message: String
+    @SerializedName("success") val success: Boolean,
+    @SerializedName("message") val message: String
 )
