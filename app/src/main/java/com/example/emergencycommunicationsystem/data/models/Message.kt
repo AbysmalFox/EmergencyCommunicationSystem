@@ -3,32 +3,42 @@ package com.example.emergencycommunicationsystem.data.models
 import com.google.gson.annotations.SerializedName
 
 data class Message(
-    @SerializedName("id")
-    val id: Int,
+    @SerializedName("message_id")
+    val messageId: Int,
+
     @SerializedName("conversation_id")
     val conversationId: Int,
+
     @SerializedName("sender_id")
-    val senderId: Int,
+    val senderId: String,
 
-    @SerializedName("senderName")
-    val senderName: String?,
+    @SerializedName("sender_name")
+    val senderName: String,
 
-    @SerializedName("messageText")
-    val messageText: String?,
+    @SerializedName("sender_type")
+    val senderType: String, // 'user' or 'admin'
 
-    @SerializedName("sent_at")
-    val sentAt: String?,
+    @SerializedName("message_text")
+    val messageText: String,
 
-    @SerializedName("icon")
-    val icon: String? = null,
+    @SerializedName("ip_address")
+    val ipAddress: String?,
 
-    @SerializedName("nonce")
-    val nonce: String? = null
+    @SerializedName("device_info")
+    val deviceInfo: String?,
+
+    @SerializedName("is_read")
+    val isRead: Int,
+
+    @SerializedName("created_at")
+    val createdAt: String
 )
 
 data class MessageResponse(
     val success: Boolean,
-    val message: String
+    val message: String,
+    @SerializedName("data")
+    val data: Message? = null
 )
 
 data class MessagesResponse(

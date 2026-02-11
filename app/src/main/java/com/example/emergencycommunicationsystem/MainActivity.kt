@@ -168,7 +168,7 @@ fun EmergencyApp(
             return
         }
 
-        val userId = if (isLoggedIn) AuthManager.getUserId() else -1
+        val userId = if (isLoggedIn) AuthManager.getUserId().toString() else "guest_${System.currentTimeMillis()}"
         val userName = if (isLoggedIn) (username ?: "User") else "Guest"
         val encodedTitle = URLEncoder.encode(alertTitle, "UTF-8")
 
@@ -216,7 +216,7 @@ fun EmergencyApp(
                         weatherViewModel = weatherViewModel,
                         onMessageClick = { alertId, alertTitle ->
                             try {
-                                val userId = if (isLoggedIn) AuthManager.getUserId() else -1
+                                val userId = if (isLoggedIn) AuthManager.getUserId().toString() else "guest_${System.currentTimeMillis()}"
                                 val alertIdInt = alertId.toInt()
                                 val encodedTitle = URLEncoder.encode(alertTitle, "UTF-8")
                                 val userName = if (isLoggedIn) (username ?: "User") else "Guest"
@@ -358,12 +358,12 @@ fun EmergencyApp(
                     arguments = listOf(
                         navArgument("alertId") { type = NavType.IntType; defaultValue = -1 },
                         navArgument("alertTitle") { type = NavType.StringType; defaultValue = "" },
-                        navArgument("userId") { type = NavType.IntType; defaultValue = -1 },
+                        navArgument("userId") { type = NavType.StringType; defaultValue = "" },
                         navArgument("userName") { type = NavType.StringType; defaultValue = "" }
                     )
                 ) { backStackEntry ->
                     val alertId = backStackEntry.arguments?.getInt("alertId") ?: -1
-                    val userId = backStackEntry.arguments?.getInt("userId") ?: -1
+                    val userId = backStackEntry.arguments?.getString("userId") ?: ""
                     val alertTitle = URLDecoder.decode(backStackEntry.arguments?.getString("alertTitle") ?: "Chat", "UTF-8")
                     val userName = backStackEntry.arguments?.getString("userName") ?: "Guest"
                     

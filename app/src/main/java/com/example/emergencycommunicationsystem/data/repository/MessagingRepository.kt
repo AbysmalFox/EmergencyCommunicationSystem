@@ -10,14 +10,42 @@ import com.example.emergencycommunicationsystem.network.SendMessageRequest
 class MessagingRepository {
     private suspend fun apiService(): MessagingApiService = ApiClient.messagingApiService()
 
-    suspend fun createConversation(alertId: Int, userId: Int): Int {
-        val request = CreateConversationRequest(alert_id = alertId, user_id = userId)
+    suspend fun createConversation(
+        userId: String, 
+        userName: String,
+        userEmail: String? = null,
+        userPhone: String? = null,
+        userLocation: String? = null,
+        userConcern: String? = null,
+        isGuest: Boolean = true
+    ): Int {
+        val request = CreateConversationRequest(
+            user_id = userId,
+            user_name = userName,
+            user_email = userEmail,
+            user_phone = userPhone,
+            user_location = userLocation,
+            user_concern = userConcern,
+            is_guest = if (isGuest) 1 else 0
+        )
         val response = apiService().createConversation(request)
-        return response.conversation?.id ?: 0
+        return response.conversation?.conversationId ?: 0
     }
 
-    suspend fun sendMessage(conversationId: Int, userId: Int, messageText: String, nonce: String): Boolean {
-        val request = SendMessageRequest(conversation_id = conversationId, user_id = userId, content = messageText, nonce = nonce)
+    suspend fun sendMessage(
+        conversationId: Int, 
+        senderId: String, 
+        senderName: String,
+        senderType: String,
+        messageText: String
+    ): Boolean {
+        val request = SendMessageRequest(
+            conversation_id = conversationId,
+            sender_id = senderId,
+            sender_name = senderName,
+            sender_type = senderType,
+            message_text = messageText
+        )
         val response = apiService().sendMessage(request)
         return response.success
     }
@@ -31,7 +59,12 @@ class MessagingRepository {
         }
     }
 
-    suspend fun listConversations(alertId: Int): List<Conversation> {
-        return apiService().listConversations(alertId)
+    suspend fun listConversations(userId: String? = null, role: String? = null): List<Conversation> {
+        val response = apiService().listConversations(userId, role)
+        return if (response.success) {
+            response.conversations
+        } else {
+            emptyList()
+        }
     }
 }

@@ -143,7 +143,7 @@ fun MessagingScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 16.dp)
                     ) {
-                        items(messages, key = { it.id }) { message ->
+                        items(messages, key = { it.messageId }) { message ->
                             MessageBubble(
                                 message = message,
                                 isCurrentUser = message.senderId == viewModel.userId
@@ -300,29 +300,22 @@ fun MessageBubble(message: Message, isCurrentUser: Boolean) {
             Column {
                 if (!isCurrentUser) {
                     Text(
-                        text = message.senderName ?: "",
+                        text = message.senderName,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (isCurrentUser)
-                            MaterialTheme.colorScheme.onPrimary
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (message.icon != null && !isCurrentUser) {
-                        Text(text = message.icon)
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
                     Text(
-                        text = message.messageText ?: "",
+                        text = message.messageText,
                         color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = formatTime(message.sentAt ?: ""),
+                    text = formatTime(message.createdAt),
                     fontSize = 9.sp,
                     color = if (isCurrentUser)
                         MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
@@ -337,7 +330,11 @@ fun MessageBubble(message: Message, isCurrentUser: Boolean) {
 fun formatTime(timestamp: String): String {
     return try {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val odt = java.time.OffsetDateTime.parse(timestamp.replace(" ", "T") + "Z")
+            val odt = if (timestamp.contains("T")) {
+                java.time.OffsetDateTime.parse(timestamp)
+            } else {
+                java.time.LocalDateTime.parse(timestamp.replace(" ", "T")).atOffset(java.time.ZoneOffset.UTC)
+            }
             odt.format(DateTimeFormatter.ofPattern("h:mm a"))
         } else {
             val parser = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())

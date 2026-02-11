@@ -30,7 +30,7 @@ sealed class NavigationRequest {
 
 class MessagingViewModel(
     private val alertId: Int,
-    val userId: Int,
+    val userId: String, // Changed to String
     private val messagingRepository: MessagingRepository,
     private val alertTitle: String,
     private val currentLanguage: String = "en"
@@ -61,7 +61,7 @@ class MessagingViewModel(
     private val _navigationChannel = Channel<NavigationRequest>()
     val navigationChannel = _navigationChannel.receiveAsFlow()
 
-    private val isTemporaryChat = (alertId != 999) || (userId <= 0)
+    private val isTemporaryChat = (alertId != 999) || (userId.isEmpty() || userId == "0")
 
     init {
         if (isTemporaryChat) {
@@ -91,7 +91,7 @@ class MessagingViewModel(
             "contact_responder" -> {
                 viewModelScope.launch { 
                     _navigationChannel.send(NavigationRequest.ToPersistentChat) 
-                    val userMessage = createUserMessage(text)
+                    val userMessage = createUserMessage(text, "User")
                     _messages.value += userMessage
                     _quickReplies.value = emptyList()
                     delay(600)
@@ -103,7 +103,7 @@ class MessagingViewModel(
             "emergency_contacts" -> {
                 viewModelScope.launch { 
                     _navigationChannel.send(NavigationRequest.ToEmergencyContacts) 
-                    val userMessage = createUserMessage(text)
+                    val userMessage = createUserMessage(text, "User")
                     _messages.value += userMessage
                     _quickReplies.value = emptyList()
                     delay(600)
@@ -120,7 +120,7 @@ class MessagingViewModel(
     fun sendTemporaryMessage(text: String) {
         if (text.isBlank()) return
 
-        val userMessage = createUserMessage(text)
+        val userMessage = createUserMessage(text, "User")
         _messages.value += userMessage
         _messageInput.value = ""
         _quickReplies.value = emptyList()
@@ -134,7 +134,6 @@ class MessagingViewModel(
     }
 
     private suspend fun getTemporaryBotResponse(userMessage: String): String {
-        // Translate user message to English for logic matching
         val englishMsg = TranslationService.translate(userMessage, "en", currentLanguage).lowercase()
 
         val response = when {
@@ -169,7 +168,7 @@ class MessagingViewModel(
         val options = listOf(
             QuickReply("What to do?", "what_to_do", "📋"),
             QuickReply("What is this disaster?", "disaster", "🔎"),
-            QuickReply("When was this issued?", "issued", "🕒"),
+            QuickReply("When was this issued?", "disaster_time", "🕒"),
             QuickReply("What is the source?", "source", "📰"),
             QuickReply("I need assistance", "assistance", "🆘"),
             QuickReply("Contact a responder", "contact_responder", "💬"),
@@ -180,8 +179,32 @@ class MessagingViewModel(
         }
     }
 
-    private fun createBotMessage(text: String) = Message(-Random.nextInt(), 0, 0, "Auto-Reply Bot", text, getCurrentTimestamp(), null)
-    private fun createUserMessage(text: String) = Message(-Random.nextInt(), 0, userId, "You", text, getCurrentTimestamp(), null)
+    private fun createBotMessage(text: String) = Message(
+        messageId = -Random.nextInt(1, 1000000),
+        conversationId = _conversationId.value ?: 0,
+        senderId = "0",
+        senderName = "Auto-Reply Bot",
+        senderType = "admin",
+        messageText = text,
+        ipAddress = null,
+        deviceInfo = null,
+        isRead = 1,
+        createdAt = getCurrentTimestamp()
+    )
+
+    private fun createUserMessage(text: String, userName: String) = Message(
+        messageId = -Random.nextInt(1, 1000000),
+        conversationId = _conversationId.value ?: 0,
+        senderId = userId,
+        senderName = userName,
+        senderType = "user",
+        messageText = text,
+        ipAddress = null,
+        deviceInfo = null,
+        isRead = 1,
+        createdAt = getCurrentTimestamp()
+    )
+
     private fun getCurrentTimestamp(): String = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
 
     // --- Persistent Chat Logic ---
@@ -190,10 +213,18 @@ class MessagingViewModel(
             _isLoading.value = true
             _errorMessage.value = null
             try {
-                val convId = messagingRepository.createConversation(alertId, userId)
+                // For persistent chat, we use a default user name if not provided elsewhere
+                val convId = messagingRepository.createConversation(
+                    userId = userId,
+                    userName = "User $userId", 
+                    userConcern = alertTitle,
+                    isGuest = userId.startsWith("guest")
+                )
                 if (convId > 0) {
+                    _conversationId.value = convId
                     loadInitialMessages(convId)
                     startPolling(convId)
+                    _quickReplies.value = getInitialOptions()
                 } else {
                     throw Exception("Failed to create or retrieve a valid conversation.")
                 }
@@ -209,7 +240,7 @@ class MessagingViewModel(
         viewModelScope.launch {
             try {
                 val history = messagingRepository.fetchMessages(conversationId, 0)
-                _messages.value = history.sortedBy { it.id }
+                _messages.value = history.sortedBy { it.messageId }
             } catch (_: Exception) {
                 _errorMessage.value = "Failed to load message history."
             }
@@ -222,14 +253,14 @@ class MessagingViewModel(
             while (isActive) {
                 delay(3000)
                 try {
-                    val lastId = _messages.value.filter { it.id > 0 }.maxOfOrNull { it.id } ?: 0
+                    val lastId = _messages.value.filter { it.messageId > 0 }.maxOfOrNull { it.messageId } ?: 0
                     val newMessages = messagingRepository.fetchMessages(conversationId, lastId)
 
                     if (newMessages.isNotEmpty()) {
                         val currentMessages = _messages.value.toMutableList()
-                        currentMessages.removeAll { it.id < 0 }
+                        currentMessages.removeAll { it.messageId < 0 } // Remove optimistic messages
                         currentMessages.addAll(newMessages)
-                        _messages.value = currentMessages.distinctBy { it.id }.sortedBy { it.id }
+                        _messages.value = currentMessages.distinctBy { it.messageId }.sortedBy { it.messageId }
                     }
                 } catch (e: Exception) {
                     Log.e("MessagingViewModel", "Polling failed: ${e.message}")
@@ -244,22 +275,12 @@ class MessagingViewModel(
     }
 
     fun sendPersistentMessage(userName: String) {
-        if (_conversationId.value == null) return
-        
+        val convId = _conversationId.value ?: return
         if (messageInput.value.isBlank()) return
 
-        val tempId = Random.nextInt(Int.MIN_VALUE, 0)
         val text = messageInput.value
-        val nonce = UUID.randomUUID().toString()
-        val optimisticMessage = Message(
-            tempId,
-            0, // Temporary placeholder
-            userId,
-            userName,
-            text,
-            SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()),
-            nonce = nonce
-        )
+        val optimisticMessage = createUserMessage(text, userName)
+        val tempId = optimisticMessage.messageId
 
         _messageInput.value = ""
         _messages.value += optimisticMessage
@@ -267,40 +288,49 @@ class MessagingViewModel(
 
         viewModelScope.launch {
             try {
-                // messagingRepository.sendMessage(convId, userId, text, nonce)
+                _isSending.value = true
+                val success = messagingRepository.sendMessage(
+                    conversationId = convId,
+                    senderId = userId,
+                    senderName = userName,
+                    senderType = "user",
+                    messageText = text
+                )
+                if (!success) throw Exception("Failed to send")
             } catch (_: Exception) {
                 _errorMessage.value = "Failed to send message."
-                _messages.value = _messages.value.filterNot { it.id == tempId }
+                _messages.value = _messages.value.filterNot { it.messageId == tempId }
                 _messageInput.value = text
+            } finally {
+                _isSending.value = false
             }
         }
     }
 
     fun onPersistentQuickReplyClicked(reply: QuickReply, userName: String) {
+        val convId = _conversationId.value ?: return
         val replyText = reply.text ?: return
         val payload = reply.payload
 
-        val tempId = Random.nextInt(Int.MIN_VALUE, 0)
-        val nonce = UUID.randomUUID().toString()
-        val optimisticMessage = Message(
-            id = tempId,
-            conversationId = 0,
-            senderId = userId,
-            senderName = userName,
-            messageText = replyText,
-            sentAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()),
-            nonce = nonce
-        )
+        val optimisticMessage = createUserMessage(replyText, userName)
+        val tempId = optimisticMessage.messageId
+        
         _messages.value += optimisticMessage
         _quickReplies.value = emptyList()
 
         viewModelScope.launch {
             try {
-                // messagingRepository.sendMessage(convId, userId, replyText, nonce)
+                messagingRepository.sendMessage(
+                    conversationId = convId,
+                    senderId = userId,
+                    senderName = userName,
+                    senderType = "user",
+                    messageText = replyText
+                )
                 handleBotLogic(payload)
             } catch (_: Exception) {
                 _errorMessage.value = "Failed to send message."
-                _messages.value = _messages.value.filterNot { it.id == tempId }
+                _messages.value = _messages.value.filterNot { it.messageId == tempId }
                 _quickReplies.value = getInitialOptions()
             }
         }
@@ -308,22 +338,11 @@ class MessagingViewModel(
 
     private suspend fun handleBotLogic(payload: String?) {
         payload ?: return
-
         delay(750)
 
         val (responseText, newReplies) = getBotResponse(payload)
-
-        // Translate the bot response text
         val translatedResponse = TranslationService.translate(responseText, currentLanguage)
-
-        val botMessage = Message(
-            id = Random.nextInt(Int.MIN_VALUE, 0),
-            conversationId = 0,
-            senderId = 0,
-            senderName = "Auto-Reply Bot",
-            messageText = translatedResponse,
-            sentAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
-        )
+        val botMessage = createBotMessage(translatedResponse)
 
         _messages.value += botMessage
         _quickReplies.value = newReplies
@@ -371,7 +390,7 @@ class MessagingViewModel(
 
 class MessagingViewModelFactory(
     private val alertId: Int,
-    private val userId: Int,
+    private val userId: String, // Changed to String
     private val alertTitle: String,
     private val repository: MessagingRepository,
     private val currentLanguage: String
