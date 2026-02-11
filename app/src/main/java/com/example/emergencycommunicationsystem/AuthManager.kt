@@ -21,6 +21,7 @@ object AuthManager {
     private const val KEY_TOKEN = "auth_token"
 
     private lateinit var sharedPrefs: SharedPreferences
+    private lateinit var appContext: Context
     private val authRepository = AuthRepository()
 
     private val _isLoggedIn = MutableStateFlow(false)
@@ -42,6 +43,7 @@ object AuthManager {
     val userDataFlow = MutableSharedFlow<Unit>(replay = 1)
 
     fun initialize(context: Context) {
+        appContext = context.applicationContext
         sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val loggedIn = sharedPrefs.getBoolean(KEY_IS_LOGGED_IN, false)
         _isLoggedIn.value = loggedIn
@@ -81,10 +83,12 @@ object AuthManager {
         com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 val fcmToken = task.result
-                CoroutineScope(Dispatchers.IO).launch {
+                val deviceId = android.provider.Settings.Secure.getString(appContext.contentResolver, android.provider.Settings.Secure.ANDROID_ID)
+                
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
                     try {
                         val apiService = com.example.emergencycommunicationsystem.data.network.ApiClient.settingsApiService()
-                        apiService.updateFcmToken(com.example.emergencycommunicationsystem.network.FcmTokenRequest(userId, fcmToken))
+                        apiService.updateFcmToken(com.example.emergencycommunicationsystem.network.FcmTokenRequest(userId, deviceId, fcmToken))
                     } catch (e: Exception) {
                         android.util.Log.e("AuthManager", "Failed to upload FCM token", e)
                     }

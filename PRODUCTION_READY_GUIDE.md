@@ -42,33 +42,28 @@ The backend must store device tokens and trigger the "Push" signal.
 - [x] **Store FCM Tokens:** `fcm_token` column added to the `users` table.
 - [x] **Token Update Script:** `update_fcm_token.php` created on Hostinger.
 - [x] **Topic Subscription:** App now automatically subscribes to the `emergency-room` topic in `MainActivity.kt`.
-- [ ] **Notification Trigger:** In your `create_alert.php` (or similar), add the logic to send a request to the Firebase Cloud Messaging API when a new alert is posted.
-
-### Recommended PHP Logic for sending Push:
-Use the FCM v1 API to send to the `emergency-room` topic:
-```php
-// Example Payload
-$message = [
-    "message" => [
-        "topic" => "emergency-room",
-        "data" => [
-            "title" => "FIRE ALERT",
-            "body" => "Fire reported in Barangay 123",
-            "category" => "fire"
-        ]
-    ]
-];
-```
+- [x] **User-Admin Messaging:** Verified Kotlin `MessagingApiService` matches backend scripts in `api/conversations/` and `api/messages/`.
+- [ ] **Notification Trigger:** Admin-side `create_alert.php` (or similar) needs to trigger the FCM V1 signal to the `emergency-room` topic.
 
 ---
 
-## 5. Summary Checklist
+## 6. Local Testing Configuration [UPDATED ✅]
+To ensure connectivity during local development on physical devices:
+- **Local IP:** Updated to `192.168.1.9` (as of Feb 12, 2026).
+- **Files updated:** `NetworkConfig.kt` and `network_security_config.xml`.
+- **Note:** Always verify your current computer IP via `ipconfig` if the app fails to connect to the local server.
+
+---
+
+## 7. Summary Checklist
 - [x] ProGuard rules updated (Gemini)
 - [x] Network DTOs annotated (Gemini)
 - [x] Add Firebase Messaging dependency (Gemini)
 - [x] Implement `FirebaseMessagingService` (Gemini)
 - [x] Automatic FCM Token upload logic (Gemini)
 - [x] Global Topic Subscription (Gemini)
+- [x] Local IP Synchronization (`192.168.1.9`) (Gemini)
+- [x] Messaging API Verification (Gemini)
 - [x] Backend `fcm_token` column and `update_fcm_token.php` (User)
 - [ ] Register Release SHA-1 in Firebase Console (User)
-- [ ] Update PHP backend to send FCM triggers (User)
+- [ ] Update Admin PHP backend to send FCM triggers (User)

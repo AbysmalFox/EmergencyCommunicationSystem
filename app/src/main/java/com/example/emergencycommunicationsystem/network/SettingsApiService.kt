@@ -13,6 +13,7 @@ import retrofit2.http.Query
 
 data class FcmTokenRequest(
     @SerializedName("user_id") val userId: Int,
+    @SerializedName("device_id") val deviceId: String,
     @SerializedName("fcm_token") val fcmToken: String
 )
 

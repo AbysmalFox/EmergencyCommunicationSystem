@@ -69,10 +69,11 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     private fun sendTokenToServer(userId: Int, token: String) {
+        val deviceId = android.provider.Settings.Secure.getString(contentResolver, android.provider.Settings.Secure.ANDROID_ID)
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val apiService = com.example.emergencycommunicationsystem.data.network.ApiClient.settingsApiService()
-                val request = com.example.emergencycommunicationsystem.network.FcmTokenRequest(userId, token)
+                val request = com.example.emergencycommunicationsystem.network.FcmTokenRequest(userId, deviceId, token)
                 val response = apiService.updateFcmToken(request)
                 if (response.isSuccessful) {
                     Log.d(TAG, "Token successfully sent to server")
