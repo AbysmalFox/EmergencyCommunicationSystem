@@ -60,6 +60,8 @@ object AppIcons {
     val AccountCircle: ImageVector = Icons.Filled.AccountCircle
     
     // Additional Icons
+    val VideoCall: ImageVector = Icons.Filled.VideoCall
+    val AttachFile: ImageVector = Icons.Filled.AttachFile
     val Language: ImageVector = Icons.Filled.Language
     val ArrowBack: ImageVector = Icons.AutoMirrored.Filled.ArrowBack
     val AddPhoto: ImageVector = Icons.Filled.AddAPhoto

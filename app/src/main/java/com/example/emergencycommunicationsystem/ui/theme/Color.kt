@@ -31,6 +31,17 @@ val StatusInfo = Color(0xFF17A2B8) // Added back to fix compilation error
 val SafetyOrange = Color(0xFFFF7D00)
 val SoftShadow = Color(0x1A000000)
 
+// High-fidelity Chat UI Brand Theme (Teal/Green)
+val ChatBrandTeal = Color(0xFF00897B)
+val ChatBrandMint = Color(0xFFD1EAE5)
+val ChatIncomingBubbleLight = Color(0xFFE0F2F1)
+val ChatIncomingBubbleDark = Color(0xFF004D40)
+val ChatOutgoingBubbleLight = Color(0xFF00897B)
+val ChatOutgoingBubbleDark = Color(0xFF00796B)
+val ChatHeaderTeal = Color(0xFF004D40)
+val ChatFooterMintLight = Color(0xFFE0F2F1)
+val ChatFooterMintDark = Color(0xFF121212)
+
 // Required legacy references
 val EmergencyRedMain = Color(0xFFE31B23)
 val EmergencyRedLight = Color(0xFFFF4D4D)
