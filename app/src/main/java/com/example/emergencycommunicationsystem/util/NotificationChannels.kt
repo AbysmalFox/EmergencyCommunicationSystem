@@ -14,7 +14,7 @@ object NotificationChannels {
 
     fun createNotificationChannels(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
 
             // Define custom sounds (assuming raw resources exist, otherwise using system defaults)
             // Ideally, you would have files like res/raw/siren.mp3, res/raw/rumble.mp3, etc.

@@ -48,9 +48,9 @@ abstract class BaseActivity : ComponentActivity() {
 
     protected fun setupMagnifier() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return
-        if (bubble != null) return
+        if (bubble != null || isFinishing || isDestroyed) return
 
-        val root = window.decorView.findViewById<ViewGroup>(android.R.id.content)
+        val root = window.decorView.findViewById<ViewGroup>(android.R.id.content) ?: return
         
         val container = object : FrameLayout(this) {
             override fun performClick(): Boolean {
@@ -74,8 +74,11 @@ abstract class BaseActivity : ComponentActivity() {
         bubble = container
 
         root.post {
-            container.x = (root.width - bubbleSize).toFloat()
-            container.y = (root.height / 2 - bubbleSize / 2).toFloat()
+            // Check if activity is still valid and bubble is still attached
+            if (!isFinishing && !isDestroyed && container.parent != null) {
+                container.x = (root.width - bubbleSize).toFloat()
+                container.y = (root.height / 2 - bubbleSize / 2).toFloat()
+            }
         }
 
         // Window size for the magnifier
