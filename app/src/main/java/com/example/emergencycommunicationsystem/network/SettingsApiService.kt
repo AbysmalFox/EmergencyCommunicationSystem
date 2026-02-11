@@ -4,6 +4,7 @@ import com.example.emergencycommunicationsystem.data.LocationUpdateRequest
 import com.example.emergencycommunicationsystem.data.LocationUpdateResponse
 import com.example.emergencycommunicationsystem.data.SubscriptionSettingsResponse
 import com.example.emergencycommunicationsystem.data.UpdateSubscriptionRequest
+import com.google.gson.annotations.SerializedName
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET

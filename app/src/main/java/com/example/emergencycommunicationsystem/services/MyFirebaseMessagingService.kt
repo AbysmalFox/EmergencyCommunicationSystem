@@ -8,6 +8,9 @@ import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.util.NotificationChannels
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
@@ -66,7 +69,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     private fun sendTokenToServer(userId: Int, token: String) {
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             try {
                 val apiService = com.example.emergencycommunicationsystem.data.network.ApiClient.settingsApiService()
                 val request = com.example.emergencycommunicationsystem.network.FcmTokenRequest(userId, token)

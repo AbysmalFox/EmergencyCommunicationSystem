@@ -3,9 +3,12 @@ package com.example.emergencycommunicationsystem
 import android.content.Context
 import android.content.SharedPreferences
 import com.example.emergencycommunicationsystem.data.repository.AuthRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 object AuthManager {
     private const val PREFS_NAME = "auth_prefs"
@@ -78,7 +81,7 @@ object AuthManager {
         com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 val fcmToken = task.result
-                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                CoroutineScope(Dispatchers.IO).launch {
                     try {
                         val apiService = com.example.emergencycommunicationsystem.data.network.ApiClient.settingsApiService()
                         apiService.updateFcmToken(com.example.emergencycommunicationsystem.network.FcmTokenRequest(userId, fcmToken))
