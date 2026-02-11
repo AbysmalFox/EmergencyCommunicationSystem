@@ -1018,21 +1018,12 @@ fun ModernAlertsSection(
                                 }
                                 
                                 // Refined scrolling indicator - modern alternative to ">>>"
-                                Surface(
+                                Row(
                                     modifier = Modifier
-                                        .padding(end = 12.dp)
-                                        .graphicsLayer {
-                                            shadowElevation = 12f
-                                        },
-                                    color = if (isDarkMode) Color.Black.copy(alpha = 0.4f) else Color.White.copy(alpha = 0.7f),
-                                    shape = RoundedCornerShape(12.dp),
-                                    border = BorderStroke(0.5.dp, (if (isDarkMode) Color.White else Color.Black).copy(alpha = 0.15f))
+                                        .padding(end = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy((-11).dp)
                                 ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy((-11).dp)
-                                    ) {
                                         Icon(
                                             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                             contentDescription = null,
@@ -1051,7 +1042,6 @@ fun ModernAlertsSection(
                                             tint = (if (isDarkMode) Color(0xFF00B0FF) else Color.Black).copy(alpha = alpha3),
                                             modifier = Modifier.size(22.dp)
                                         )
-                                    }
                                 }
                             }
 
