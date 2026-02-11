@@ -30,7 +30,10 @@ sealed class NavigationRequest {
 
 class MessagingViewModel(
     private val alertId: Int,
-    val userId: String, // Changed to String
+    val userId: String,
+    private val userName: String,
+    private val userEmail: String? = null,
+    private val userPhone: String? = null,
     private val messagingRepository: MessagingRepository,
     private val alertTitle: String,
     private val currentLanguage: String = "en"
@@ -213,12 +216,16 @@ class MessagingViewModel(
             _isLoading.value = true
             _errorMessage.value = null
             try {
-                // For persistent chat, we use a default user name if not provided elsewhere
+                val deviceInfo = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
+                Log.d("MessagingViewModel", "Initializing persistent chat: userId=$userId, userName=$userName, email=$userEmail")
                 val convId = messagingRepository.createConversation(
                     userId = userId,
-                    userName = "User $userId", 
+                    userName = userName,
+                    userEmail = userEmail,
+                    userPhone = userPhone,
                     userConcern = alertTitle,
-                    isGuest = userId.startsWith("guest")
+                    isGuest = userId.startsWith("guest"),
+                    deviceInfo = deviceInfo
                 )
                 if (convId > 0) {
                     _conversationId.value = convId
@@ -279,6 +286,7 @@ class MessagingViewModel(
         if (messageInput.value.isBlank()) return
 
         val text = messageInput.value
+        // Use the userName passed from UI (which should be "Kim E. Sis")
         val optimisticMessage = createUserMessage(text, userName)
         val tempId = optimisticMessage.messageId
 
@@ -289,6 +297,7 @@ class MessagingViewModel(
         viewModelScope.launch {
             try {
                 _isSending.value = true
+                Log.d("MessagingViewModel", "Sending to API: convId=$convId, senderId=$userId, name=$userName, text=$text")
                 val success = messagingRepository.sendMessage(
                     conversationId = convId,
                     senderId = userId,
@@ -390,7 +399,10 @@ class MessagingViewModel(
 
 class MessagingViewModelFactory(
     private val alertId: Int,
-    private val userId: String, // Changed to String
+    private val userId: String,
+    private val userName: String,
+    private val userEmail: String? = null,
+    private val userPhone: String? = null,
     private val alertTitle: String,
     private val repository: MessagingRepository,
     private val currentLanguage: String
@@ -401,6 +413,9 @@ class MessagingViewModelFactory(
             return MessagingViewModel(
                 alertId = alertId,
                 userId = userId,
+                userName = userName,
+                userEmail = userEmail,
+                userPhone = userPhone,
                 alertTitle = alertTitle,
                 messagingRepository = repository,
                 currentLanguage = currentLanguage

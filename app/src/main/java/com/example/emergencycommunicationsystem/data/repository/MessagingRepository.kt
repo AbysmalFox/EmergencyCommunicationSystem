@@ -17,7 +17,8 @@ class MessagingRepository {
         userPhone: String? = null,
         userLocation: String? = null,
         userConcern: String? = null,
-        isGuest: Boolean = true
+        isGuest: Boolean = true,
+        deviceInfo: String? = null
     ): Int {
         val request = CreateConversationRequest(
             user_id = userId,
@@ -26,7 +27,8 @@ class MessagingRepository {
             user_phone = userPhone,
             user_location = userLocation,
             user_concern = userConcern,
-            is_guest = if (isGuest) 1 else 0
+            is_guest = if (isGuest) 1 else 0,
+            device_info = deviceInfo
         )
         val response = apiService().createConversation(request)
         return response.conversation?.conversationId ?: 0

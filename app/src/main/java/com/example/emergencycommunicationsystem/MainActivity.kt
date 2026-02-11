@@ -170,10 +170,15 @@ fun EmergencyApp(
 
         val userId = if (isLoggedIn) AuthManager.getUserId().toString() else "guest_${System.currentTimeMillis()}"
         val userName = if (isLoggedIn) (username ?: "User") else "Guest"
+        val userEmail = if (isLoggedIn) (email ?: "") else ""
+        val userPhone = if (isLoggedIn) (phone ?: "") else ""
         val encodedTitle = URLEncoder.encode(alertTitle, "UTF-8")
+        val encodedName = URLEncoder.encode(userName, "UTF-8")
+        val encodedEmail = URLEncoder.encode(userEmail, "UTF-8")
+        val encodedPhone = URLEncoder.encode(userPhone, "UTF-8")
 
         navController.navigate(
-            "${Screen.Messaging.route}?alertId=$alertId&alertTitle=$encodedTitle&userId=$userId&userName=$userName"
+            "${Screen.Messaging.route}?alertId=$alertId&alertTitle=$encodedTitle&userId=$userId&userName=$encodedName&userEmail=$encodedEmail&userPhone=$encodedPhone"
         )
     }
 
@@ -220,7 +225,14 @@ fun EmergencyApp(
                                 val alertIdInt = alertId.toInt()
                                 val encodedTitle = URLEncoder.encode(alertTitle, "UTF-8")
                                 val userName = if (isLoggedIn) (username ?: "User") else "Guest"
-                                navController.navigate("${Screen.Messaging.route}?alertId=$alertIdInt&alertTitle=$encodedTitle&userId=$userId&userName=$userName")
+                                val userEmail = if (isLoggedIn) (email ?: "") else ""
+                                val userPhone = if (isLoggedIn) (phone ?: "") else ""
+                                
+                                val encodedName = URLEncoder.encode(userName, "UTF-8")
+                                val encodedEmail = URLEncoder.encode(userEmail, "UTF-8")
+                                val encodedPhone = URLEncoder.encode(userPhone, "UTF-8")
+                                
+                                navController.navigate("${Screen.Messaging.route}?alertId=$alertIdInt&alertTitle=$encodedTitle&userId=$userId&userName=$encodedName&userEmail=$encodedEmail&userPhone=$encodedPhone")
                             } catch (e: Exception) {
                                 Log.e("NavigationError", "Error navigating to messaging", e)
                             }
@@ -354,23 +366,36 @@ fun EmergencyApp(
                     AboutAppScreen(onBackPressed = { navController.popBackStack() })
                 }
                 composable(
-                    "${Screen.Messaging.route}?alertId={alertId}&alertTitle={alertTitle}&userId={userId}&userName={userName}",
+                    "${Screen.Messaging.route}?alertId={alertId}&alertTitle={alertTitle}&userId={userId}&userName={userName}&userEmail={userEmail}&userPhone={userPhone}",
                     arguments = listOf(
                         navArgument("alertId") { type = NavType.IntType; defaultValue = -1 },
                         navArgument("alertTitle") { type = NavType.StringType; defaultValue = "" },
                         navArgument("userId") { type = NavType.StringType; defaultValue = "" },
-                        navArgument("userName") { type = NavType.StringType; defaultValue = "" }
+                        navArgument("userName") { type = NavType.StringType; defaultValue = "" },
+                        navArgument("userEmail") { type = NavType.StringType; defaultValue = "" },
+                        navArgument("userPhone") { type = NavType.StringType; defaultValue = "" }
                     )
                 ) { backStackEntry ->
                     val alertId = backStackEntry.arguments?.getInt("alertId") ?: -1
                     val userId = backStackEntry.arguments?.getString("userId") ?: ""
                     val alertTitle = URLDecoder.decode(backStackEntry.arguments?.getString("alertTitle") ?: "Chat", "UTF-8")
-                    val userName = backStackEntry.arguments?.getString("userName") ?: "Guest"
+                    val userName = URLDecoder.decode(backStackEntry.arguments?.getString("userName") ?: "Guest", "UTF-8")
+                    val userEmail = URLDecoder.decode(backStackEntry.arguments?.getString("userEmail") ?: "", "UTF-8")
+                    val userPhone = URLDecoder.decode(backStackEntry.arguments?.getString("userPhone") ?: "", "UTF-8")
                     
                     val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
 
                     if (alertId > 0) {
-                        val factory = MessagingViewModelFactory(alertId, userId, alertTitle, messagingRepository, currentLanguage)
+                        val factory = MessagingViewModelFactory(
+                            alertId = alertId,
+                            userId = userId,
+                            userName = userName,
+                            userEmail = userEmail.ifEmpty { null },
+                            userPhone = userPhone.ifEmpty { null },
+                            alertTitle = alertTitle,
+                            repository = messagingRepository,
+                            currentLanguage = currentLanguage
+                        )
                         val messagingViewModel: MessagingViewModel = viewModel(key = "messaging_${alertId}_$currentLanguage", factory = factory)
 
                         MessagingScreen(
