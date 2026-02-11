@@ -2,7 +2,6 @@ package com.example.emergencycommunicationsystem.ui.screens
 
 import android.os.Build
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,12 +47,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.data.models.Message
-import com.example.emergencycommunicationsystem.ui.theme.ChatBrandTeal
 import com.example.emergencycommunicationsystem.ui.theme.ChatHeaderTeal
-import com.example.emergencycommunicationsystem.ui.theme.ChatIncomingBubbleDark
 import com.example.emergencycommunicationsystem.ui.theme.ChatIncomingBubbleLight
-import com.example.emergencycommunicationsystem.ui.theme.ChatBrandMint
-import com.example.emergencycommunicationsystem.ui.theme.ChatOutgoingBubbleDark
+import com.example.emergencycommunicationsystem.ui.theme.ChatFooterMintLight
 import com.example.emergencycommunicationsystem.ui.theme.ChatOutgoingBubbleLight
 import kotlinx.coroutines.flow.collectLatest
 import java.text.SimpleDateFormat
@@ -80,7 +76,6 @@ fun MessagingScreen(
     val isSending by viewModel.isSending.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
-    val isDarkTheme = isSystemInDarkTheme()
 
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
@@ -109,27 +104,26 @@ fun MessagingScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = if (isDarkTheme) Color(0xFF121212) else Color.White
+        containerColor = Color.White
     ) { padding ->
-        // Use a Box without scaffold padding to allow the header to go under the status bar
         Box(
             modifier = Modifier.fillMaxSize()
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Curved Header - Removing top white space by ignoring Scaffold padding
+                // Curved Header
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(130.dp), // Slightly reduced height
+                        .height(120.dp), 
                     color = ChatHeaderTeal,
                     shape = CurvedHeaderShape()
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxSize()
-                            .statusBarsPadding() // Adds internal padding for icons but keeps background at top
+                            .statusBarsPadding()
                             .padding(horizontal = 16.dp)
-                            .padding(top = 0.dp, bottom = 25.dp), // Content moved higher by reducing top and increasing bottom padding
+                            .padding(bottom = 8.dp), 
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(onClick = onBackPressed) {
@@ -178,22 +172,43 @@ fun MessagingScreen(
 
                 if (isLoading && messages.isEmpty()) {
                     Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = ChatBrandTeal)
+                        CircularProgressIndicator(color = ChatHeaderTeal)
                     }
                 } else {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 8.dp, bottom = 16.dp)
-                    ) {
-                        items(messages, key = { it.messageId }) { message ->
-                            MessageBubble(
-                                message = message,
-                                isCurrentUser = message.senderId == viewModel.userId
-                            )
+                    if (messages.isEmpty()) {
+                        Box(
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    imageVector = AppIcons.Chat, 
+                                    contentDescription = null, 
+                                    tint = Color.LightGray,
+                                    modifier = Modifier.size(64.dp)
+                                )
+                                Text(
+                                    text = "No messages yet. Say hi!",
+                                    color = Color.Gray,
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 8.dp, bottom = 16.dp)
+                        ) {
+                            items(messages, key = { it.messageId }) { message ->
+                                MessageBubble(
+                                    message = message,
+                                    isCurrentUser = message.senderId == viewModel.userId
+                                )
+                            }
                         }
                     }
                 }
@@ -202,18 +217,18 @@ fun MessagingScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(115.dp) // Height includes navigation bar area
+                        .height(115.dp)
                 ) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
-                        color = if (isDarkTheme) Color(0xFF1E1E1E) else ChatBrandMint,
+                        color = ChatFooterMintLight,
                         shape = CurvedFooterShape()
                     ) {
                         if (alertId == 999) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .navigationBarsPadding() // Background stays at bottom, content is padded
+                                    .navigationBarsPadding()
                                     .padding(horizontal = 16.dp)
                                     .padding(top = 10.dp, bottom = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -223,7 +238,7 @@ fun MessagingScreen(
                                     Icon(
                                         imageVector = AppIcons.AttachFile,
                                         contentDescription = "Attach",
-                                        tint = if (isDarkTheme) Color.White else ChatBrandTeal
+                                        tint = ChatHeaderTeal
                                     )
                                 }
 
@@ -233,19 +248,11 @@ fun MessagingScreen(
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(50.dp),
-                                    placeholder = { 
-                                        Text(
-                                            localeContext.getString(R.string.type_message), 
-                                            fontSize = 14.sp,
-                                            color = if (isDarkTheme) Color.White.copy(alpha = 0.6f) else Color.Gray
-                                        ) 
-                                    },
+                                    placeholder = { Text(localeContext.getString(R.string.type_message), fontSize = 14.sp) },
                                     shape = RoundedCornerShape(25.dp),
                                     colors = TextFieldDefaults.colors(
-                                        focusedContainerColor = if (isDarkTheme) Color(0xFF2C2C2C) else Color.White,
-                                        unfocusedContainerColor = if (isDarkTheme) Color(0xFF2C2C2C) else Color.White,
-                                        focusedTextColor = if (isDarkTheme) Color.White else Color.Black,
-                                        unfocusedTextColor = if (isDarkTheme) Color.White else Color.Black,
+                                        focusedContainerColor = Color.White,
+                                        unfocusedContainerColor = Color.White,
                                         focusedIndicatorColor = Color.Transparent,
                                         unfocusedIndicatorColor = Color.Transparent
                                     ),
@@ -261,9 +268,9 @@ fun MessagingScreen(
                                         .size(44.dp)
                                         .background(
                                             color = if (isSending || messageInput.isBlank())
-                                                (if (isDarkTheme) Color.White.copy(alpha = 0.3f) else ChatBrandTeal.copy(alpha = 0.5f))
+                                                ChatHeaderTeal.copy(alpha = 0.5f)
                                             else
-                                                (if (isDarkTheme) Color.White else ChatBrandTeal),
+                                                ChatHeaderTeal,
                                             shape = CircleShape
                                         ),
                                     enabled = !isSending && messageInput.isNotBlank()
@@ -271,14 +278,14 @@ fun MessagingScreen(
                                     if (isSending) {
                                         CircularProgressIndicator(
                                             modifier = Modifier.size(20.dp),
-                                            color = if (isDarkTheme) Color.Black else Color.White,
+                                            color = Color.White,
                                             strokeWidth = 2.dp
                                         )
                                     } else {
                                         Icon(
                                             imageVector = AppIcons.Send,
                                             contentDescription = localeContext.getString(R.string.send_button),
-                                            tint = if (isDarkTheme) Color.Black else Color.White,
+                                            tint = Color.White,
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }
@@ -288,15 +295,12 @@ fun MessagingScreen(
                     }
                 }
             }
-            
-            // Re-apply Snackbar placement if needed, or rely on Scaffold which we kept
         }
     }
 }
 
 @Composable
 fun MessageBubble(message: Message, isCurrentUser: Boolean) {
-    val isDarkTheme = isSystemInDarkTheme()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -309,13 +313,13 @@ fun MessageBubble(message: Message, isCurrentUser: Boolean) {
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape),
-                color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else ChatBrandTeal.copy(alpha = 0.2f)
+                color = ChatHeaderTeal.copy(alpha = 0.2f)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         text = message.senderName.take(1).uppercase(),
                         fontWeight = FontWeight.Bold,
-                        color = if (isDarkTheme) Color.White else ChatBrandTeal,
+                        color = ChatHeaderTeal,
                         fontSize = 14.sp
                     )
                 }
@@ -335,11 +339,7 @@ fun MessageBubble(message: Message, isCurrentUser: Boolean) {
                         bottomEnd = if (isCurrentUser) 2.dp else 16.dp
                     ))
                     .background(
-                        color = if (isCurrentUser) {
-                            if (isDarkTheme) ChatOutgoingBubbleDark else ChatOutgoingBubbleLight
-                        } else {
-                            if (isDarkTheme) ChatIncomingBubbleDark else ChatIncomingBubbleLight
-                        },
+                        color = if (isCurrentUser) ChatOutgoingBubbleLight else ChatIncomingBubbleLight,
                         shape = RoundedCornerShape(
                             topStart = 16.dp,
                             topEnd = 16.dp,
@@ -353,7 +353,7 @@ fun MessageBubble(message: Message, isCurrentUser: Boolean) {
                 Column {
                     Text(
                         text = message.messageText,
-                        color = if (isCurrentUser) Color.White else if (isDarkTheme) Color.White.copy(alpha = 0.9f) else Color.Black.copy(alpha = 0.8f),
+                        color = if (isCurrentUser) Color.White else Color.Black.copy(alpha = 0.8f),
                         fontSize = 15.sp
                     )
                 }
@@ -362,7 +362,7 @@ fun MessageBubble(message: Message, isCurrentUser: Boolean) {
             Text(
                 text = formatTime(message.createdAt),
                 fontSize = 10.sp,
-                color = if (isDarkTheme) Color.LightGray.copy(alpha = 0.6f) else Color.Gray,
+                color = Color.Gray,
                 modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp)
             )
         }
@@ -373,7 +373,7 @@ fun MessageBubble(message: Message, isCurrentUser: Boolean) {
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape),
-                color = if (isDarkTheme) ChatOutgoingBubbleDark else ChatBrandTeal
+                color = ChatHeaderTeal
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
