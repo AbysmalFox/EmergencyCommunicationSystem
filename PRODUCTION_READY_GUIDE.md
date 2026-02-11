@@ -2,73 +2,27 @@
 
 This guide outlines the critical steps required to move from a development prototype to a production-ready application, specifically focusing on fixing the "no alerts" issue in signed release builds.
 
-## 1. Fix: Release Build Obfuscation (R8/ProGuard)
+## 1. Fix: Release Build Obfuscation (R8/ProGuard) [COMPLETED ✅]
 In signed builds, Android's R8 compiler renames classes and fields to save space. This breaks JSON parsing (Retrofit/Gson) if the field names don't match your PHP backend.
 
-**What was done:**
-- Updated `app/proguard-rules.pro` to "keep" the `data` and `network` packages.
-- Added `@SerializedName` annotations to DTOs in `MessagingApiService.kt`.
-
-**What you should do:**
-- Ensure every field in your data classes (like `Alert`, `User`, `Message`) has a `@SerializedName("key_name")` that matches your PHP database keys exactly.
+**Status:**
+- [x] Updated `app/proguard-rules.pro` to "keep" the `data` and `network` packages.
+- [x] Added `@SerializedName` annotations to DTOs in `MessagingApiService.kt`, `AuthModels.kt`, `LocationModels.kt`, and `SubscriptionModels.kt`.
 
 ---
 
-## 2. Critical Missing Feature: Push Notifications (FCM)
-Currently, the app only "pulls" data when opened. In an emergency, the backend must "push" notifications to the phone.
+## 2. Push Notifications (FCM) Implementation [CODE COMPLETED ✅]
+The app now supports a "push" model where the backend can actively send notifications to the phone.
 
-### Step A: Add Dependency
-Add this to `app/build.gradle.kts` dependencies:
-```kotlin
-implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
-implementation("com.google.firebase:firebase-messaging-ktx")
-```
-
-### Step B: Create the Messaging Service
-Create `com.example.emergencycommunicationsystem.services.MyFirebaseMessagingService`:
-
-```kotlin
-class MyFirebaseMessagingService : FirebaseMessagingService() {
-    override fun onMessageReceived(remoteMessage: RemoteMessage) {
-        val title = remoteMessage.notification?.title ?: remoteMessage.data["title"]
-        val body = remoteMessage.notification?.body ?: remoteMessage.data["body"]
-        val category = remoteMessage.data["category"]
-
-        val channelId = NotificationChannels.getChannelIdForCategory(category)
-        
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val notification = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.drawable.ic_tabler_bell_ringing)
-            .setContentTitle(title)
-            .setContentText(body)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
-            .build()
-
-        notificationManager.notify(System.currentTimeMillis().toInt(), notification)
-    }
-
-    override fun onNewToken(token: String) {
-        // Send this token to your PHP backend (e.g., update_token.php)
-        // so the server knows which device belongs to which user.
-    }
-}
-```
-
-### Step C: Register in AndroidManifest.xml
-```xml
-<service
-    android:name=".services.MyFirebaseMessagingService"
-    android:exported="false">
-    <intent-filter>
-        <action android:name="com.google.firebase.MESSAGING_EVENT" />
-    </intent-filter>
-</service>
-```
+**Status:**
+- [x] Added Firebase Messaging dependencies to `app/build.gradle.kts`.
+- [x] Created `MyFirebaseMessagingService.kt` to handle incoming alerts and display them via the correct Notification Channels (Fire, Weather, etc.).
+- [x] Registered the service in `AndroidManifest.xml`.
+- [x] **Automatic Token Sync:** Updated `AuthManager.kt` and `MyFirebaseMessagingService.kt` to automatically send the device's FCM token to the server upon login or token refresh.
 
 ---
 
-## 3. Firebase Console Configuration (Crucial for Signed APK)
+## 3. Firebase Console Configuration [MANUAL STEP REQUIRED ⚠️]
 Google Services (Login, FCM) will **fail** in a signed APK if the SHA-1 fingerprint of your release keystore isn't registered.
 
 1.  Open your terminal in Android Studio.
@@ -81,18 +35,22 @@ Google Services (Login, FCM) will **fail** in a signed APK if the SHA-1 fingerpr
 
 ---
 
-## 4. Backend (PHP) Requirements
-Your Hostinger backend must be modified to trigger the "Push" whenever an alert is added:
+## 4. Backend (PHP) Requirements [IN PROGRESS 🔄]
+The backend must store device tokens and trigger the "Push" signal.
 
-1.  **Store FCM Tokens:** Create a column in your `users` table for `fcm_token`.
-2.  **Notification Trigger:** In your `create_alert.php` (or similar), use a CURL request to the Firebase Cloud Messaging API to send the notification to the `emergency-room` topic or individual user tokens.
+**Status:**
+- [x] **Store FCM Tokens:** `fcm_token` column added to the `users` table. (Verified by User)
+- [x] **Token Update Script:** `update_fcm_token.php` created on Hostinger. (Verified by User)
+- [ ] **Notification Trigger:** In your `create_alert.php` (or similar), add the logic to send a request to the Firebase Cloud Messaging API when a new alert is posted.
 
 ---
 
 ## 5. Summary Checklist
-- [x] ProGuard rules updated (Completed by Gemini)
-- [x] Network DTOs annotated (Completed by Gemini)
-- [ ] Add Firebase Messaging dependency
-- [ ] Implement `FirebaseMessagingService`
-- [ ] Register Release SHA-1 in Firebase Console
-- [ ] Update PHP backend to send FCM triggers
+- [x] ProGuard rules updated (Gemini)
+- [x] Network DTOs annotated (Gemini)
+- [x] Add Firebase Messaging dependency (Gemini)
+- [x] Implement `FirebaseMessagingService` (Gemini)
+- [x] Automatic FCM Token upload logic (Gemini)
+- [x] Backend `fcm_token` column and `update_fcm_token.php` (User)
+- [ ] Register Release SHA-1 in Firebase Console (User)
+- [ ] Update PHP backend to send FCM triggers (User)
