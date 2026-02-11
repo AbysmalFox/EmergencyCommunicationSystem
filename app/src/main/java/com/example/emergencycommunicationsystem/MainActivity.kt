@@ -75,6 +75,15 @@ class MainActivity : BaseActivity() {
             try {
                 // Initialize ApiClient first as others might depend on it
                 ApiClient.initializeAndCheckConnection(applicationContext)
+                
+                // Subscribe to Global Emergency Topic
+                com.google.firebase.messaging.FirebaseMessaging.getInstance().subscribeToTopic("emergency-room")
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            Log.i("MainActivity", "Subscribed to emergency-room topic")
+                        }
+                    }
+
                 Log.i("MainActivity", "System initialization completed successfully.")
             } catch (e: Exception) {
                 Log.e("MainActivity", "Initialization failed", e)

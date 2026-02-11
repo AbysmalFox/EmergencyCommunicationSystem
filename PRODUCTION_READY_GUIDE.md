@@ -39,9 +39,26 @@ Google Services (Login, FCM) will **fail** in a signed APK if the SHA-1 fingerpr
 The backend must store device tokens and trigger the "Push" signal.
 
 **Status:**
-- [x] **Store FCM Tokens:** `fcm_token` column added to the `users` table. (Verified by User)
-- [x] **Token Update Script:** `update_fcm_token.php` created on Hostinger. (Verified by User)
+- [x] **Store FCM Tokens:** `fcm_token` column added to the `users` table.
+- [x] **Token Update Script:** `update_fcm_token.php` created on Hostinger.
+- [x] **Topic Subscription:** App now automatically subscribes to the `emergency-room` topic in `MainActivity.kt`.
 - [ ] **Notification Trigger:** In your `create_alert.php` (or similar), add the logic to send a request to the Firebase Cloud Messaging API when a new alert is posted.
+
+### Recommended PHP Logic for sending Push:
+Use the FCM v1 API to send to the `emergency-room` topic:
+```php
+// Example Payload
+$message = [
+    "message" => [
+        "topic" => "emergency-room",
+        "data" => [
+            "title" => "FIRE ALERT",
+            "body" => "Fire reported in Barangay 123",
+            "category" => "fire"
+        ]
+    ]
+];
+```
 
 ---
 
@@ -51,6 +68,7 @@ The backend must store device tokens and trigger the "Push" signal.
 - [x] Add Firebase Messaging dependency (Gemini)
 - [x] Implement `FirebaseMessagingService` (Gemini)
 - [x] Automatic FCM Token upload logic (Gemini)
+- [x] Global Topic Subscription (Gemini)
 - [x] Backend `fcm_token` column and `update_fcm_token.php` (User)
 - [ ] Register Release SHA-1 in Firebase Console (User)
 - [ ] Update PHP backend to send FCM triggers (User)
