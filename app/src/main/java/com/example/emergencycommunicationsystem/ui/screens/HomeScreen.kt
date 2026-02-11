@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.WaterDrop
@@ -787,15 +788,50 @@ fun ModernAlertsSection(
             if (isDarkMode) Color(0xFF0B1F19) else Color(0xFF397C64)
         )
     )
-    val arrowPulse = rememberInfiniteTransition(label = "arrowPulse")
-    val arrowAlpha by arrowPulse.animateFloat(
-        initialValue = 0.55f,
+    val indicatorTransition = rememberInfiniteTransition(label = "indicatorTransition")
+    val alpha1 by indicatorTransition.animateFloat(
+        initialValue = 0.1f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(800, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
+            animation = keyframes {
+                durationMillis = 2400
+                0.1f at 0
+                1f at 800
+                0.1f at 1600
+                0.1f at 2400
+            },
+            repeatMode = RepeatMode.Restart
         ),
-        label = "arrowAlpha"
+        label = "alpha1"
+    )
+    val alpha2 by indicatorTransition.animateFloat(
+        initialValue = 0.1f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes {
+                durationMillis = 2400
+                0.1f at 400
+                1f at 1200
+                0.1f at 2000
+                0.1f at 2400
+            },
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "alpha2"
+    )
+    val alpha3 by indicatorTransition.animateFloat(
+        initialValue = 0.1f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes {
+                durationMillis = 2400
+                0.1f at 800
+                1f at 1600
+                0.1f at 2400
+            },
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "alpha3"
     )
 
     when (alertsState) {
@@ -981,27 +1017,63 @@ fun ModernAlertsSection(
                                     }
                                 }
                                 
-                                // Centered vertically with the cards
-                                Text(
-                                    text = ">>>",
-                                    fontSize = 22.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = (if (isDarkMode) Color(0xFF00B0FF) else Color.Black).copy(alpha = arrowAlpha),
+                                // Refined scrolling indicator - modern alternative to ">>>"
+                                Surface(
                                     modifier = Modifier
                                         .padding(end = 12.dp)
                                         .graphicsLayer {
                                             shadowElevation = 12f
-                                        }
-                                )
+                                        },
+                                    color = if (isDarkMode) Color.Black.copy(alpha = 0.4f) else Color.White.copy(alpha = 0.7f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(0.5.dp, (if (isDarkMode) Color.White else Color.Black).copy(alpha = 0.15f))
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy((-11).dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                            contentDescription = null,
+                                            tint = (if (isDarkMode) Color(0xFF00B0FF) else Color.Black).copy(alpha = alpha1),
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                            contentDescription = null,
+                                            tint = (if (isDarkMode) Color(0xFF00B0FF) else Color.Black).copy(alpha = alpha2),
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                            contentDescription = null,
+                                            tint = (if (isDarkMode) Color(0xFF00B0FF) else Color.Black).copy(alpha = alpha3),
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                }
                             }
 
-                            Text(
-                                text = "Swipe to browse",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White.copy(alpha = 0.9f),
-                                modifier = Modifier.padding(top = 10.dp, start = 8.dp)
-                            )
+                            Row(
+                                modifier = Modifier.padding(top = 10.dp, start = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Swipe to browse",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 0.5.sp,
+                                    color = Color.White.copy(alpha = 0.8f)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = null,
+                                    tint = Color.White.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
                         }
                     }
                 }
