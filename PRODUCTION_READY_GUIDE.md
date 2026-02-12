@@ -1,69 +1,82 @@
-# Production Readiness Guide: Emergency Communication System
+# Production Ready Guide: Emergency Communication System
 
-This guide outlines the critical steps required to move from a development prototype to a production-ready application, specifically focusing on fixing the "no alerts" issue in signed release builds.
+Last updated: February 12, 2026
 
-## 1. Fix: Release Build Obfuscation (R8/ProGuard) [COMPLETED ✅]
-In signed builds, Android's R8 compiler renames classes and fields to save space. This breaks JSON parsing (Retrofit/Gson) if the field names don't match your PHP backend.
+This guide tracks what is complete, what is still required, and the exact release checks before distributing APKs to other devices.
 
-**Status:**
-- [x] Updated `app/proguard-rules.pro` to "keep" the `data` and `network` packages.
-- [x] Added `@SerializedName` annotations to DTOs in `MessagingApiService.kt`, `AuthModels.kt`, `LocationModels.kt`, and `SubscriptionModels.kt`.
+## 1. Build and Serialization Stability [COMPLETED]
+Signed builds can break parsing if DTOs are obfuscated or annotation classes are missing at compile time.
 
----
+Status:
+- [x] Gson dependency explicitly added: `com.google.code.gson:gson:2.10.1` in `app/build.gradle.kts`.
+- [x] Retrofit Gson converter present: `com.squareup.retrofit2:converter-gson:2.9.0`.
+- [x] `@SerializedName` is used in network DTOs (including `FcmTokenRequest` in `SettingsApiService.kt`).
+- [x] ProGuard rules keep API models, including `com.example.emergencycommunicationsystem.data.models.**`.
 
-## 2. Push Notifications (FCM) Implementation [CODE COMPLETED ✅]
-The app now supports a "push" model where the backend can actively send notifications to the phone.
+## 2. Release Backend Behavior [COMPLETED]
+Release builds must never depend on local/LAN backend routes.
 
-**Status:**
-- [x] Added Firebase Messaging dependencies to `app/build.gradle.kts`.
-- [x] Created `MyFirebaseMessagingService.kt` to handle incoming alerts and display them via the correct Notification Channels (Fire, Weather, etc.).
-- [x] Registered the service in `AndroidManifest.xml`.
-- [x] **Automatic Token Sync:** Updated `AuthManager.kt` and `MyFirebaseMessagingService.kt` to automatically send the device's FCM token to the server upon login or token refresh.
+Status:
+- [x] Release is forced to production backend only (`ALLOW_LOCAL_FALLBACK=false` for release).
+- [x] Local fallback is now opt-in for debug only via `local.properties` (`ALLOW_LOCAL_FALLBACK=true|false`).
+- [x] Local device IP is configurable via `LOCAL_DEVICE_HOST` in `local.properties` (debug use only).
 
----
+Important:
+- Production/distributed APKs should always use the public HTTPS backend.
+- Do not rely on `192.168.x.x`, `10.0.2.2`, `localhost`, or USB/Wi-Fi proximity for release behavior.
 
-## 3. Firebase Console Configuration [MANUAL STEP REQUIRED ⚠️]
-Google Services (Login, FCM) will **fail** in a signed APK if the SHA-1 fingerprint of your release keystore isn't registered.
+## 3. Firebase Release Configuration [MANUAL - REQUIRED]
+Google Sign-In and FCM can fail on release APKs if release signing fingerprints are not registered.
 
-1.  Open your terminal in Android Studio.
-2.  Run the signing report: `./gradlew signingReport`
-3.  Look for the `release` variant (not debug).
-4.  Copy the **SHA-1** and **SHA-256** fingerprints.
-5.  Go to **Firebase Console > Project Settings > General**.
-6.  Under "Your Apps" > "Android app", click **Add Fingerprint** and paste them.
-7.  Download the new `google-services.json` and replace the one in your `app/` folder.
+Required steps:
+1. Run: `./gradlew signingReport`
+2. Copy SHA-1 and SHA-256 for the `release` variant.
+3. Add both in Firebase Console:
+Project Settings -> Your Apps -> Android -> Add Fingerprint.
+4. Download updated `google-services.json`.
+5. Replace `app/google-services.json` and rebuild release.
 
----
+## 4. Backend Requirements for Alerts [IN PROGRESS]
+The app can receive tokens and subscribe to topic(s), but backend must actively send push notifications.
 
-## 4. Backend (PHP) Requirements [IN PROGRESS 🔄]
-The backend must store device tokens and trigger the "Push" signal.
+Status:
+- [x] `fcm_token` storage and token update flow implemented (`update_fcm_token.php`).
+- [x] Client side FCM service and topic subscription implemented.
+- [ ] Admin alert creation endpoint must trigger FCM HTTP v1 send (topic or per-user token).
+- [ ] Backend should handle invalid/expired tokens and clean them up.
 
-**Status:**
-- [x] **Store FCM Tokens:** `fcm_token` column added to the `users` table.
-- [x] **Token Update Script:** `update_fcm_token.php` created on Hostinger.
-- [x] **Topic Subscription:** App now automatically subscribes to the `emergency-room` topic in `MainActivity.kt`.
-- [x] **User-Admin Messaging:** Verified Kotlin `MessagingApiService` matches backend scripts in `api/conversations/` and `api/messages/`.
-- [ ] **Notification Trigger:** Admin-side `create_alert.php` (or similar) needs to trigger the FCM V1 signal to the `emergency-room` topic.
+## 5. Security Requirements Before Public Release [REQUIRED]
 
----
+Status:
+- [x] `local.properties` is git-ignored.
+- [x] `.gitignore` corruption fixed.
+- [ ] Rotate any exposed keys/secrets immediately.
+- [ ] Remove `GOOGLE_WEB_CLIENT_SECRET` from Android app build usage (keep this secret server-side only).
+- [ ] Keep release API keys minimal and scoped by package/signature restrictions where possible.
 
-## 6. Local Testing Configuration [UPDATED ✅]
-To ensure connectivity during local development on physical devices:
-- **Local IP:** Updated to `192.168.1.9` (as of Feb 12, 2026).
-- **Files updated:** `NetworkConfig.kt` and `network_security_config.xml`.
-- **Note:** Always verify your current computer IP via `ipconfig` if the app fails to connect to the local server.
+## 6. Release Validation Checklist (Fresh Install)
+Run this checklist before publishing or sharing APK publicly.
 
----
+1. Build signed release APK/AAB.
+2. Install on a clean device (uninstall old app first).
+3. Test on a different network (mobile data or another Wi-Fi).
+4. Verify:
+   - Login works.
+   - Alerts load from backend.
+   - Push notifications arrive.
+   - FCM token updates successfully.
+5. Confirm logs show production base URL usage in release.
+6. Confirm no local fallback behavior in release.
 
-## 7. Summary Checklist
-- [x] ProGuard rules updated (Gemini)
-- [x] Network DTOs annotated (Gemini)
-- [x] Add Firebase Messaging dependency (Gemini)
-- [x] Implement `FirebaseMessagingService` (Gemini)
-- [x] Automatic FCM Token upload logic (Gemini)
-- [x] Global Topic Subscription (Gemini)
-- [x] Local IP Synchronization (`192.168.1.9`) (Gemini)
-- [x] Messaging API Verification (Gemini)
-- [x] Backend `fcm_token` column and `update_fcm_token.php` (User)
-- [ ] Register Release SHA-1 in Firebase Console (User)
-- [ ] Update Admin PHP backend to send FCM triggers (User)
+## 7. Quick Status Summary
+
+Completed:
+- [x] Serialization/proguard hardening.
+- [x] FCM client integration + token sync path.
+- [x] Strict production-only backend mode for release builds.
+- [x] Debug-only local fallback toggle.
+
+Still required for full production readiness:
+- [ ] Firebase release SHA registration and `google-services.json` refresh.
+- [ ] Backend FCM trigger on alert creation.
+- [ ] Key rotation and removal of client-side web client secret usage.
