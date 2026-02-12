@@ -133,7 +133,7 @@ object ApiClient {
         // Pre-initialize client with context
         getOkHttpClient(context.applicationContext)
 
-        if (BuildConfig.DEBUG) {
+        if (BuildConfig.ALLOW_LOCAL_FALLBACK) {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     val request = Request.Builder()
@@ -164,6 +164,7 @@ object ApiClient {
             }
         } else {
             _useLocalServer.value = false
+            Log.i("ApiClient", "Local fallback disabled. Using production backend only.")
             if (!isInitialized.isCompleted) {
                 isInitialized.complete(Unit)
             }

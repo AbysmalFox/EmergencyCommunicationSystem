@@ -15,6 +15,7 @@
 # Gson
 # Keep all data classes used in API responses and requests
 -keep class com.example.emergencycommunicationsystem.data.** { *; }
+-keep class com.example.emergencycommunicationsystem.data.models.** { *; }
 -keep class com.example.emergencycommunicationsystem.network.** { *; }
 
 # Room

@@ -57,12 +57,34 @@ android {
             "OPENWEATHER_API_KEY",
             "\"${getLocalProperty("OPENWEATHER_API_KEY", "YOUR_OPENWEATHER_API_KEY_PLACEHOLDER")}\""
         )
+        buildConfigField(
+            "String",
+            "LOCAL_DEVICE_HOST",
+            "\"${getLocalProperty("LOCAL_DEVICE_HOST", "192.168.1.9")}\""
+        )
+        buildConfigField(
+            "boolean",
+            "ALLOW_LOCAL_FALLBACK",
+            "false"
+        )
     }
 
     buildTypes {
+        debug {
+            buildConfigField(
+                "boolean",
+                "ALLOW_LOCAL_FALLBACK",
+                getLocalProperty("ALLOW_LOCAL_FALLBACK", "false")
+            )
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            buildConfigField(
+                "boolean",
+                "ALLOW_LOCAL_FALLBACK",
+                "false"
+            )
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -112,6 +134,7 @@ dependencies {
     // Retrofit + Gson
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.google.code.gson:gson:2.10.1")
 
     // OkHttp Logging Interceptor
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
