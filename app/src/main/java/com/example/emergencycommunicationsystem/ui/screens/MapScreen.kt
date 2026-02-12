@@ -5,7 +5,6 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
-import android.view.View
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -25,7 +24,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.ui.components.PulsingCircleOverlay
@@ -41,9 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import com.example.emergencycommunicationsystem.util.NavigationManager
 import com.example.emergencycommunicationsystem.data.network.RoutingService
 import androidx.compose.ui.Alignment
@@ -60,12 +56,13 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.data.models.SafeZone
 import com.example.emergencycommunicationsystem.data.models.SafeZoneType
 import com.example.emergencycommunicationsystem.ui.theme.ThemeManager
 import com.example.emergencycommunicationsystem.ui.theme.BrandTealAccent
 import com.example.emergencycommunicationsystem.ui.theme.BrandDeepTeal
+import com.example.emergencycommunicationsystem.data.UserPrefs
+import com.example.emergencycommunicationsystem.util.getLocaleContext
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
@@ -77,7 +74,7 @@ import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
 import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
-import com.example.emergencycommunicationsystem.viewmodel.AlertWithDistance
+import com.example.emergencycommunicationsystem.viewmodel.MapViewModel
 
 private const val TAG = "MapScreen"
 
@@ -85,12 +82,12 @@ private const val TAG = "MapScreen"
 fun MapScreen() {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val alertsViewModel: AlertsViewModel = viewModel()
-    val mapViewModel: com.example.emergencycommunicationsystem.viewmodel.MapViewModel = viewModel()
+    val alertsViewModel = viewModel<AlertsViewModel>()
+    val mapViewModel = viewModel<MapViewModel>()
     
     val alertsState by alertsViewModel.uiState.collectAsState()
-    val currentLanguage by com.example.emergencycommunicationsystem.data.UserPrefs.getLanguage(context).collectAsState(initial = "en")
-    val localeContext = com.example.emergencycommunicationsystem.util.getLocaleContext()
+    val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
+    val localeContext = getLocaleContext()
     val userLocation by mapViewModel.userLocation.collectAsState()
 
     // State to hold MapView and Overlay for interaction
