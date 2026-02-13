@@ -34,11 +34,12 @@ import java.util.Date
 import java.util.Locale
 import kotlin.coroutines.resume
 import com.example.emergencycommunicationsystem.util.LocaleManager
+import com.example.emergencycommunicationsystem.BuildConfig
 
 class WeatherViewModel(application: Application) : AndroidViewModel(application) {
     private val _weatherState = MutableStateFlow<WeatherState>(WeatherState.Loading)
     val weatherState: StateFlow<WeatherState> = _weatherState
-    private val apiKey = com.example.emergencycommunicationsystem.BuildConfig.OPENWEATHER_API_KEY
+    private val apiKey = BuildConfig.OPENWEATHER_API_KEY
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(application)
     private val weatherDao = AppDatabase.getDatabase(application).weatherDao()
     

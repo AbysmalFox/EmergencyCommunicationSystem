@@ -3,42 +3,38 @@ package com.example.emergencycommunicationsystem.data.models
 import com.google.gson.annotations.SerializedName
 
 data class WeatherResponse(
-    @SerializedName("main") val main: Main,
-    @SerializedName("weather") val weather: List<Weather>,
-    @SerializedName("name") val name: String,
-    @SerializedName("wind") val wind: Wind,
-    @SerializedName("visibility") val visibility: Int
+    val main: Main,
+    val weather: List<Weather>,
+    val name: String,
+    val wind: Wind,
+    val visibility: Int
 )
 data class Main(
-    @SerializedName("temp") val temp: Double,
+    val temp: Double,
     @SerializedName("feels_like") val feelsLike: Double,
-    @SerializedName("humidity") val humidity: Int
+    val humidity: Int
 )
-data class Weather(
-    @SerializedName("id") val id: Int,
-    @SerializedName("main") val main: String,
-    @SerializedName("icon") val icon: String
-)
-data class Wind(@SerializedName("speed") val speed: Double)
+data class Weather(val id: Int, val main: String, val icon: String)
+data class Wind(val speed: Double)
 
 data class ForecastResponse(
-    @SerializedName("list") val list: List<ForecastItem>,
-    @SerializedName("city") val city: City
+    val list: List<ForecastItem>,
+    val city: City
 )
 
 data class ForecastItem(
-    @SerializedName("dt") val dt: Long,
-    @SerializedName("main") val main: Main,
-    @SerializedName("weather") val weather: List<Weather>
+    val dt: Long,
+    val main: Main,
+    val weather: List<Weather>
 )
 
 data class City(
-    @SerializedName("name") val name: String,
-    @SerializedName("country") val country: String
+    val name: String,
+    val country: String
 )
 
 @Suppress("unused")
-data class LatLng(@SerializedName("lat") val lat: Double, @SerializedName("lon") val lon: Double)
+data class LatLng(val lat: Double, val lon: Double)
 
 data class Alert(
     @SerializedName("id")
@@ -91,9 +87,9 @@ data class Alert(
 )
 
 data class Poll(
-    @SerializedName("id") val id: Int,
-    @SerializedName("title") val title: String,
-    @SerializedName("description") val description: String,
+    val id: Int,
+    val title: String,
+    val description: String,
     @SerializedName("is_active") val isActive: Boolean,
     @SerializedName("created_at") val createdAt: String
 )

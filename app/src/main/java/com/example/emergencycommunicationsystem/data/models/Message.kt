@@ -35,13 +35,14 @@ data class Message(
 )
 
 data class MessageResponse(
-    @SerializedName("success") val success: Boolean,
-    @SerializedName("message") val message: String,
-    @SerializedName("data") val data: Message? = null
+    val success: Boolean,
+    val message: String,
+    @SerializedName("data")
+    val data: Message? = null
 )
 
 data class MessagesResponse(
-    @SerializedName("success") val success: Boolean,
-    @SerializedName("messages") val messages: List<Message>,
-    @SerializedName("error") val error: String? = null
+    val success: Boolean,
+    val messages: List<Message>,
+    val error: String? = null
 )

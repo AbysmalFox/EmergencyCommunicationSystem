@@ -14,15 +14,9 @@
 
 # Gson
 # Keep all data classes used in API responses and requests
-# Use -keep,allowobfuscation if you want to obfuscate but keep the fields
--keep class com.google.gson.** { *; }
--keepattributes *Annotation*
 -keep class com.example.emergencycommunicationsystem.data.** { *; }
 -keep class com.example.emergencycommunicationsystem.data.models.** { *; }
 -keep class com.example.emergencycommunicationsystem.network.** { *; }
-
-# Prevent R8 from removing generic signatures which causes "Class cannot be cast to ParameterizedType"
--keepattributes Signature
 
 # Room
 -keep class * extends androidx.room.RoomDatabase
@@ -57,3 +51,5 @@
 -keep class coil.** { *; }
 -dontwarn coil.**
 -keep class com.example.emergencycommunicationsystem.MyApplication { *; }
+
+
