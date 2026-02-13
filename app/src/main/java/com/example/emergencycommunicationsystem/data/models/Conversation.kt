@@ -62,14 +62,13 @@ data class Conversation(
  * Correctly models the top-level JSON response from the conversations API.
  */
 data class ConversationResponse(
-    val success: Boolean,
-    val message: String,
-    @SerializedName("data")
-    val conversation: Conversation? // Matches the 'data' key used in PHP
+    @SerializedName("success") val success: Boolean,
+    @SerializedName("message") val message: String,
+    @SerializedName("data") val conversation: Conversation? // Matches the 'data' key used in PHP
 )
 
 data class ConversationsListResponse(
-    val success: Boolean,
-    val message: String,
-    val conversations: List<Conversation>
+    @SerializedName("success") val success: Boolean,
+    @SerializedName("message") val message: String,
+    @SerializedName("conversations") val conversations: List<Conversation>
 )

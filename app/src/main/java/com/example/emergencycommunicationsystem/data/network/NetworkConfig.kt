@@ -4,19 +4,36 @@ import android.os.Build
 import com.example.emergencycommunicationsystem.BuildConfig
 
 object NetworkConfig {
-    // 1. Production (Your Hostinger Domain)
+    /**
+     * PRODUCTION BASE URL
+     * ENSURE HTTPS is used strictly.
+     */
     const val PRODUCTION_HOST = "https://emergency-comm.alertaraqc.com"
+    const val PRODUCTION_API_URL = "$PRODUCTION_HOST/PHP/api/"
 
-    // 2. Local Development
-    private const val EMULATOR_HOST = "10.0.2.2" // Gateway to your PC's localhost
-    private val DEVICE_HOST: String
+    /**
+     * LOCAL DEVELOPMENT SETTINGS
+     */
+    private const val EMULATOR_HOST = "10.0.2.2"
+    
+    private val DEVICE_HOST: String 
         get() = BuildConfig.LOCAL_DEVICE_HOST
 
-    // Publicly accessible URLs for both environments
-    val PRODUCTION_API_URL: String = "$PRODUCTION_HOST/PHP/api/"
-    val LOCAL_API_URL: String by lazy {
-        val host = if (isEmulator()) EMULATOR_HOST else DEVICE_HOST
-        "http://$host/PHP/api/"
+    val LOCAL_API_URL: String
+        get() {
+            val host = if (isEmulator()) EMULATOR_HOST else DEVICE_HOST
+            return "http://$host/PHP/api/"
+        }
+
+    /**
+     * URL DISCOVERY LOGIC
+     */
+    fun getBaseUrl(): String {
+        return if (BuildConfig.DEBUG) {
+            LOCAL_API_URL
+        } else {
+            PRODUCTION_API_URL
+        }
     }
 
     private fun isEmulator(): Boolean {

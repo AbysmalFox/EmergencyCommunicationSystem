@@ -19,8 +19,8 @@ data class SubscriptionCategory(
  * Represents the entire response from the GET subscription_settings.php endpoint.
  */
 data class SubscriptionSettingsResponse(
-    val success: Boolean,
-    val data: List<SubscriptionCategory>
+    @SerializedName("success") val success: Boolean,
+    @SerializedName("data") val data: List<SubscriptionCategory>
 )
 
 /**

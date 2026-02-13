@@ -78,7 +78,7 @@ object GoogleSignInHelper {
             Log.e(TAG, "Diagnosis: $message")
             Log.e(TAG, "Check: 1. local.properties has correct GOOGLE_WEB_CLIENT_ID")
             Log.e(TAG, "Check: 2. SHA-1 of THIS build matches Google Cloud Console")
-            Log.e(TAG, "Check: 3. Package name matches exactly: com.example.emergencycommunicationsystem")
+            Log.e(TAG, "Check: 3. Package name matches exactly: com.lgu.emergencycommunicationsystem")
             Log.e(TAG, "====================================================")
             
             throw Exception(message)
