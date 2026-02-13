@@ -23,6 +23,15 @@ android {
     namespace = "com.example.emergencycommunicationsystem" 
     compileSdk = 35
 
+    signingConfigs {
+        create("debugCustom") {
+            storeFile = file("${System.getProperty("user.home")}/.android/ecs-debug.keystore")
+            storePassword = "android"
+            keyAlias = "ecsdebug"
+            keyPassword = "android"
+        }
+    }
+
     defaultConfig {
         // EXTERNAL IDENTITY: Matches your Firebase Console. This FIXES the "No Data" issue.
         applicationId = "com.lgu.emergencycommunicationsystem" 
@@ -43,6 +52,7 @@ android {
 
     buildTypes {
         debug {
+            signingConfig = signingConfigs.getByName("debugCustom")
             buildConfigField("boolean", "ALLOW_LOCAL_FALLBACK", getLocalProperty("ALLOW_LOCAL_FALLBACK", "false"))
         }
         release {

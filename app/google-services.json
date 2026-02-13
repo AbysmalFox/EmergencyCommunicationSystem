@@ -7,12 +7,21 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:16818035848:android:10483c28c42e7f0b11533d",
+        "mobilesdk_app_id": "1:16818035848:android:e24166f9d8a0a74f11533d",
         "android_client_info": {
           "package_name": "com.lgu.emergencycommunicationsystem"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "16818035848-jldnbs48plpbls1n9o1uso5sloh51erk.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.lgu.emergencycommunicationsystem",
+            "certificate_hash": "3517cca809b3a14118c7251c65bda683082e72bd"
+          }
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAD5-zBi_tE-Ke2gkhFlwFPdKFoLK0Wl1I"
@@ -20,7 +29,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "16818035848-a6vccgc23l5gbpj294qqabc2ibl3oofb.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

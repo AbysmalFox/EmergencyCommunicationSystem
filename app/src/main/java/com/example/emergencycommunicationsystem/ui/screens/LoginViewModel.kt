@@ -2,6 +2,7 @@ package com.example.emergencycommunicationsystem.ui.screens
 
 import android.app.Application
 import android.content.Intent
+import android.util.Base64
 import android.util.Log
 import android.util.Patterns
 import androidx.lifecycle.AndroidViewModel
@@ -147,6 +148,8 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                 _loginState.value = LoginState.Error("Google Sign-In: ID token is missing")
                 return
             }
+
+            logGoogleTokenClaims(idToken)
             
             val loginData = mutableMapOf<String, Any>()
             loginData["email"] = email
@@ -219,6 +222,29 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         } catch (e: Exception) {
             Log.e("LoginViewModel", "Unexpected error during Google login", e)
             _loginState.value = LoginState.Error("An unexpected error occurred.")
+        }
+    }
+
+    private fun logGoogleTokenClaims(idToken: String) {
+        try {
+            val parts = idToken.split(".")
+            if (parts.size < 2) {
+                Log.w("LoginViewModel", "Google token format invalid (not JWT)")
+                return
+            }
+
+            val payloadBytes = Base64.decode(parts[1], Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
+            val payload = String(payloadBytes, Charsets.UTF_8)
+            val json = JSONObject(payload)
+
+            val aud = json.optString("aud", "")
+            val azp = json.optString("azp", "")
+            val iss = json.optString("iss", "")
+            val sub = json.optString("sub", "")
+
+            Log.i("LoginViewModel", "Google token claims: aud=$aud azp=$azp iss=$iss sub=${sub.take(8)}...")
+        } catch (e: Exception) {
+            Log.w("LoginViewModel", "Failed to decode Google token claims", e)
         }
     }
 }
