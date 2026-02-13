@@ -1,6 +1,7 @@
 package com.example.emergencycommunicationsystem.ui.theme
 
 import android.app.Activity
+import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -66,9 +67,16 @@ fun EmergencyCommunicationSystemTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb()
+            
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                // Fallback for older versions while statusBarColor is still available
+                @Suppress("DEPRECATION")
+                window.statusBarColor = colorScheme.background.toArgb()
+            }
+            
             // In light theme, if background is dark, we want light status bar icons
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+            val insetsController = WindowCompat.getInsetsController(window, view)
+            insetsController.isAppearanceLightStatusBars = false
         }
     }
 

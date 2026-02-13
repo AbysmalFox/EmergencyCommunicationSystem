@@ -7,7 +7,10 @@ import com.example.emergencycommunicationsystem.BuildConfig
  * 
  * Reads Google Sign-In credentials from BuildConfig, which are injected from:
  * 1. local.properties (for local development) - recommended
- * 2. Default fallback values (if not set in local.properties)
+ * 2. build.gradle.kts (for default fallback values)
+ * 
+ * SECURITY NOTE: WEB_CLIENT_SECRET was removed from the mobile app as it should
+ * only be stored on the backend server to prevent APK decompilation leaks.
  */
 object GoogleAuthConfig {
     /**
@@ -16,12 +19,6 @@ object GoogleAuthConfig {
     val WEB_CLIENT_ID: String
         get() = BuildConfig.GOOGLE_WEB_CLIENT_ID
     
-    /**
-     * Web Client Secret
-     */
-    val WEB_CLIENT_SECRET: String
-        get() = BuildConfig.GOOGLE_WEB_CLIENT_SECRET
-
     /**
      * Android Client ID
      */

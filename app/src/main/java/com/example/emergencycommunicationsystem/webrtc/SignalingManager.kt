@@ -132,9 +132,9 @@ class SignalingManager(private val context: Context) {
             if (callId.isNotBlank()) currentCallId = callId
 
             val sdpObj = offerData.optJSONObject("sdp")
-            val typeStr = sdpObj?.optString("type", null)
-            val sdp = sdpObj?.optString("sdp", null)
-            if (typeStr.isNullOrBlank() || sdp.isNullOrBlank()) return
+            val typeStr = sdpObj?.optString("type", "") ?: ""
+            val sdp = sdpObj?.optString("sdp", "") ?: ""
+            if (typeStr.isBlank() || sdp.isBlank()) return
 
             val type = SessionDescription.Type.fromCanonicalForm(typeStr)
             val sessionDescription = SessionDescription(type, sdp)
@@ -199,9 +199,9 @@ class SignalingManager(private val context: Context) {
             if (callId.isNotBlank()) currentCallId = callId
 
             val sdpObj = answerData.optJSONObject("sdp")
-            val typeStr = sdpObj?.optString("type", null)
-            val sdp = sdpObj?.optString("sdp", null)
-            if (typeStr.isNullOrBlank() || sdp.isNullOrBlank()) return
+            val typeStr = sdpObj?.optString("type", "") ?: ""
+            val sdp = sdpObj?.optString("sdp", "") ?: ""
+            if (typeStr.isBlank() || sdp.isBlank()) return
 
             val type = SessionDescription.Type.fromCanonicalForm(typeStr)
             val sessionDescription = SessionDescription(type, sdp)
@@ -228,10 +228,10 @@ class SignalingManager(private val context: Context) {
             if (callId.isNotBlank()) currentCallId = callId
 
             val candObj = candidateData.optJSONObject("candidate")
-            val sdpMid = candObj?.optString("sdpMid", null)
+            val sdpMid = candObj?.optString("sdpMid", "") ?: ""
             val sdpMLineIndex = candObj?.optInt("sdpMLineIndex", -1) ?: -1
-            val candidate = candObj?.optString("candidate", null)
-            if (sdpMid.isNullOrBlank() || sdpMLineIndex < 0 || candidate.isNullOrBlank()) return
+            val candidate = candObj?.optString("candidate", "") ?: ""
+            if (sdpMid.isBlank() || sdpMLineIndex < 0 || candidate.isBlank()) return
             
             val iceCandidate = IceCandidate(sdpMid, sdpMLineIndex, candidate)
             peerConnection.addIceCandidate(iceCandidate)

@@ -5,6 +5,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.VolumeDown
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -70,7 +72,8 @@ object AppIcons {
     val LocalPolice: ImageVector = Icons.Filled.LocalPolice
     val Send: ImageVector = Icons.AutoMirrored.Filled.Send
     val MicOff: ImageVector = Icons.Filled.MicOff
-    val VolumeUp: ImageVector = Icons.Filled.VolumeUp
+    val VolumeUp: ImageVector = Icons.AutoMirrored.Filled.VolumeUp
+    val VolumeDown: ImageVector = Icons.AutoMirrored.Filled.VolumeDown
     val Undo: ImageVector = Icons.Filled.Refresh
     val Dialpad: ImageVector = Icons.Filled.Dialpad
     val CallEnd: ImageVector = Icons.Filled.CallEnd
