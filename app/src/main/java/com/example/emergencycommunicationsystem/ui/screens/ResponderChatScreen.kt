@@ -85,7 +85,7 @@ fun ResponderChatScreen(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(100.dp), // Reduced from 110.dp
+                        .height(110.dp),
                     color = ChatHeaderTeal,
                     shape = CurvedHeaderShape()
                 ) {
@@ -93,8 +93,9 @@ fun ResponderChatScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .statusBarsPadding()
-                            .padding(horizontal = 20.dp, vertical = 20.dp), // Added small vertical padding
-                        verticalAlignment = Alignment.Top // Changed from CenterVertically to push contents up
+                            .padding(horizontal = 20.dp)
+                            .padding(top = 12.dp, bottom = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(onClick = onBackPressed, modifier = Modifier.size(32.dp)) {
                             Icon(imageVector = AppIcons.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(24.dp))
@@ -140,7 +141,7 @@ fun ResponderChatScreen(
                 Box(modifier = Modifier.fillMaxWidth().background(ChatFooterMintLight)) {
                     Box(modifier = Modifier.fillMaxWidth().navigationBarsPadding()) {
                         Surface(
-                            modifier = Modifier.fillMaxWidth().height(75.dp),
+                            modifier = Modifier.fillMaxWidth().height(92.dp),
                             color = ChatFooterMintLight, 
                             shape = CurvedFooterShape()
                         ) {}
@@ -149,16 +150,16 @@ fun ResponderChatScreen(
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
                                 .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             IconButton(
                                 onClick = { imagePickerLauncher.launch("image/*") }, 
-                                modifier = Modifier.size(36.dp),
+                                modifier = Modifier.size(42.dp),
                                 enabled = !isSending
                             ) {
-                                Icon(imageVector = AppIcons.AttachFile, contentDescription = "Attach", tint = ChatHeaderTeal, modifier = Modifier.size(22.dp))
+                                Icon(imageVector = AppIcons.AttachFile, contentDescription = "Attach", tint = ChatHeaderTeal, modifier = Modifier.size(24.dp))
                             }
                             
                             TextField(
@@ -166,12 +167,12 @@ fun ResponderChatScreen(
                                 onValueChange = { viewModel.updateMessageInput(it) },
                                 modifier = Modifier
                                     .weight(1f)
-                                    .heightIn(min = 40.dp, max = 100.dp), // Controlled height to prevent vertical cutoff
+                                    .heightIn(min = 48.dp, max = 120.dp), // Controlled height to prevent vertical cutoff
                                 placeholder = { 
                                     Text(
                                         text = localeContext.getString(R.string.type_message), 
-                                        fontSize = 14.sp,
-                                        style = TextStyle(lineHeight = 18.sp)
+                                        fontSize = 15.sp,
+                                        style = TextStyle(lineHeight = 20.sp)
                                     ) 
                                 },
                                 shape = RoundedCornerShape(20.dp),
@@ -181,7 +182,7 @@ fun ResponderChatScreen(
                                     focusedIndicatorColor = Color.Transparent,
                                     unfocusedIndicatorColor = Color.Transparent
                                 ),
-                                textStyle = TextStyle(fontSize = 14.sp, lineHeight = 18.sp),
+                                textStyle = TextStyle(fontSize = 15.sp, lineHeight = 20.sp),
                                 singleLine = false, // Allows vertical centering and multi-line growth
                                 maxLines = 3,
                                 enabled = !isSending
@@ -189,11 +190,16 @@ fun ResponderChatScreen(
                             
                             IconButton(
                                 onClick = { viewModel.sendPersistentMessage(userName ?: "User") },
-                                modifier = Modifier.size(40.dp).background(color = if (isSending || messageInput.isBlank()) ChatHeaderTeal.copy(alpha = 0.5f) else ChatHeaderTeal, shape = CircleShape),
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .background(
+                                        color = if (isSending || messageInput.isBlank()) ChatHeaderTeal.copy(alpha = 0.5f) else ChatHeaderTeal,
+                                        shape = CircleShape
+                                    ),
                                 enabled = !isSending && messageInput.isNotBlank()
                             ) {
-                                if (isSending) CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
-                                else Icon(imageVector = AppIcons.Send, contentDescription = "Send", tint = Color.White, modifier = Modifier.size(18.dp))
+                                if (isSending) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                                else Icon(imageVector = AppIcons.Send, contentDescription = "Send", tint = Color.White, modifier = Modifier.size(20.dp))
                             }
                         }
                     }

@@ -195,4 +195,20 @@
     <string name="type_message">Pag-type og mensahe&#8230;</string>
     <string name="chat_title">Chat</string>
     <string name="send_button">Ipadala</string>
+
+    <string name="call_via_internet_label">CALL VIA INTERNET</string>
+    <string name="slide_to_call_internet">SLIDE TO CALL VIA INTERNET</string>
+
+    <string name="auto_reply_bot">Auto-Reply Bot</string>
+    <string name="bot_status_online">Online • Automated</string>
+    <string name="suggested_answers">Suggested answers</string>
+
+    <string name="weather_sunny">Sunny</string>
+    <string name="weather_clear">Clear</string>
+    <string name="weather_cloudy">Cloudy</string>
+    <string name="weather_rainy">Rainy</string>
+    <string name="weather_drizzle">Drizzle</string>
+    <string name="weather_thunderstorm">Thunderstorm</string>
+    <string name="weather_snow">Snow</string>
+    <string name="weather_mist">Mist</string>
 </resources>

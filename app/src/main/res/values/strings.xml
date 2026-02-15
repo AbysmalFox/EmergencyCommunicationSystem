@@ -194,7 +194,10 @@
     <string name="map_routing_unavailable">Routing unavailable. Using direct path.</string>
     <string name="map_direct_route_fallback">Using direct route (routing unavailable)</string>
     <string name="automated_assistant">Automated Assistant</string>
+    <string name="auto_reply_bot">Auto-Reply Bot</string>
+    <string name="bot_status_online">Online • Automated</string>
     <string name="live_responder">Live Responder</string>
+    <string name="suggested_answers">Suggested answers</string>
     <string name="type_message">Type a message&#8230;</string>
     <string name="chat_title">Chat</string>
     <string name="send_button">Send</string>

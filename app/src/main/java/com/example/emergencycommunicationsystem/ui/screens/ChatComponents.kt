@@ -5,6 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.SmartToy
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -41,6 +43,7 @@ fun MessageBubble(message: Message, isCurrentUser: Boolean) {
         verticalAlignment = Alignment.Bottom
     ) {
         if (!isCurrentUser) {
+            val isBot = message.senderId == "0" || message.senderName.contains("bot", ignoreCase = true)
             Surface(
                 modifier = Modifier
                     .size(36.dp)
@@ -48,12 +51,21 @@ fun MessageBubble(message: Message, isCurrentUser: Boolean) {
                 color = ChatHeaderTeal.copy(alpha = 0.2f)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = message.senderName.take(1).uppercase(),
-                        fontWeight = FontWeight.Bold,
-                        color = ChatHeaderTeal,
-                        fontSize = 14.sp
-                    )
+                    if (isBot) {
+                        Icon(
+                            imageVector = Icons.Filled.SmartToy,
+                            contentDescription = null,
+                            tint = ChatHeaderTeal,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    } else {
+                        Text(
+                            text = message.senderName.take(1).uppercase(),
+                            fontWeight = FontWeight.Bold,
+                            color = ChatHeaderTeal,
+                            fontSize = 14.sp
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.width(8.dp))
