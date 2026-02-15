@@ -1,11 +1,28 @@
 # Retrofit & OkHttp
--keepattributes Signature, InnerClasses, EnclosingMethod
--keepattributes RuntimeVisibleAnnotations, RuntimeVisibleParameterAnnotations
+# Retrofit's Kotlin coroutine support relies on generic signature information (Continuation<? super T>).
+# R8 can strip this unless we explicitly keep the attributes.
+-keepattributes Signature, Exceptions, InnerClasses, EnclosingMethod
+-keepattributes RuntimeVisibleAnnotations, RuntimeVisibleParameterAnnotations, RuntimeInvisibleAnnotations, RuntimeInvisibleParameterAnnotations
 -keepattributes AnnotationDefault
--keepattributes Exceptions
+-keepattributes KotlinMetadata
+
+# Keep Kotlin metadata class itself (safe, small, and avoids reflection edge cases).
+-keep class kotlin.Metadata { *; }
+
+# Ensure Continuation isn't removed; generic signature must remain for suspend service methods.
+-keep,allowobfuscation,allowshrinking class kotlin.coroutines.Continuation
+
+# Keep Retrofit service methods and their annotations/signatures.
 -keepclasseswithmembers class * {
     @retrofit2.http.* <methods>;
 }
+
+# Be explicit: keep your Retrofit service interfaces (prevents signature stripping on methods).
+-keep interface com.example.emergencycommunicationsystem.network.** { *; }
+-keep class com.example.emergencycommunicationsystem.network.** { *; }
+-keep interface com.example.emergencycommunicationsystem.data.network.** { *; }
+-keep class com.example.emergencycommunicationsystem.data.network.** { *; }
+
 -dontwarn retrofit2.**
 -keep class retrofit2.** { *; }
 -dontwarn okhttp3.**
@@ -16,7 +33,6 @@
 # Keep all data classes used in API responses and requests
 -keep class com.example.emergencycommunicationsystem.data.** { *; }
 -keep class com.example.emergencycommunicationsystem.data.models.** { *; }
--keep class com.example.emergencycommunicationsystem.network.** { *; }
 
 # Room
 -keep class * extends androidx.room.RoomDatabase

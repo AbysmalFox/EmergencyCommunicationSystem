@@ -955,39 +955,40 @@ fun ModernAlertsSection(
                                         }
                                     }
 
-                                    // Issued timestamp moved into each alert card
-                                }
-                            }
+                                    if (highPriorityCount > 0) {
+                                        Spacer(modifier = Modifier.height(10.dp))
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            // Keep the "high priority" indicator visually inside the Live Monitoring header.
+                                            val highChipBg = Color(0xFFE53935).copy(alpha = 0.18f)
+                                            val highChipBorder = Color(0xFFFFCDD2).copy(alpha = 0.45f)
+                                            Surface(
+                                                color = highChipBg,
+                                                shape = RoundedCornerShape(10.dp),
+                                                border = BorderStroke(1.dp, highChipBorder)
+                                            ) {
+                                                Text(
+                                                    text = "$highPriorityCount high priority",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFFFFCDD2),
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                                )
+                                            }
 
-                            if (highPriorityCount > 0) {
-                                Spacer(modifier = Modifier.height(10.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    val highChipBg = if (isDarkMode) Color(0xFF3A1212) else Color(0xFFFFE5E5)
-                                    val highChipBorder = Color(0xFFE53935).copy(alpha = if (isDarkMode) 0.4f else 0.35f)
-                                    Surface(
-                                        color = highChipBg,
-                                        shape = RoundedCornerShape(10.dp),
-                                        border = BorderStroke(1.dp, highChipBorder)
-                                    ) {
-                                        Text(
-                                            text = "$highPriorityCount high priority",
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color(0xFFE53935),
-                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                        )
+                                            Text(
+                                                text = "Priority feed",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = Color.White.copy(alpha = 0.85f)
+                                            )
+                                        }
                                     }
 
-                                    Text(
-                                        text = "Priority feed",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f)
-                                    )
+                                    // Issued timestamp moved into each alert card
                                 }
                             }
 

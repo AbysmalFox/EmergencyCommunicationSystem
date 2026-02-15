@@ -30,6 +30,25 @@ android {
             keyAlias = "ecsdebug"
             keyPassword = "android"
         }
+
+        // Release signing is driven by local.properties to avoid hardcoding secrets in VCS.
+        // For publishing, this MUST be a dedicated, long-lived keystore.
+        create("releaseCustom") {
+            val storeFileProp = getLocalProperty("RELEASE_STORE_FILE", "")
+            val storePassProp = getLocalProperty("RELEASE_STORE_PASSWORD", "")
+            val keyAliasProp = getLocalProperty("RELEASE_KEY_ALIAS", "")
+            val keyPassProp = getLocalProperty("RELEASE_KEY_PASSWORD", "")
+
+            require(storeFileProp.isNotBlank()) { "Missing RELEASE_STORE_FILE in local.properties" }
+            require(storePassProp.isNotBlank()) { "Missing RELEASE_STORE_PASSWORD in local.properties" }
+            require(keyAliasProp.isNotBlank()) { "Missing RELEASE_KEY_ALIAS in local.properties" }
+            require(keyPassProp.isNotBlank()) { "Missing RELEASE_KEY_PASSWORD in local.properties" }
+
+            storeFile = file(storeFileProp)
+            storePassword = storePassProp
+            keyAlias = keyAliasProp
+            keyPassword = keyPassProp
+        }
     }
 
     defaultConfig {
@@ -58,6 +77,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("releaseCustom")
             buildConfigField("boolean", "ALLOW_LOCAL_FALLBACK", "false")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }

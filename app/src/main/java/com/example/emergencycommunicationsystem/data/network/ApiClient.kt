@@ -130,8 +130,13 @@ object ApiClient {
     fun initializeAndCheckConnection(context: Context) {
         if (isInitialized.isCompleted) return
 
-        // Pre-initialize client with context
-        getOkHttpClient(context.applicationContext)
+        // Never allow initialization failures to block all API calls forever.
+        runCatching {
+            // Pre-initialize client with context (enables cache/interceptors)
+            getOkHttpClient(context.applicationContext)
+        }.onFailure { e ->
+            Log.e("ApiClient", "OkHttp pre-initialization failed; continuing without context-backed cache", e)
+        }
 
         if (BuildConfig.ALLOW_LOCAL_FALLBACK) {
             CoroutineScope(Dispatchers.IO).launch {
@@ -163,10 +168,13 @@ object ApiClient {
                 }
             }
         } else {
-            _useLocalServer.value = false
-            Log.i("ApiClient", "Local fallback disabled. Using production backend only.")
-            if (!isInitialized.isCompleted) {
-                isInitialized.complete(Unit)
+            try {
+                _useLocalServer.value = false
+                Log.i("ApiClient", "Local fallback disabled. Using production backend only.")
+            } finally {
+                if (!isInitialized.isCompleted) {
+                    isInitialized.complete(Unit)
+                }
             }
         }
     }

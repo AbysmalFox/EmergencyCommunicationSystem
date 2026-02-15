@@ -1318,47 +1318,90 @@ fun CompactAlertCard(
                 spotColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.08f),
                 ambientColor = if (isDarkMode) SoftShadow else Color.Black.copy(alpha = 0.05f)
             ),
-        colors = CardDefaults.cardColors(containerColor = cardContainer),
+        // We draw a custom background so we can add gradients/highlights without changing Card's
+        // surface model. Keep Card container transparent and paint inside.
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         shape = RoundedCornerShape(18.dp),
         border = BorderStroke(
             width = if (isDarkMode) 1.dp else 0.5.dp,
             color = cardBorder
         )
     ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+        val contentShape = RoundedCornerShape(18.dp)
+        val base = cardContainer
+        val accent = severityColor
+        val accent2 = categoryColor
+
+        val backdropBrush = if (isDarkMode) {
+            Brush.linearGradient(listOf(base, base))
+        } else {
+            // Subtle tinting so the card doesn't look like a plain white slab.
+            Brush.linearGradient(
+                colors = listOf(
+                    base,
+                    lerp(base, accent, 0.06f),
+                    lerp(base, accent2, 0.04f),
+                    base
+                )
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(contentShape)
+                .background(backdropBrush)
+                .drawBehind {
+                    // A soft highlight in the top-right to give the card depth.
+                    if (!isDarkMode) {
+                        drawCircle(
+                            color = accent.copy(alpha = 0.10f),
+                            radius = size.minDimension * 0.7f,
+                            center = Offset(size.width * 0.95f, size.height * 0.15f)
+                        )
+                        drawCircle(
+                            color = accent2.copy(alpha = 0.08f),
+                            radius = size.minDimension * 0.55f,
+                            center = Offset(size.width * 0.85f, size.height * 0.05f)
+                        )
+                    }
+                }
+                .padding(14.dp)
         ) {
-            // Severity indicator bar - enhanced for light mode
-            Box(
-                modifier = Modifier
-                    .width(if (isDarkMode) 6.dp else 5.dp)
-                    .height(64.dp)
-                    .background(
-                        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                            colors = listOf(
-                                severityColor,
-                                severityColor.copy(alpha = 0.8f)
-                            )
-                        ),
-                        shape = RoundedCornerShape(if (isDarkMode) 3.dp else 2.5.dp)
-                    )
-            )
-            
-            Spacer(modifier = Modifier.width(12.dp))
-            
-            // Icon
-            Icon(
-                imageVector = getIconForCategory(alert),
-                contentDescription = alert.category,
-                modifier = Modifier.size(32.dp),
-                tint = categoryColor
-            )
-            
-            Spacer(modifier = Modifier.width(12.dp))
-            
-            // Content
-            Column(modifier = Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Severity indicator bar - enhanced for light mode
+                Box(
+                    modifier = Modifier
+                        .width(if (isDarkMode) 6.dp else 5.dp)
+                        .height(64.dp)
+                        .background(
+                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                colors = listOf(
+                                    severityColor,
+                                    severityColor.copy(alpha = 0.8f)
+                                )
+                            ),
+                            shape = RoundedCornerShape(if (isDarkMode) 3.dp else 2.5.dp)
+                        )
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Icon
+                Icon(
+                    imageVector = getIconForCategory(alert),
+                    contentDescription = alert.category,
+                    modifier = Modifier.size(32.dp),
+                    tint = categoryColor
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Content
+                Column(modifier = Modifier.weight(1f)) {
                 // Category, Severity and Source
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -1468,6 +1511,16 @@ fun CompactAlertCard(
                         )
                     }
                 }
+            }
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Trailing affordance so cards feel less static.
+                Icon(
+                    imageVector = AppIcons.ChevronRight,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (isDarkMode) 0.55f else 0.35f)
+                )
             }
         }
     }

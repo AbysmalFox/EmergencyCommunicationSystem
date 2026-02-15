@@ -20,6 +20,18 @@
             "package_name": "com.lgu.emergencycommunicationsystem",
             "certificate_hash": "3517cca809b3a14118c7251c65bda683082e72bd"
           }
+        },
+        {
+          "client_id": "16818035848-v9u858c8pb8pvlro0ebfk2pn9js17rj6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.lgu.emergencycommunicationsystem",
+            "certificate_hash": "b7eab6e6061a5bc1939c027431525bef52e49811"
+          }
+        },
+        {
+          "client_id": "16818035848-g5lohlj8kdqiq79o10qru7qh87tv6e7q.apps.googleusercontent.com",
+          "client_type": 3
         }
       ],
       "api_key": [

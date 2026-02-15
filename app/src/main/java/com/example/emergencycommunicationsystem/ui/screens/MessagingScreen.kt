@@ -10,10 +10,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -217,78 +222,80 @@ fun MessagingScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(115.dp)
+                        .heightIn(min = 115.dp)
                 ) {
                     Surface(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.matchParentSize(),
                         color = ChatFooterMintLight,
                         shape = CurvedFooterShape()
-                    ) {
-                        if (alertId == 999) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .navigationBarsPadding()
-                                    .padding(horizontal = 16.dp)
-                                    .padding(top = 10.dp, bottom = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                IconButton(onClick = { /* Handle attachments */ }) {
-                                    Icon(
-                                        imageVector = AppIcons.AttachFile,
-                                        contentDescription = "Attach",
-                                        tint = ChatHeaderTeal
-                                    )
-                                }
+                    ) {}
 
-                                TextField(
-                                    value = messageInput,
-                                    onValueChange = { viewModel.updateMessageInput(it) },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(50.dp),
-                                    placeholder = { Text(localeContext.getString(R.string.type_message), fontSize = 14.sp) },
-                                    shape = RoundedCornerShape(25.dp),
-                                    colors = TextFieldDefaults.colors(
-                                        focusedContainerColor = Color.White,
-                                        unfocusedContainerColor = Color.White,
-                                        focusedIndicatorColor = Color.Transparent,
-                                        unfocusedIndicatorColor = Color.Transparent
-                                    ),
-                                    singleLine = true,
-                                    enabled = !isSending
+                    // Place the composer on top of the Surface so it isn't clipped by the curved shape.
+                    if (alertId == 999) {
+                        Row(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                // Keep the input above the nav bar/keyboard WITHOUT shrinking the footer background.
+                                .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            IconButton(onClick = { /* Handle attachments */ }) {
+                                Icon(
+                                    imageVector = AppIcons.AttachFile,
+                                    contentDescription = "Attach",
+                                    tint = ChatHeaderTeal
                                 )
+                            }
 
-                                IconButton(
-                                    onClick = {
-                                        viewModel.sendPersistentMessage(userName ?: "User")
-                                    },
-                                    modifier = Modifier
-                                        .size(44.dp)
-                                        .background(
-                                            color = if (isSending || messageInput.isBlank())
-                                                ChatHeaderTeal.copy(alpha = 0.5f)
-                                            else
-                                                ChatHeaderTeal,
-                                            shape = CircleShape
-                                        ),
-                                    enabled = !isSending && messageInput.isNotBlank()
-                                ) {
-                                    if (isSending) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(20.dp),
-                                            color = Color.White,
-                                            strokeWidth = 2.dp
-                                        )
-                                    } else {
-                                        Icon(
-                                            imageVector = AppIcons.Send,
-                                            contentDescription = localeContext.getString(R.string.send_button),
-                                            tint = Color.White,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
+                            TextField(
+                                value = messageInput,
+                                onValueChange = { viewModel.updateMessageInput(it) },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(50.dp),
+                                placeholder = { Text(localeContext.getString(R.string.type_message), fontSize = 14.sp) },
+                                shape = RoundedCornerShape(25.dp),
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = Color.White,
+                                    unfocusedContainerColor = Color.White,
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent
+                                ),
+                                singleLine = true,
+                                enabled = !isSending
+                            )
+
+                            IconButton(
+                                onClick = {
+                                    viewModel.sendPersistentMessage(userName ?: "User")
+                                },
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(
+                                        color = if (isSending || messageInput.isBlank())
+                                            ChatHeaderTeal.copy(alpha = 0.5f)
+                                        else
+                                            ChatHeaderTeal,
+                                        shape = CircleShape
+                                    ),
+                                enabled = !isSending && messageInput.isNotBlank()
+                            ) {
+                                if (isSending) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        color = Color.White,
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = AppIcons.Send,
+                                        contentDescription = localeContext.getString(R.string.send_button),
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp)
+                                    )
                                 }
                             }
                         }
