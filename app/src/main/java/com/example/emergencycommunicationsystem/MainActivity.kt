@@ -401,19 +401,32 @@ fun EmergencyApp(
                         )
                         val messagingViewModel: MessagingViewModel = viewModel(key = "messaging_${alertId}_$currentLanguage", factory = factory)
 
-                        MessagingScreen(
-                            viewModel = messagingViewModel,
-                            alertId = alertId,
-                            alertTitle = alertTitle,
-                            userName = userName,
-                            onBackPressed = { navController.popBackStack() },
-                            onNavigateToPersistentChat = {
-                                navigateToMessaging(alertId = 999, alertTitle = "General Inquiry")
-                            },
-                            onNavigateToEmergencyContacts = {
-                                navController.navigate(Screen.EmergencyContacts.route)
-                            }
-                        )
+                        if (alertId == 999) {
+                            ResponderChatScreen(
+                                viewModel = messagingViewModel,
+                                alertTitle = alertTitle,
+                                userName = userName,
+                                onBackPressed = { navController.popBackStack() },
+                                onNavigateToPersistentChat = {
+                                    navigateToMessaging(alertId = 999, alertTitle = "General Inquiry")
+                                },
+                                onNavigateToEmergencyContacts = {
+                                    navController.navigate(Screen.EmergencyContacts.route)
+                                }
+                            )
+                        } else {
+                            ChatbotScreen(
+                                viewModel = messagingViewModel,
+                                alertTitle = alertTitle,
+                                onBackPressed = { navController.popBackStack() },
+                                onNavigateToPersistentChat = {
+                                    navigateToMessaging(alertId = 999, alertTitle = "General Inquiry")
+                                },
+                                onNavigateToEmergencyContacts = {
+                                    navController.navigate(Screen.EmergencyContacts.route)
+                                }
+                            )
+                        }
                     } else {
                         LaunchedEffect(Unit) {
                             Toast.makeText(context, "Invalid chat session.", Toast.LENGTH_SHORT).show()

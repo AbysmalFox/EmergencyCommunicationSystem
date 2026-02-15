@@ -1,16 +1,13 @@
 package com.example.emergencycommunicationsystem.network
 
-import com.example.emergencycommunicationsystem.data.models.Conversation
 import com.example.emergencycommunicationsystem.data.models.ConversationResponse
 import com.example.emergencycommunicationsystem.data.models.ConversationsListResponse
-import com.example.emergencycommunicationsystem.data.models.Message
 import com.example.emergencycommunicationsystem.data.models.MessageResponse
 import com.example.emergencycommunicationsystem.data.models.MessagesResponse
 import com.google.gson.annotations.SerializedName
-import retrofit2.http.Body
-import retrofit2.http.GET
-import retrofit2.http.POST
-import retrofit2.http.Query
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import retrofit2.http.*
 
 // Data classes to represent the JSON request bodies
 data class CreateConversationRequest(
@@ -43,6 +40,16 @@ interface MessagingApiService {
         @Body request: SendMessageRequest
     ): MessageResponse
 
+    @Multipart
+    @POST("messages/send.php")
+    suspend fun sendImageMessage(
+        @Part("conversation_id") conversationId: RequestBody,
+        @Part("sender_id") senderId: RequestBody,
+        @Part("sender_name") senderName: RequestBody,
+        @Part("sender_type") senderType: RequestBody,
+        @Part image: MultipartBody.Part
+    ): MessageResponse
+
     @GET("messages/list.php")
     suspend fun fetchMessages(
         @Query("conversation_id") conversationId: Int,
@@ -55,6 +62,3 @@ interface MessagingApiService {
         @Query("role") role: String? = null
     ): ConversationsListResponse
 }
-// Note: listConversations might need a proper response wrapper if it's more than just a list.
-// Based on PHP, it returns success=true, message="OK", conversations=[...]
-// So a better return type would be a new ConversationsListResponse.

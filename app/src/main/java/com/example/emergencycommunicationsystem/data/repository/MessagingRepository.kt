@@ -6,6 +6,10 @@ import com.example.emergencycommunicationsystem.data.network.ApiClient
 import com.example.emergencycommunicationsystem.network.CreateConversationRequest
 import com.example.emergencycommunicationsystem.network.MessagingApiService
 import com.example.emergencycommunicationsystem.network.SendMessageRequest
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 
 class MessagingRepository {
     private suspend fun apiService(): MessagingApiService = ApiClient.messagingApiService()
@@ -49,6 +53,24 @@ class MessagingRepository {
             message_text = messageText
         )
         val response = apiService().sendMessage(request)
+        return response.success
+    }
+
+    suspend fun sendImageMessage(
+        conversationId: Int,
+        senderId: String,
+        senderName: String,
+        senderType: String,
+        imagePart: MultipartBody.Part
+    ): Boolean {
+        val convIdBody = conversationId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+        val sIdBody = senderId.toRequestBody("text/plain".toMediaTypeOrNull())
+        val sNameBody = senderName.toRequestBody("text/plain".toMediaTypeOrNull())
+        val sTypeBody = senderType.toRequestBody("text/plain".toMediaTypeOrNull())
+
+        val response = apiService().sendImageMessage(
+            convIdBody, sIdBody, sNameBody, sTypeBody, imagePart
+        )
         return response.success
     }
 

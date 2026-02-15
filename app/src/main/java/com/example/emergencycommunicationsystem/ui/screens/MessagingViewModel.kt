@@ -1,5 +1,7 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
+import android.content.Context
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -17,6 +19,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import java.io.File
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -286,7 +293,6 @@ class MessagingViewModel(
         if (messageInput.value.isBlank()) return
 
         val text = messageInput.value
-        // Use the userName passed from UI (which should be "Kim E. Sis")
         val optimisticMessage = createUserMessage(text, userName)
         val tempId = optimisticMessage.messageId
 
@@ -313,6 +319,62 @@ class MessagingViewModel(
             } finally {
                 _isSending.value = false
             }
+        }
+    }
+
+    fun sendImageMessage(context: Context, uri: Uri, userName: String) {
+        val convId = _conversationId.value ?: return
+        
+        viewModelScope.launch {
+            try {
+                _isSending.value = true
+                
+                // 1. Create a local copy of the image to send as a file
+                val file = getFileFromUri(context, uri)
+                if (file == null) {
+                    _errorMessage.value = "Failed to process image."
+                    return@launch
+                }
+                
+                val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
+                val imagePart = MultipartBody.Part.createFormData("image", file.name, requestFile)
+                
+                Log.d("MessagingViewModel", "Sending image to API: convId=$convId, senderId=$userId, name=$userName")
+                
+                val success = messagingRepository.sendImageMessage(
+                    conversationId = convId,
+                    senderId = userId,
+                    senderName = userName,
+                    senderType = "user",
+                    imagePart = imagePart
+                )
+                
+                if (!success) throw Exception("Failed to send image")
+                
+                // Refresh messages after sending
+                loadInitialMessages(convId)
+                
+            } catch (e: Exception) {
+                Log.e("MessagingViewModel", "Image send failed", e)
+                _errorMessage.value = "Failed to send image: ${e.message}"
+            } finally {
+                _isSending.value = false
+            }
+        }
+    }
+
+    private fun getFileFromUri(context: Context, uri: Uri): File? {
+        return try {
+            val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+            val file = File(context.cacheDir, "upload_${System.currentTimeMillis()}.jpg")
+            val outputStream = FileOutputStream(file)
+            inputStream.copyTo(outputStream)
+            inputStream.close()
+            outputStream.close()
+            file
+        } catch (e: Exception) {
+            Log.e("MessagingViewModel", "Error creating file from URI", e)
+            null
         }
     }
 
