@@ -2,6 +2,7 @@ package com.example.emergencycommunicationsystem.webrtc
 
 import android.content.Context
 import android.util.Log
+import com.example.emergencycommunicationsystem.AuthManager
 import com.example.emergencycommunicationsystem.socket.SocketManager
 import org.json.JSONObject
 import org.webrtc.*
@@ -13,17 +14,30 @@ class SignalingManager(private val context: Context) {
     private var currentCallId: String? = null
     private var currentUserId: String? = null
     private var currentUserName: String? = null
+    private var currentLatitude: Double? = null
+    private var currentLongitude: Double? = null
+    private var currentLocationLabel: String? = null
     
     companion object {
         private const val TAG = "SignalingManager"
     }
     
-    fun connect(callId: String? = null, userId: String? = null, userName: String? = null) {
+    fun connect(
+        callId: String? = null,
+        userId: String? = null,
+        userName: String? = null,
+        latitude: Double? = null,
+        longitude: Double? = null,
+        locationLabel: String? = null
+    ) {
         if (!callId.isNullOrBlank()) {
             currentCallId = callId
         }
         currentUserId = userId
         currentUserName = userName
+        currentLatitude = latitude
+        currentLongitude = longitude
+        currentLocationLabel = locationLabel
 
         socketManager.connect(
             onConnected = {
@@ -94,6 +108,13 @@ class SignalingManager(private val context: Context) {
                 peerConnection.setLocalDescription(object : SdpObserver {
                     override fun onCreateSuccess(p0: SessionDescription?) {}
                     override fun onSetSuccess() {
+                        val resolvedUserId = currentUserId ?: AuthManager.getUserId().takeIf { it > 0 }?.toString()
+                        val resolvedUserName = currentUserName ?: AuthManager.getUsername() ?: "User"
+                        val resolvedPhone = AuthManager.getPhone()
+                        val hasCoordinates = currentLatitude != null && currentLongitude != null
+                        val resolvedLocationText = currentLocationLabel?.takeIf { it.isNotBlank() }
+                            ?: if (hasCoordinates) "${currentLatitude},${currentLongitude}" else "Unknown location"
+
                         val payload = JSONObject().apply {
                             put(
                                 "sdp",
@@ -103,8 +124,27 @@ class SignalingManager(private val context: Context) {
                                 }
                             )
                             put("callId", callId)
-                            currentUserId?.let { put("userId", it) }
-                            currentUserName?.let { put("userName", it) }
+                            put("conversationId", callId)
+                            put("caller", resolvedUserName)
+                            put("location", resolvedLocationText)
+
+                            resolvedUserId?.let { put("userId", it) }
+                            put("userName", resolvedUserName)
+
+                            put("callerInfo", JSONObject().apply {
+                                resolvedUserId?.let { put("id", it) }
+                                put("name", resolvedUserName)
+                                resolvedPhone?.let { put("phone", it) }
+                                put("source", "android")
+                            })
+
+                            put("locationData", JSONObject().apply {
+                                put("source", "android")
+                                put("hasCoordinates", hasCoordinates)
+                                currentLatitude?.let { put("latitude", it) }
+                                currentLongitude?.let { put("longitude", it) }
+                                currentLocationLabel?.let { put("label", it) }
+                            })
                         }
 
                         socketManager.sendOffer(payload)

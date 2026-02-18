@@ -21,7 +21,14 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
     data object EmergencyGuideDetail : Screen("emergency_guide_detail/{guideId}", "Emergency Guide Detail", null) {
         fun createRoute(guideId: String) = "emergency_guide_detail/$guideId"
     }
-    data object InternetCall : Screen("internet_call", "Internet Call", null)
+    data object InternetCall : Screen("internet_call?callType={callType}", "Internet Call", null) {
+        private const val BASE_ROUTE = "internet_call"
+
+        fun createRoute(callType: String): String {
+            val normalized = if (callType.equals("cellular", ignoreCase = true)) "cellular" else "internet"
+            return "$BASE_ROUTE?callType=$normalized"
+        }
+    }
     data object MyReports : Screen("my_reports", "My Reports", null)
     data object CallHistory : Screen("call_history", "Call History", null)
 
@@ -43,12 +50,15 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
                 "emergency_contacts" -> EmergencyContacts
                 "emergency_guides" -> EmergencyGuides
                 "internet_call" -> InternetCall
+                "internet_call?callType={callType}" -> InternetCall
                 "my_reports" -> MyReports
                 "call_history" -> CallHistory
                 else -> {
                     // Handle dynamic route for EmergencyGuideDetail
                     if (route?.startsWith("emergency_guide_detail/") == true) {
                         EmergencyGuideDetail
+                    } else if (route?.startsWith("internet_call") == true) {
+                        InternetCall
                     } else {
                         Home // Default screen
                     }

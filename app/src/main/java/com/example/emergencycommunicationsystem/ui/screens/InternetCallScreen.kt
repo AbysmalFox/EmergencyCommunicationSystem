@@ -1,6 +1,7 @@
 package com.example.emergencycommunicationsystem.ui.screens
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -34,22 +35,33 @@ import com.example.emergencycommunicationsystem.data.models.CallMessage
 import com.example.emergencycommunicationsystem.ui.components.MessageBubble
 import com.example.emergencycommunicationsystem.util.getLocaleContext
 import com.example.emergencycommunicationsystem.viewmodel.InternetCallViewModel
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InternetCallScreen(
     onEndCall: () -> Unit,
-    viewModel: InternetCallViewModel
+    viewModel: InternetCallViewModel,
+    callType: String = "internet"
 ) {
     val context = LocalContext.current
     val localeContext = getLocaleContext()
+    val scope = rememberCoroutineScope()
     
     val callState by viewModel.callState.collectAsState()
     val messageInput by viewModel.messageInput
     val isSending by viewModel.isSending
     
     var hasAudioPermission by remember { mutableStateOf(false) }
+    val normalizedCallType = remember(callType) {
+        if (callType.equals("cellular", ignoreCase = true)) "cellular" else "internet"
+    }
     
     // Permission launcher for audio recording
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -57,9 +69,19 @@ fun InternetCallScreen(
     ) { isGranted ->
         hasAudioPermission = isGranted
         if (isGranted) {
-            val userId = AuthManager.getUserId()
-            val roomName = "emergency-room-${System.currentTimeMillis()}"
-            viewModel.startCall(userId, roomName)
+            scope.launch {
+                val userId = AuthManager.getUserId()
+                val roomName = "emergency-room-${System.currentTimeMillis()}"
+                val location = resolveCallLocation(context)
+                viewModel.startCall(
+                    userId = userId,
+                    roomName = roomName,
+                    callType = normalizedCallType,
+                    latitude = location?.first,
+                    longitude = location?.second,
+                    locationLabel = location?.third
+                )
+            }
         }
     }
     
@@ -74,7 +96,15 @@ fun InternetCallScreen(
             // Start call with current user
             val userId = AuthManager.getUserId()
             val roomName = "emergency-room-${System.currentTimeMillis()}"
-            viewModel.startCall(userId, roomName)
+            val location = resolveCallLocation(context)
+            viewModel.startCall(
+                userId = userId,
+                roomName = roomName,
+                callType = normalizedCallType,
+                latitude = location?.first,
+                longitude = location?.second,
+                locationLabel = location?.third
+            )
         } else {
             permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         }
@@ -106,6 +136,7 @@ fun InternetCallScreen(
                 Text(
                     text = if (callState.isConnecting) localeContext.getString(com.example.emergencycommunicationsystem.R.string.connecting)
                     else if (callState.isActive) localeContext.getString(com.example.emergencycommunicationsystem.R.string.emergency_call_title)
+                    else if (normalizedCallType == "cellular") localeContext.getString(com.example.emergencycommunicationsystem.R.string.cellular_call)
                     else localeContext.getString(com.example.emergencycommunicationsystem.R.string.internet_call),
                     color = Color.White,
                     fontSize = 24.sp,
@@ -143,6 +174,7 @@ fun InternetCallScreen(
                             )
                             Text(
                                 text = if (callState.isActive) localeContext.getString(com.example.emergencycommunicationsystem.R.string.connected_status)
+                                else if (normalizedCallType == "cellular") localeContext.getString(com.example.emergencycommunicationsystem.R.string.cellular_call)
                                 else localeContext.getString(com.example.emergencycommunicationsystem.R.string.via_internet),
                                 color = Color.White.copy(alpha = 0.7f),
                                 fontSize = 14.sp
@@ -151,6 +183,7 @@ fun InternetCallScreen(
                     }
                 } ?: Text(
                     text = if (callState.isActive) localeContext.getString(com.example.emergencycommunicationsystem.R.string.connected_emergency_services)
+                    else if (normalizedCallType == "cellular") localeContext.getString(com.example.emergencycommunicationsystem.R.string.cellular_call)
                     else localeContext.getString(com.example.emergencycommunicationsystem.R.string.via_internet),
                     color = Color.White.copy(alpha = 0.7f),
                     fontSize = 16.sp
@@ -405,5 +438,40 @@ fun InternetCallScreen(
                 }
             }
         }
+    }
+}
+
+@SuppressLint("MissingPermission")
+private suspend fun resolveCallLocation(context: android.content.Context): Triple<Double, Double, String>? {
+    val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    if (!hasFine && !hasCoarse) return null
+
+    return try {
+        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+
+        val lastLoc = suspendCancellableCoroutine<android.location.Location?> { continuation ->
+            fusedLocationClient.lastLocation
+                .addOnSuccessListener { continuation.resume(it) }
+                .addOnFailureListener { continuation.resume(null) }
+        }
+
+        val location = if (lastLoc != null && (System.currentTimeMillis() - lastLoc.time) < 600000) {
+            lastLoc
+        } else {
+            suspendCancellableCoroutine<android.location.Location?> { continuation ->
+                val cts = CancellationTokenSource()
+                fusedLocationClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, cts.token)
+                    .addOnSuccessListener { continuation.resume(it) }
+                    .addOnFailureListener { continuation.resume(null) }
+                    .addOnCanceledListener { continuation.resume(null) }
+            }
+        }
+
+        location?.let {
+            Triple(it.latitude, it.longitude, "${it.latitude},${it.longitude}")
+        }
+    } catch (_: Exception) {
+        null
     }
 }

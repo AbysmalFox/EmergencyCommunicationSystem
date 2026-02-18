@@ -199,7 +199,9 @@ fun EmergencyApp(
                 composable(Screen.Home.route) {
                     HomeScreen(
                         onEmergencyCallClick = { navController.navigate(Screen.EmergencyContacts.route) },
-                        onInternetCallClick = { navController.navigate(Screen.InternetCall.route) },
+                        onInternetCallClick = { callType ->
+                            navController.navigate(Screen.InternetCall.createRoute(callType))
+                        },
                         onReportIncidentClick = { navController.navigate(Screen.ReportIncident.route) },
                         onMessageClick = {
                             navigateToMessaging(alertId = 999, alertTitle = "General Inquiry")
@@ -434,7 +436,16 @@ fun EmergencyApp(
                         }
                     }
                 }
-                composable(Screen.InternetCall.route) {
+                composable(
+                    route = Screen.InternetCall.route,
+                    arguments = listOf(
+                        navArgument("callType") {
+                            type = NavType.StringType
+                            defaultValue = "internet"
+                        }
+                    )
+                ) { backStackEntry ->
+                    val callTypeArg = backStackEntry.arguments?.getString("callType") ?: "internet"
                     val callRepository = remember { CallRepository(context) }
                     val signalingManager = remember { SignalingManager(context.applicationContext) }
                     val viewModel: InternetCallViewModel = viewModel(
@@ -447,7 +458,8 @@ fun EmergencyApp(
                     )
                     InternetCallScreen(
                         onEndCall = { navController.popBackStack() },
-                        viewModel = viewModel
+                        viewModel = viewModel,
+                        callType = callTypeArg
                     )
                 }
             }

@@ -477,7 +477,7 @@ fun EmergencyCallButton(onClick: () -> Unit) {
 @Composable
 fun ActionGrid(
     onEmergencyCallClick: () -> Unit,
-    onInternetCallClick: () -> Unit,
+    onInternetCallClick: (String) -> Unit,
     onReportClick: () -> Unit,
     onSafeClick: () -> Unit,
     onMessageClick: () -> Unit = {}

@@ -55,7 +55,7 @@ private val AlertaraSuccess = Color(0xFF43A047)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InternetCallSlider(
-    onCallInitiated: () -> Unit,
+    onCallInitiated: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scope = rememberCoroutineScope()
@@ -305,7 +305,7 @@ fun InternetCallSlider(
                                         
                                         showSuccess = true
                                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        onCallInitiated()
+                                        onCallInitiated(if (isInternetCall) "internet" else "cellular")
                                         
                                         delay(3000)
                                         showSuccess = false

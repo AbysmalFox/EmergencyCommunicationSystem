@@ -40,9 +40,17 @@ class InternetCallViewModel(
         _callState.value = CallState()
     }
     
-    fun startCall(userId: Int, roomName: String) {
+    fun startCall(
+        userId: Int,
+        roomName: String,
+        callType: String = "internet",
+        latitude: Double? = null,
+        longitude: Double? = null,
+        locationLabel: String? = null
+    ) {
         viewModelScope.launch {
             try {
+                val normalizedCallType = if (callType.equals("cellular", ignoreCase = true)) "cellular" else "internet"
                 // Update state to connecting
                 _callState.update { it.copy(
                     isConnecting = true,
@@ -61,7 +69,7 @@ class InternetCallViewModel(
                 // Log the call
                 val callLog = CallLog(
                     userId = userId,
-                    callType = "internet",
+                    callType = normalizedCallType,
                     startTime = System.currentTimeMillis(),
                     status = "active",
                     roomName = roomName
@@ -76,7 +84,10 @@ class InternetCallViewModel(
                     signalingManager?.connect(
                         callId = roomName,
                         userId = userId.toString(),
-                        userName = userName
+                        userName = userName,
+                        latitude = latitude,
+                        longitude = longitude,
+                        locationLabel = locationLabel
                     )
                     
                     // Update state to active

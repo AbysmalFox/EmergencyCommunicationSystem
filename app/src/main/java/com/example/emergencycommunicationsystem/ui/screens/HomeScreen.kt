@@ -87,7 +87,7 @@ val AlertaraTealAccent = Color(0xFFB2DFDB)
 @Composable
 fun HomeScreen(
     onEmergencyCallClick: () -> Unit,
-    onInternetCallClick: () -> Unit,
+    onInternetCallClick: (String) -> Unit,
     onReportIncidentClick: () -> Unit,
     onMessageClick: () -> Unit = {},
     onAlertClick: (Int) -> Unit = {},
