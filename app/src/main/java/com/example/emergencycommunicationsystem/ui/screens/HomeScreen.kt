@@ -1057,13 +1057,6 @@ fun ModernAlertsSection(
                                     letterSpacing = 0.5.sp,
                                     color = Color.White.copy(alpha = 0.8f)
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                    contentDescription = null,
-                                    tint = Color.White.copy(alpha = 0.6f),
-                                    modifier = Modifier.size(12.dp)
-                                )
                             }
                         }
                     }
@@ -1450,7 +1443,12 @@ fun CompactInstructionsCard(
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
+                // Reserve space for the right-side illustration so text never overlaps it.
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 92.dp)
+                ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_tabler_message_2_exclamation),

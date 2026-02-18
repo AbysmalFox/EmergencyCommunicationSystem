@@ -60,6 +60,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import kotlin.math.roundToInt
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
@@ -1296,16 +1297,49 @@ fun CompactAlertCard(
     val categoryColor = getColorForCategory(alert)
     val bgColor = MaterialTheme.colorScheme.background
     val isDarkMode = (bgColor.red + bgColor.green + bgColor.blue) / 3f < 0.5f
+    val severityKey = severity.trim().lowercase(Locale.ROOT)
+    val isFireAlert = remember(alert.categoryId, alert.category, alert.title, alert.content) {
+        val category = alert.category.orEmpty().lowercase(Locale.ROOT)
+        val title = alert.title.orEmpty().lowercase(Locale.ROOT)
+        val content = alert.content.orEmpty().lowercase(Locale.ROOT)
+        alert.categoryId == 4 ||
+            "fire" in category || "fire" in title || "fire" in content ||
+            "smoke" in category || "smoke" in title || "smoke" in content ||
+            "blaze" in category || "blaze" in title || "blaze" in content
+    }
+    val isWeatherAlert = remember(alert.category, alert.title, alert.content) {
+        val category = alert.category.orEmpty().lowercase(Locale.ROOT)
+        val title = alert.title.orEmpty().lowercase(Locale.ROOT)
+        val content = alert.content.orEmpty().lowercase(Locale.ROOT)
+        "weather" in category || "flood" in category || "rain" in category ||
+            "weather" in title || "flood" in title || "rain" in title ||
+            "weather" in content || "flood" in content || "rain" in content
+    }
+    val leadingIcon = when {
+        isFireAlert -> AppIcons.Fire
+        isWeatherAlert -> AppIcons.Water
+        else -> getIconForCategory(alert)
+    }
+    val badgeColor = when (severityKey) {
+        "medium" -> Color(0xFFFFA726)
+        "high", "critical" -> Color(0xFFFF5252)
+        "low" -> Color(0xFF4CAF50)
+        else -> severityColor
+    }
+    val iconTint = if (isWeatherAlert) Color(0xFF1E88E5) else categoryColor
+    val sourceChipColor = if (isWeatherAlert) Color(0xFF6AAE93) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
     
     val cardContainer = containerColorOverride ?: if (isDarkMode) {
         MaterialTheme.colorScheme.surface
     } else {
         Color.White
     }
-    val cardBorder = borderColorOverride ?: if (isDarkMode) {
-        Color.Black.copy(alpha = 0.1f)
+    val cardBorder = borderColorOverride ?: if (isWeatherAlert) {
+        Color(0xFFA8D1BE)
+    } else if (isDarkMode) {
+        badgeColor.copy(alpha = 0.35f)
     } else {
-        severityColor.copy(alpha = 0.2f)
+        badgeColor.copy(alpha = 0.28f)
     }
 
     Card(
@@ -1329,22 +1363,31 @@ fun CompactAlertCard(
     ) {
         val contentShape = RoundedCornerShape(18.dp)
         val base = cardContainer
-        val accent = severityColor
+        val accent = badgeColor
         val accent2 = categoryColor
 
-        val backdropBrush = if (isDarkMode) {
-            Brush.linearGradient(listOf(base, base))
-        } else {
-            // Subtle tinting so the card doesn't look like a plain white slab.
-            Brush.linearGradient(
-                colors = listOf(
-                    base,
-                    lerp(base, accent, 0.06f),
-                    lerp(base, accent2, 0.04f),
+        val backdropBrush = Brush.linearGradient(
+            colors = if (isWeatherAlert) {
+                listOf(
+                    Color(0xFFE4F4EB),
+                    Color(0xFFD2ECDD),
+                    Color(0xFFC7E5D5)
+                )
+            } else if (isDarkMode) {
+                listOf(
+                    lerp(base, accent, 0.10f),
+                    lerp(base, accent2, 0.06f),
                     base
                 )
-            )
-        }
+            } else {
+                listOf(
+                    Color.White.copy(alpha = 0.92f),
+                    lerp(base, accent, 0.10f),
+                    lerp(base, accent2, 0.08f),
+                    Color.White.copy(alpha = 0.90f)
+                )
+            }
+        )
 
         Box(
             modifier = Modifier
@@ -1366,164 +1409,162 @@ fun CompactAlertCard(
                         )
                     }
                 }
-                .padding(14.dp)
+                .padding(horizontal = 14.dp, vertical = 12.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Severity indicator bar - enhanced for light mode
-                Box(
-                    modifier = Modifier
-                        .width(if (isDarkMode) 6.dp else 5.dp)
-                        .height(64.dp)
-                        .background(
-                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                                colors = listOf(
-                                    severityColor,
-                                    severityColor.copy(alpha = 0.8f)
-                                )
-                            ),
-                            shape = RoundedCornerShape(if (isDarkMode) 3.dp else 2.5.dp)
-                        )
-                )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                // Icon
-                Icon(
-                    imageVector = getIconForCategory(alert),
-                    contentDescription = alert.category,
-                    modifier = Modifier.size(32.dp),
-                    tint = categoryColor
-                )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                // Content
-                Column(modifier = Modifier.weight(1f)) {
-                // Category, Severity and Source
+            Column(modifier = Modifier.fillMaxWidth()) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.weight(1f)
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(iconTint.copy(alpha = if (isDarkMode) 0.22f else 0.14f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = leadingIcon,
+                            contentDescription = alert.category,
+                            modifier = Modifier.size(20.dp),
+                            tint = iconTint
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(badgeColor.copy(alpha = 0.20f))
+                            .border(1.dp, badgeColor.copy(alpha = 0.55f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 9.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = displayCategory.uppercase(),
+                            text = severity.uppercase(),
                             fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = categoryColor
+                            fontWeight = FontWeight.Black,
+                            color = badgeColor,
+                            maxLines = 1,
+                            softWrap = false
                         )
-                        // Semi-transparent badge styling
-                        Box(
-                            modifier = Modifier
-                                .background(severityColor.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
-                        ) {
-                            Text(
-                                text = severity,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = severityColor
-                            )
-                        }
                     }
-                    
-                    if (!alert.source.isNullOrBlank()) {
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(sourceChipColor.copy(alpha = 0.18f))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
                         Text(
-                            text = alert.source ?: "",
+                            text = (alert.source ?: "PAGASA").uppercase(),
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                            color = sourceChipColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
-                
-                Spacer(modifier = Modifier.height(4.dp))
-                
-                // Title
+
+                Spacer(modifier = Modifier.height(10.dp))
+
                 Text(
                     text = displayTitle,
-                    fontSize = 15.sp, // Increased size
-                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp,
+                    lineHeight = 21.sp,
+                    fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Start,
                     modifier = Modifier.fillMaxWidth()
                 )
-                
-                if (translatedLocation.isNotEmpty()) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(top = 2.dp)
-                    ) {
-                        Icon(
-                            imageVector = AppIcons.Location,
-                            contentDescription = null,
-                            modifier = Modifier.size(10.dp),
-                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = translatedLocation,
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = AppIcons.Location,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = translatedLocation.ifBlank { "Metro Manila" },
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.66f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
 
                 if (!issuedText.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Issued $issuedText",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(6.dp))
-                
-                // Distance and location
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    if (distanceKm != null) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = AppIcons.Location,
-                            contentDescription = "Distance",
-                            modifier = Modifier.size(14.dp),
-                            tint = Color.Gray // Medium gray
+                            imageVector = AppIcons.DateRange,
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f)
                         )
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = com.example.emergencycommunicationsystem.util.LocationUtils.formatDistance(distanceKm),
-                            fontSize = 13.sp, // Increased font size
-                            color = Color.Gray, // Medium gray
-                            fontWeight = FontWeight.Medium
+                            text = "Issued $issuedText",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
                         )
                     }
                 }
-            }
-                Spacer(modifier = Modifier.width(8.dp))
 
-                // Trailing affordance so cards feel less static.
-                Icon(
-                    imageVector = AppIcons.ChevronRight,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (isDarkMode) 0.55f else 0.35f)
-                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = AppIcons.Location,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = distanceKm?.let { formatDashboardDistance(it) } ?: "Far from your area",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
+                    )
+                }
             }
         }
     }
+}
+
+private fun issuedAgeProgress(issuedText: String): Float {
+    val value = issuedText.trim().lowercase(Locale.ROOT)
+    if (value.contains("just now")) return 1f
+
+    val match = Regex("""(\d+)\s*([a-z]+)""").find(value) ?: return 0.35f
+    val amount = match.groupValues.getOrNull(1)?.toFloatOrNull() ?: return 0.35f
+    val unit = match.groupValues.getOrNull(2).orEmpty()
+
+    val ageHours = when {
+        unit.startsWith("min") -> amount / 60f
+        unit.startsWith("hr") || unit == "h" -> amount
+        unit.startsWith("d") -> amount * 24f
+        else -> amount
+    }
+
+    // Newer alerts show a fuller bar; taper over one week.
+    return (1f - (ageHours / 168f)).coerceIn(0.18f, 1f)
+}
+
+private fun formatDashboardDistance(distanceKm: Double): String {
+    if (distanceKm.isNaN() || distanceKm.isInfinite() || distanceKm < 0.0) return "Distance unavailable"
+    if (distanceKm > 500.0) return "Far from your area"
+    return com.example.emergencycommunicationsystem.util.LocationUtils.formatDistance(distanceKm)
 }
 
 /**
