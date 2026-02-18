@@ -28,7 +28,7 @@ fun getIconForCategory(alert: Alert): ImageVector {
         categoryId == 1 || "weather" in categoryStr || "typhoon" in title || "storm" in title -> AppIcons.Weather
         categoryId == 2 || "earthquake" in categoryStr || "tremor" in title -> AppIcons.Earthquake
         categoryId == 4 || "fire" in categoryStr -> AppIcons.Fire
-        "security" in categoryStr -> AppIcons.Security
+        categoryId == 5 || "security" in categoryStr || "crime" in title -> AppIcons.Security
         "water" in categoryStr || "flood" in categoryStr || "flood" in title -> AppIcons.Flood
         else -> AppIcons.Info
     }

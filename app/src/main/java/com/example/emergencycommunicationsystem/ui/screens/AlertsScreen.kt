@@ -59,12 +59,14 @@ fun CategoryIcon(
     val iconRes = when {
         categoryId == 4 || "fire" in categoryStr || "wildfire" in title -> R.drawable.ic_tabler_flame
         categoryId == 3 || "health" in categoryStr -> R.drawable.ic_tabler_clipboard_heart
-        categoryId == 5 || "general" in categoryStr || "emergency" in categoryStr || "traffic" in title || "road" in title || "power" in title -> R.drawable.ic_tabler_message_2_exclamation
+        "general" in categoryStr || "emergency" in categoryStr || "traffic" in title || "road" in title || "power" in title -> R.drawable.ic_tabler_message_2_exclamation
         else -> null
     }
 
     if (iconRes != null) {
         Icon(painter = painterResource(id = iconRes), contentDescription = null, modifier = modifier, tint = tint)
+    } else if (categoryId == 5 || "security" in categoryStr || "crime" in title) {
+        Icon(imageVector = AppIcons.Security, contentDescription = null, modifier = modifier, tint = tint)
     } else {
         Icon(imageVector = getIconForCategory(alert), contentDescription = null, modifier = modifier, tint = tint)
     }
