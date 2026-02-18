@@ -170,7 +170,7 @@ class InternetCallViewModel(
                 
                 // Update call status to cancelled in database
                 currentCallLog?.let { callLog ->
-                    callRepository.endCall(callLog.id, endTime, duration)
+                    callRepository.cancelCall(callLog.id, endTime, duration)
                 }
                 
                 // Disconnect WebRTC

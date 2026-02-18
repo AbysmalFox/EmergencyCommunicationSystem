@@ -7,6 +7,7 @@ import android.util.Log
 import com.example.emergencycommunicationsystem.BuildConfig
 import com.example.emergencycommunicationsystem.network.AlertsApiService
 import com.example.emergencycommunicationsystem.network.AuthApiService
+import com.example.emergencycommunicationsystem.network.CallApiService
 import com.example.emergencycommunicationsystem.network.IncidentApiService
 import com.example.emergencycommunicationsystem.network.MessagingApiService
 import com.example.emergencycommunicationsystem.network.SettingsApiService
@@ -125,6 +126,11 @@ object ApiClient {
     suspend fun incidentApiService(): IncidentApiService {
         isInitialized.await()
         return getRetrofit(_useLocalServer.value).create(IncidentApiService::class.java)
+    }
+
+    suspend fun callApiService(): CallApiService {
+        isInitialized.await()
+        return getRetrofit(_useLocalServer.value).create(CallApiService::class.java)
     }
 
     fun initializeAndCheckConnection(context: Context) {

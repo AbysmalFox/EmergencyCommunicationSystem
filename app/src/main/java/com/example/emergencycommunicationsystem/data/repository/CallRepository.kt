@@ -3,7 +3,9 @@ package com.example.emergencycommunicationsystem.data.repository
 import android.content.Context
 import android.util.Log
 import com.example.emergencycommunicationsystem.data.local.*
+import com.example.emergencycommunicationsystem.data.network.ApiClient
 import com.example.emergencycommunicationsystem.data.models.*
+import com.example.emergencycommunicationsystem.network.CallEventRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -38,6 +40,20 @@ class CallRepository(private val context: Context) {
             
             val id = callLogDao.insertCallLog(entity)
             val loggedCall = callLog.copy(id = id.toInt())
+
+            // Best-effort backend event logging (do not fail local call start).
+            logCallEventToBackend(
+                callId = callLog.roomName,
+                userId = callLog.userId,
+                event = "started",
+                timestampMillis = callLog.startTime,
+                durationSec = null,
+                room = callLog.roomName,
+                metadata = mapOf(
+                    "call_type" to callLog.callType,
+                    "is_admin_call" to callLog.isAdminCall
+                )
+            )
             
             Log.d("CallRepository", "Call logged successfully: ID $id")
             Result.success(loggedCall)
@@ -81,6 +97,15 @@ class CallRepository(private val context: Context) {
             callLogDao.endCall(callId, "ended", endTime, duration)
             val entity = callLogDao.getCallLogById(callId)
             if (entity != null) {
+                logCallEventToBackend(
+                    callId = entity.roomName,
+                    userId = entity.userId,
+                    event = "ended",
+                    timestampMillis = endTime,
+                    durationSec = duration,
+                    room = entity.roomName
+                )
+
                 val endedCall = CallLog(
                     id = entity.id,
                     userId = entity.userId,
@@ -109,6 +134,15 @@ class CallRepository(private val context: Context) {
             callLogDao.cancelCall(callId, endTime, duration)
             val entity = callLogDao.getCallLogById(callId)
             if (entity != null) {
+                logCallEventToBackend(
+                    callId = entity.roomName,
+                    userId = entity.userId,
+                    event = "cancelled",
+                    timestampMillis = endTime,
+                    durationSec = duration,
+                    room = entity.roomName
+                )
+
                 val cancelledCall = CallLog(
                     id = entity.id,
                     userId = entity.userId,
@@ -226,6 +260,54 @@ class CallRepository(private val context: Context) {
             }
         }
     }
+
+    suspend fun getUserCallHistoryRemote(
+        userId: Int,
+        limit: Int = 50,
+        offset: Int = 0
+    ): Result<List<CallLog>> = withContext(Dispatchers.IO) {
+        try {
+            val service = ApiClient.callApiService()
+            val response = service.getCallHistory(userId = userId, limit = limit, offset = offset)
+            if (!response.isSuccessful) {
+                return@withContext Result.failure(Exception("HTTP ${response.code()}"))
+            }
+
+            val body = response.body()
+            if (body?.success != true) {
+                return@withContext Result.failure(Exception(body?.message ?: "Failed to fetch call history"))
+            }
+
+            val items = body.data?.callHistory.orEmpty()
+            val logs = items.map { item ->
+                val timestampSec = item.timestamp ?: 0L
+                val timestampMs = if (timestampSec < 1_000_000_000_000L) timestampSec * 1000L else timestampSec
+                val event = (item.event ?: "ended").lowercase()
+                val status = when (event) {
+                    "started", "incoming", "connected" -> "active"
+                    "cancelled", "declined", "missed" -> "cancelled"
+                    else -> "ended"
+                }
+                CallLog(
+                    id = item.id,
+                    userId = item.userId,
+                    callType = ((item.metadata?.get("call_type") as? String) ?: "internet"),
+                    startTime = timestampMs,
+                    endTime = if (status == "active") null else timestampMs,
+                    duration = item.durationSec ?: 0,
+                    status = status,
+                    roomName = item.room ?: item.callId ?: "",
+                    isAdminCall = item.role?.equals("admin", ignoreCase = true) == true,
+                    createdAt = timestampMs
+                )
+            }
+
+            Result.success(logs)
+        } catch (e: Exception) {
+            Log.e("CallRepository", "Error fetching remote call history", e)
+            Result.failure(e)
+        }
+    }
     
     private suspend fun ensureUserExists(userId: Int) {
         val user = userDao.getUserById(userId)
@@ -256,5 +338,34 @@ class CallRepository(private val context: Context) {
             isOnline = entity.isOnline,
             lastSeen = entity.lastSeen
         )
+    }
+
+    private suspend fun logCallEventToBackend(
+        callId: String,
+        userId: Int,
+        event: String,
+        timestampMillis: Long,
+        durationSec: Int? = null,
+        room: String? = null,
+        metadata: Map<String, Any?>? = null
+    ) {
+        try {
+            val service = ApiClient.callApiService()
+            val request = CallEventRequest(
+                callId = callId,
+                userId = userId,
+                event = event,
+                timestamp = timestampMillis / 1000L,
+                durationSec = durationSec,
+                room = room,
+                metadata = metadata
+            )
+            val response = service.logCallEvent(request)
+            if (!response.isSuccessful || response.body()?.success != true) {
+                Log.w("CallRepository", "Backend call event logging failed: ${response.code()}")
+            }
+        } catch (e: Exception) {
+            Log.w("CallRepository", "Backend call event logging exception", e)
+        }
     }
 }
