@@ -915,7 +915,7 @@ fun ModernAlertsSection(
                                                     )
                                                     Spacer(modifier = Modifier.width(5.dp))
                                                     Text(
-                                                        text = "Live monitoring",
+                                                        text = localizedStringResource(R.string.live_monitoring),
                                                         fontSize = 10.sp,
                                                         fontWeight = FontWeight.SemiBold,
                                                         color = Color.White.copy(alpha = 0.9f)
@@ -931,7 +931,7 @@ fun ModernAlertsSection(
                                                 border = BorderStroke(1.dp, gold.copy(alpha = 0.4f))
                                             ) {
                                                 Text(
-                                                    text = "$totalAlerts active",
+                                                    text = localizedStringResource(R.string.alerts_active_count, totalAlerts),
                                                     fontSize = 10.sp,
                                                     fontWeight = FontWeight.Black,
                                                     color = gold,
@@ -971,7 +971,7 @@ fun ModernAlertsSection(
                                                 border = BorderStroke(1.dp, highChipBorder)
                                             ) {
                                                 Text(
-                                                    text = "$highPriorityCount high priority",
+                                                    text = localizedStringResource(R.string.high_priority_count, highPriorityCount),
                                                     fontSize = 11.sp,
                                                     fontWeight = FontWeight.Bold,
                                                     color = Color(0xFFFFCDD2),
@@ -980,7 +980,7 @@ fun ModernAlertsSection(
                                             }
 
                                             Text(
-                                                text = "Priority feed",
+                                                text = localizedStringResource(R.string.priority_feed),
                                                 fontSize = 10.sp,
                                                 fontWeight = FontWeight.SemiBold,
                                                 color = Color.White.copy(alpha = 0.85f)
@@ -1051,7 +1051,7 @@ fun ModernAlertsSection(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Swipe to browse",
+                                    text = localizedStringResource(R.string.swipe_to_browse),
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 0.5.sp,

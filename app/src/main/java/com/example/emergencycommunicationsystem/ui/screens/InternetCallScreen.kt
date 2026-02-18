@@ -104,7 +104,9 @@ fun InternetCallScreen(
                 modifier = Modifier.padding(top = 60.dp)
             ) {
                 Text(
-                    text = if (callState.isConnecting) "Connecting..." else if (callState.isActive) "Emergency Call" else "Internet Call",
+                    text = if (callState.isConnecting) localeContext.getString(com.example.emergencycommunicationsystem.R.string.connecting)
+                    else if (callState.isActive) localeContext.getString(com.example.emergencycommunicationsystem.R.string.emergency_call_title)
+                    else localeContext.getString(com.example.emergencycommunicationsystem.R.string.internet_call),
                     color = Color.White,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
@@ -140,14 +142,16 @@ fun InternetCallScreen(
                                 fontWeight = FontWeight.Medium
                             )
                             Text(
-                                text = if (callState.isActive) "Connected" else "Via Internet",
+                                text = if (callState.isActive) localeContext.getString(com.example.emergencycommunicationsystem.R.string.connected_status)
+                                else localeContext.getString(com.example.emergencycommunicationsystem.R.string.via_internet),
                                 color = Color.White.copy(alpha = 0.7f),
                                 fontSize = 14.sp
                             )
                         }
                     }
                 } ?: Text(
-                    text = if (callState.isActive) "Connected to Emergency Services" else "Via Internet",
+                    text = if (callState.isActive) localeContext.getString(com.example.emergencycommunicationsystem.R.string.connected_emergency_services)
+                    else localeContext.getString(com.example.emergencycommunicationsystem.R.string.via_internet),
                     color = Color.White.copy(alpha = 0.7f),
                     fontSize = 16.sp
                 )
@@ -338,7 +342,7 @@ fun InternetCallScreen(
                                     modifier = Modifier.weight(1f),
                                     placeholder = {
                                         Text(
-                                            "Type a message...",
+                                            localeContext.getString(com.example.emergencycommunicationsystem.R.string.type_message),
                                             color = Color.White.copy(alpha = 0.6f)
                                         )
                                     },
@@ -393,7 +397,7 @@ fun InternetCallScreen(
                 
                 if (!hasAudioPermission) {
                     Text(
-                        text = "Microphone permission required for calls",
+                        text = localeContext.getString(com.example.emergencycommunicationsystem.R.string.microphone_permission_required),
                         color = Color.Red,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(horizontal = 20.dp)

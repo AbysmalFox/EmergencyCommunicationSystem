@@ -74,7 +74,7 @@ fun ActiveAlertsSection(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Active Alerts",
+                            text = localeContext.getString(com.example.emergencycommunicationsystem.R.string.active_alerts_title),
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground,

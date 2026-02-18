@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,6 +33,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.emergencycommunicationsystem.util.localizedStringResource
 import kotlinx.coroutines.delay
 
 /**
@@ -41,10 +43,11 @@ import kotlinx.coroutines.delay
 @Composable
 fun SafeOverlay(
     visible: Boolean,
-    message: String = "Always stay safe",
+    message: String? = null,
     onDismiss: () -> Unit
 ) {
     if (!visible) return
+    val safeMessage = message ?: localizedStringResource(R.string.always_stay_safe)
 
     var success by remember { mutableStateOf(false) }
 
@@ -97,7 +100,7 @@ fun SafeOverlay(
                     CircularProgressIndicator(color = Color.White)
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "Sending status...",
+                        text = localizedStringResource(R.string.sending_status),
                         color = Color.White,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium
@@ -123,7 +126,7 @@ fun SafeOverlay(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = message,
+                        text = safeMessage,
                         color = Color.White,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold

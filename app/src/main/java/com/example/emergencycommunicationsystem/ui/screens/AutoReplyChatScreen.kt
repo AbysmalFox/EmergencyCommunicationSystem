@@ -209,6 +209,7 @@ fun AutoReplyChatScreen(viewModel: AutoReplyViewModel = androidx.lifecycle.viewm
 
 @Composable
 fun ChatHeader() {
+    val localeContext = getLocaleContext()
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shadowElevation = 2.dp,
@@ -222,7 +223,7 @@ fun ChatHeader() {
         ) {
             Column {
                 Text(
-                    text = "Auto-Reply Bot",
+                    text = localeContext.getString(com.example.emergencycommunicationsystem.R.string.auto_reply_bot),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold
                 )
@@ -234,7 +235,7 @@ fun ChatHeader() {
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "Online • Auto-Reply",
+                        text = localeContext.getString(com.example.emergencycommunicationsystem.R.string.bot_status_online),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -328,6 +329,7 @@ fun QuickReplyPanel(
     onReplyClick: (QuickReply) -> Unit
 ) {
     if (replies.isEmpty()) return
+    val localeContext = getLocaleContext()
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -340,7 +342,7 @@ fun QuickReplyPanel(
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
             Text(
-                text = "Quick replies:",
+                text = localeContext.getString(com.example.emergencycommunicationsystem.R.string.suggested_answers),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 6.dp, start = 4.dp)
@@ -373,3 +375,4 @@ fun QuickReplyPanel(
         }
     }
 }
+

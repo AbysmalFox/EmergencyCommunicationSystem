@@ -20,7 +20,7 @@ import java.util.Locale
 val highKeywords = listOf("fire", "flood", "earthquake", "tsunami", "typhoon", "evacuate", "urgent", "emergency")
 
 fun getIconForCategory(alert: Alert): ImageVector {
-    val categoryId = try { alert.category?.toIntOrNull() ?: 0 } catch (_: Exception) { 0 }
+    val categoryId = alert.categoryId ?: 0
     val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
     val categoryStr = alert.category?.lowercase(Locale.getDefault()) ?: ""
     
@@ -29,7 +29,7 @@ fun getIconForCategory(alert: Alert): ImageVector {
         categoryId == 2 || "earthquake" in categoryStr || "tremor" in title -> AppIcons.Earthquake
         categoryId == 4 || "fire" in categoryStr -> AppIcons.Fire
         "security" in categoryStr -> AppIcons.Security
-        "water" in categoryStr || "flood" in title -> AppIcons.Flood
+        "water" in categoryStr || "flood" in categoryStr || "flood" in title -> AppIcons.Flood
         else -> AppIcons.Info
     }
 }
@@ -48,13 +48,13 @@ fun getColorForCategory(alert: Alert): Color {
  * Non-composable version of getColorForCategory for use in LaunchedEffect or other contexts.
  */
 fun getStaticColorForCategory(alert: Alert, isDark: Boolean): Color {
-    val categoryId = try { alert.category?.toIntOrNull() ?: 0 } catch (_: Exception) { 0 }
+    val categoryId = alert.categoryId ?: 0
     val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
     val categoryStr = alert.category?.lowercase(Locale.getDefault()) ?: ""
     
     return when {
         // Flood / Water - Blue
-        categoryId == 1 || "flood" in title || "water" in categoryStr -> {
+        categoryId == 1 || "flood" in categoryStr || "flood" in title || "water" in categoryStr -> {
             if (isDark) Color(0xFF64B5F6) else Color(0xFF1976D2) // Blue
         }
         // Weather - Teal (Distinct from Flood)
@@ -102,12 +102,12 @@ fun getAlertSeverity(alert: Alert): String {
 }
 
 fun getCategoryDisplayName(alert: Alert): String {
-    val categoryId = try { alert.category?.toIntOrNull() ?: 0 } catch (_: Exception) { 0 }
+    val categoryId = alert.categoryId ?: 0
     val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
     val categoryStr = alert.category?.lowercase(Locale.getDefault()) ?: ""
     
     return when {
-        categoryId == 1 || "weather" in categoryStr || "flood" in title || "typhoon" in title || "storm" in title || "rain" in title -> "Weather"
+        categoryId == 1 || "weather" in categoryStr || "flood" in categoryStr || "flood" in title || "typhoon" in title || "storm" in title || "rain" in title -> "Weather"
         categoryId == 2 || "earthquake" in categoryStr || "tremor" in title -> "Earthquake"
         categoryId == 3 || "health" in categoryStr || "medical" in title -> "Health"
         categoryId == 4 || "fire" in categoryStr || "smoke" in title -> "Fire"

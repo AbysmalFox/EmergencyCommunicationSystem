@@ -1,6 +1,7 @@
 package com.example.emergencycommunicationsystem.ui
 
 import android.animation.ObjectAnimator
+import android.content.Context
 import android.graphics.*
 import android.graphics.drawable.Drawable
 import android.os.Build
@@ -19,6 +20,8 @@ import androidx.core.graphics.toColorInt
 import androidx.lifecycle.lifecycleScope
 import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.data.UserPrefs
+import com.example.emergencycommunicationsystem.util.LocaleManager
+import com.example.emergencycommunicationsystem.util.createLocaleContext
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.math.hypot
@@ -33,6 +36,14 @@ abstract class BaseActivity : ComponentActivity() {
     private val longPressRunnable = Runnable {
         isLongPress = true
         bubble?.alpha = 0.1f 
+    }
+
+    override fun attachBaseContext(newBase: Context) {
+        val langCode = UserPrefs.getLanguageSync(newBase)
+        val locale = LocaleManager.getLocaleFromCode(langCode)
+        LocaleManager.updateLocale(locale)
+        val localizedBase = newBase.createLocaleContext(locale)
+        super.attachBaseContext(localizedBase)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

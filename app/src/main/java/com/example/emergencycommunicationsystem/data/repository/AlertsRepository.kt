@@ -218,6 +218,12 @@ class AlertsRepository(
                 } else {
                     alert.content
                 }
+
+                val translatedMessage = if (!alert.message.isNullOrBlank()) {
+                    TranslationService.translate(alert.message, targetLanguage)
+                } else {
+                    alert.message
+                }
                 
                 val translatedLocation = if (!alert.location.isNullOrBlank()) {
                     TranslationService.translate(alert.location, targetLanguage)
@@ -227,6 +233,7 @@ class AlertsRepository(
                 
                 alert.copy(
                     title = translatedTitle,
+                    message = translatedMessage,
                     content = translatedContent,
                     location = translatedLocation
                 )

@@ -38,7 +38,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.emergencycommunicationsystem.R
 import com.example.emergencycommunicationsystem.ui.theme.ThemeManager
+import com.example.emergencycommunicationsystem.util.localizedStringResource
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -160,7 +162,7 @@ fun InternetCallSlider(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Internet Call",
+                            text = localizedStringResource(R.string.internet_call),
                             fontSize = 11.sp,
                             fontWeight = if (isInternetCall) FontWeight.Bold else FontWeight.Medium,
                             color = if (isInternetCall) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
@@ -203,7 +205,7 @@ fun InternetCallSlider(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Cellular Call",
+                            text = localizedStringResource(R.string.cellular_call),
                             fontSize = 11.sp,
                             fontWeight = if (!isInternetCall) FontWeight.Bold else FontWeight.Medium,
                             color = if (!isInternetCall) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
@@ -243,7 +245,7 @@ fun InternetCallSlider(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "Slide to Call".uppercase(),
+                    text = localizedStringResource(R.string.slide_to_call_short).uppercase(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = (1f - progress).coerceIn(0.2f, 0.6f)),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Black,
@@ -263,7 +265,7 @@ fun InternetCallSlider(
                     Icon(Icons.Default.Phone, null, tint = AlertaraSuccess, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "CONNECTING...",
+                        text = localizedStringResource(R.string.connecting),
                         color = AlertaraSuccess,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Black,

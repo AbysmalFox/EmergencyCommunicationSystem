@@ -1014,7 +1014,7 @@ fun DirectionsCard(
                 Row(modifier = Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(text = "$translatedDistanceLabel: $distance", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     destination.capacity?.let { cap ->
-                        Text(text = "• $translatedCapacityLabel: $cap", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(text = "- $translatedCapacityLabel: $cap", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -1081,7 +1081,7 @@ fun NavigationCard(
                     Text(text = translatedNavLabel, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 }
                 IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Filled.Close, contentDescription = "Stop", modifier = Modifier.size(16.dp))
+                    Icon(Icons.Filled.Close, contentDescription = localeContext.getString(R.string.stop), modifier = Modifier.size(16.dp))
                 }
             }
             
@@ -2701,3 +2701,4 @@ private fun getQuezonCityBoundaryPoints(): ArrayList<GeoPoint> {
         GeoPoint(14.7646242, 121.1095933),
     )
 }
+

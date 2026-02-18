@@ -389,7 +389,7 @@ fun EmergencyCallButton(onClick: () -> Unit) {
                 // Release to Cancel (Centered)
                 if (progress > 0.2f && !isCompleted) {
                     Text(
-                        text = "RELEASE TO CANCEL",
+                        text = localizedStringResource(R.string.release_to_cancel),
                         color = secondaryLabelColor,
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp,
@@ -752,7 +752,7 @@ fun WeatherWidget(state: WeatherState, onRetry: () -> Unit = {}) {
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Weather Information Unavailable",
+                            text = localizedStringResource(R.string.weather_information_unavailable),
                             color = MaterialTheme.colorScheme.onError,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
@@ -770,7 +770,7 @@ fun WeatherWidget(state: WeatherState, onRetry: () -> Unit = {}) {
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onError),
                         modifier = Modifier.background(MaterialTheme.colorScheme.onError.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
                     ) {
-                        Text("Retry", fontWeight = FontWeight.Bold)
+                        Text(localizedStringResource(R.string.retry), fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -909,14 +909,14 @@ fun WeatherAdvice(advice: String) {
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "AI Reporter",
+                text = localizedStringResource(R.string.ai_reporter),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White.copy(alpha = 0.7f),
                 modifier = Modifier.padding(bottom = 2.dp)
             )
             Text(
-                text = displayedText.ifEmpty { "Analysing weather data..." },
+                text = displayedText.ifEmpty { localizedStringResource(R.string.analysing_weather_data) },
                 fontSize = 13.sp,
                 color = Color.White,
                 lineHeight = 18.sp,
@@ -1459,7 +1459,7 @@ fun CompactAlertCard(
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = (alert.source ?: "PAGASA").uppercase(),
+                            text = (alert.source ?: localizedStringResource(R.string.pagasa_label)).uppercase(),
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
                             color = sourceChipColor,
@@ -1494,7 +1494,7 @@ fun CompactAlertCard(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = translatedLocation.ifBlank { "Metro Manila" },
+                        text = translatedLocation.ifBlank { localizedStringResource(R.string.metro_manila) },
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.66f),
                         maxLines = 1,
@@ -1513,7 +1513,7 @@ fun CompactAlertCard(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Issued $issuedText",
+                            text = localizedStringResource(R.string.issued_time, issuedText),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
@@ -1531,7 +1531,8 @@ fun CompactAlertCard(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = distanceKm?.let { formatDashboardDistance(it) } ?: "Far from your area",
+                        text = distanceKm?.let { formatDashboardDistance(it, localizedStringResource(R.string.distance_unavailable), localizedStringResource(R.string.far_from_your_area)) }
+                            ?: localizedStringResource(R.string.far_from_your_area),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
@@ -1561,9 +1562,9 @@ private fun issuedAgeProgress(issuedText: String): Float {
     return (1f - (ageHours / 168f)).coerceIn(0.18f, 1f)
 }
 
-private fun formatDashboardDistance(distanceKm: Double): String {
-    if (distanceKm.isNaN() || distanceKm.isInfinite() || distanceKm < 0.0) return "Distance unavailable"
-    if (distanceKm > 500.0) return "Far from your area"
+private fun formatDashboardDistance(distanceKm: Double, unavailableText: String, farText: String): String {
+    if (distanceKm.isNaN() || distanceKm.isInfinite() || distanceKm < 0.0) return unavailableText
+    if (distanceKm > 500.0) return farText
     return com.example.emergencycommunicationsystem.util.LocationUtils.formatDistance(distanceKm)
 }
 

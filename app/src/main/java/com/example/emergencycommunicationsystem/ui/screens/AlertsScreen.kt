@@ -52,7 +52,7 @@ fun CategoryIcon(
     modifier: Modifier = Modifier,
     tint: Color = MaterialTheme.colorScheme.onSurface
 ) {
-    val categoryId = try { alert.category?.toIntOrNull() ?: 0 } catch (_: Exception) { 0 }
+    val categoryId = alert.categoryId ?: 0
     val title = alert.title?.lowercase(Locale.getDefault()) ?: ""
     val categoryStr = alert.category?.lowercase(Locale.getDefault()) ?: ""
     
@@ -126,19 +126,10 @@ fun AlertItem(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        var categoryName by remember { mutableStateOf("") }
-                        val baseCategory = getCategoryDisplayName(alert)
-                        
-                        LaunchedEffect(baseCategory, currentLanguage) {
-                            categoryName = if (currentLanguage != "en") {
-                                TranslationService.translate(baseCategory, currentLanguage)
-                            } else {
-                                baseCategory
-                            }
-                        }
+                        val categoryName = getCategoryDisplayName(alert)
                         
                         Text(
-                            text = "${categoryName.uppercase()} • ${alert.category?.uppercase() ?: ""}",
+                            text = "${categoryName.uppercase()} - ${alert.category?.uppercase() ?: ""}",
                             color = categoryColor,
                             fontWeight = FontWeight.Black,
                             fontSize = 10.sp,
@@ -208,10 +199,16 @@ fun AlertItem(
             Spacer(modifier = Modifier.height(8.dp))
             
             Column(modifier = Modifier.animateContentSize()) {
-                val displayContent = if (!alert.message.isNullOrBlank()) {
-                    "${alert.message}\n\n${alert.content ?: ""}"
-                } else {
-                    alert.content ?: ""
+                val displayContent = when {
+                    // Avoid mixed-language blocks (e.g., EN message + translated content) on non-English UI.
+                    currentLanguage != "en" && !alert.content.isNullOrBlank() -> alert.content
+                    !alert.message.isNullOrBlank() && !alert.content.isNullOrBlank() -> {
+                        if (alert.message.trim() == alert.content.trim()) alert.content
+                        else "${alert.message}\n\n${alert.content}"
+                    }
+                    !alert.content.isNullOrBlank() -> alert.content
+                    !alert.message.isNullOrBlank() -> alert.message
+                    else -> ""
                 }
 
                 Text(
@@ -284,7 +281,10 @@ fun AlertItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Source: ${alert.source ?: localeContext.getString(R.string.unknown_source)}",
+                    text = localeContext.getString(
+                        R.string.source_label_format,
+                        alert.source ?: localeContext.getString(R.string.unknown_source)
+                    ),
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)

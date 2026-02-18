@@ -11,6 +11,8 @@ import java.util.Locale
 
 object UserPrefs {
     private val Context.dataStore by preferencesDataStore("settings")
+    private const val LEGACY_PREFS_NAME = "settings_sync"
+    private const val LEGACY_LANGUAGE_KEY = "app_language"
 
     private val LANGUAGE_KEY = stringPreferencesKey("app_language")
     private val THEME_KEY = stringPreferencesKey("app_theme")
@@ -20,6 +22,11 @@ object UserPrefs {
         context.dataStore.edit { prefs ->
             prefs[LANGUAGE_KEY] = langCode
         }
+        // Keep a synchronous copy for early Activity locale setup (attachBaseContext).
+        context.getSharedPreferences(LEGACY_PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(LEGACY_LANGUAGE_KEY, langCode)
+            .apply()
     }
 
     suspend fun saveTheme(context: Context, theme: String) {
@@ -42,6 +49,18 @@ object UserPrefs {
                 else -> "en"
             }
         }
+
+    fun getLanguageSync(context: Context): String {
+        val stored = context.getSharedPreferences(LEGACY_PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(LEGACY_LANGUAGE_KEY, null)
+        if (!stored.isNullOrBlank()) return stored
+
+        return when (Locale.getDefault().language) {
+            "es" -> "es"
+            "fil", "tl" -> "fil"
+            else -> "en"
+        }
+    }
 
     fun getTheme(context: Context): Flow<String> =
         context.dataStore.data.map { prefs ->
