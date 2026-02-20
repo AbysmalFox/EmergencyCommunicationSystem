@@ -130,6 +130,11 @@ class ProfileViewModel(
     }
     
     fun changePassword(current: String, new: String) {
+        if (new.length < 8) {
+            _changePasswordResult.value = Result.failure(Exception("New password must be at least 8 characters long."))
+            return
+        }
+
         viewModelScope.launch {
             try {
                 val request = ChangePasswordRequest(userId, current, new)

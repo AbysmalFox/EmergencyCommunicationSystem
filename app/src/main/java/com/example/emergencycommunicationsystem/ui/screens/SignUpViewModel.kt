@@ -46,8 +46,8 @@ class SignUpViewModel(application: Application) : AndroidViewModel(application) 
             _signUpState.value = SignUpState.Error("All fields are required.")
             return
         }
-        if (password.length < 6) {
-            _signUpState.value = SignUpState.Error("Password must be at least 6 characters long.")
+        if (password.length < 8) {
+            _signUpState.value = SignUpState.Error("Password must be at least 8 characters long.")
             return
         }
 
