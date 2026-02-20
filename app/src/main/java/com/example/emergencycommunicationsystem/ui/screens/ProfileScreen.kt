@@ -112,8 +112,8 @@ fun ProfileScreen(
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            title = { Text(localeContext.getString(R.string.logout)) },
-            text = { Text(localeContext.getString(R.string.logout_message)) },
+            title = { Text(localeContext.getString(R.string.logout), color = Color.Black) },
+            text = { Text(localeContext.getString(R.string.logout_message), color = Color.Black) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -126,7 +126,10 @@ fun ProfileScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showLogoutDialog = false }) {
+                TextButton(
+                    onClick = { showLogoutDialog = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = Color.Black)
+                ) {
                     Text(localeContext.getString(R.string.cancel))
                 }
             }
@@ -418,30 +421,69 @@ fun ChangePasswordDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(localeContext.getString(R.string.change_password)) },
+        title = { Text(localeContext.getString(R.string.change_password), color = Color.Black) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 OutlinedTextField(
                     value = currentPassword,
                     onValueChange = { currentPassword = it },
-                    label = { Text("Current Password") },
+                    label = { Text("Current Password", color = Color.Black) },
                     singleLine = true,
-                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.Black,
+                        focusedContainerColor = Color.Black,
+                        unfocusedContainerColor = Color.White,
+                        focusedBorderColor = Color.Black,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedLabelColor = Color.Black,
+                        unfocusedLabelColor = Color.Black,
+                        cursorColor = Color.White
+                    )
                 )
                 OutlinedTextField(
                     value = newPassword,
                     onValueChange = { newPassword = it },
-                    label = { Text("New Password") },
+                    label = { Text("New Password", color = Color.Black) },
                     singleLine = true,
-                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.Black,
+                        focusedContainerColor = Color.Black,
+                        unfocusedContainerColor = Color.White,
+                        focusedBorderColor = Color.Black,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedLabelColor = Color.Black,
+                        unfocusedLabelColor = Color.Black,
+                        cursorColor = Color.White
+                    )
                 )
                 OutlinedTextField(
                     value = confirmPassword,
                     onValueChange = { confirmPassword = it },
-                    label = { Text("Confirm New Password") },
+                    label = { Text("Confirm New Password", color = Color.Black) },
                     singleLine = true,
                     visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                    isError = newPassword.isNotEmpty() && confirmPassword.isNotEmpty() && newPassword != confirmPassword
+                    isError = newPassword.isNotEmpty() && confirmPassword.isNotEmpty() && newPassword != confirmPassword,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.Black,
+                        focusedContainerColor = Color.Black,
+                        unfocusedContainerColor = Color.White,
+                        focusedBorderColor = Color.Black,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedLabelColor = Color.Black,
+                        unfocusedLabelColor = Color.Black,
+                        cursorColor = Color.White
+                    )
                 )
             }
         },
@@ -454,12 +496,12 @@ fun ChangePasswordDialog(
                 },
                 enabled = newPassword == confirmPassword && newPassword.isNotEmpty() && currentPassword.isNotEmpty()
             ) {
-                Text(localeContext.getString(R.string.save_changes))
+                Text(localeContext.getString(R.string.save_changes), color = Color.Black)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(localeContext.getString(R.string.cancel))
+                Text(localeContext.getString(R.string.cancel), color = Color.Black)
             }
         }
     )
