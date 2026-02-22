@@ -145,7 +145,13 @@ fun EmergencyApp(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val mainScreens = listOf(Screen.Home.route, Screen.Alerts.route, Screen.Map.route, Screen.Profile.route)
+    val mainScreens = listOf(
+        Screen.Home.route,
+        Screen.Alerts.route,
+        Screen.Alerts.routeWithArgs,
+        Screen.Map.route,
+        Screen.Profile.route
+    )
 
     if (isLoggedIn) {
         LocationUpdater {
@@ -206,8 +212,8 @@ fun EmergencyApp(
                         onMessageClick = {
                             navigateToMessaging(alertId = 999, alertTitle = "General Inquiry")
                         },
-                        onAlertClick = { _ ->
-                            navController.navigate(Screen.Alerts.route) {
+                        onAlertClick = { alertId ->
+                            navController.navigate(Screen.Alerts.createRoute(alertId)) {
                                 popUpTo(navController.graph.findStartDestination().id) {
                                     saveState = true
                                 }
@@ -221,9 +227,20 @@ fun EmergencyApp(
                         weatherViewModel = weatherViewModel
                     )
                 }
-                composable(Screen.Alerts.route) {
+                composable(
+                    route = Screen.Alerts.routeWithArgs,
+                    arguments = listOf(
+                        navArgument("alertId") {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        }
+                    )
+                ) { backStackEntry ->
+                    val alertId = backStackEntry.arguments?.getString("alertId")
                     AlertsScreen(
                         weatherViewModel = weatherViewModel,
+                        alertId = alertId,
                         onMessageClick = { alertId, alertTitle ->
                             try {
                                 val userId = if (isLoggedIn) AuthManager.getUserId().toString() else "guest_${System.currentTimeMillis()}"

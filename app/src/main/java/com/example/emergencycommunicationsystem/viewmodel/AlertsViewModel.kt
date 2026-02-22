@@ -126,7 +126,8 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
                 withContext(Dispatchers.Main) {
                     if (result.isSuccess) {
                         LogFilter.i("AlertsViewModel", "Successfully acknowledged alert $alertId")
-                        _events.send(AlertsEvent.ShowUndoSnackbar(alertId, "Alert acknowledged"))
+                        // REMOVED Snackbar event as per user request to remove "Alert acknowledged" black bar
+                        // _events.send(AlertsEvent.ShowUndoSnackbar(alertId, "Alert acknowledged"))
                         loadAlerts() // Refresh list to update UI state
                     } else {
                         val error = result.exceptionOrNull()

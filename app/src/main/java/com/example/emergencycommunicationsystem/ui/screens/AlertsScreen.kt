@@ -15,6 +15,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
@@ -26,6 +27,7 @@ import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -414,6 +416,7 @@ fun AlertItemLine(
 fun AlertsScreen(
     viewModel: AlertsViewModel = viewModel(),
     weatherViewModel: com.example.emergencycommunicationsystem.viewmodel.WeatherViewModel = viewModel(),
+    alertId: String? = null,
     onMessageClick: ((alertId: String, alertTitle: String) -> Unit)? = null
 ) {
     val localeContext = getLocaleContext()
@@ -421,7 +424,15 @@ fun AlertsScreen(
     val activePoll by viewModel.activePoll.collectAsState()
     val isRefreshing = state is Resource.Loading
     var isCompactMode by remember { mutableStateOf(false) }
+    var selectedAlertId by remember { mutableStateOf<Int?>(null) }
+    var consumedDeepLinkAlertId by rememberSaveable { mutableStateOf<String?>(null) }
+    val listState = rememberLazyListState()
     val currentLanguage by UserPrefs.getLanguage(LocalContext.current).collectAsState(initial = "en")
+    val alerts = (state as? Resource.Success)?.data
+        ?.map { it.alert }
+        ?.filter { it.title != "General Inquiry" }
+        ?: emptyList()
+    val selectedAlert = selectedAlertId?.let { id -> alerts.firstOrNull { it.id == id } }
     
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -455,6 +466,18 @@ fun AlertsScreen(
         refreshing = isRefreshing, 
         onRefresh = { viewModel.loadAlerts() }
     )
+
+    LaunchedEffect(alertId, alerts) {
+        if (alertId.isNullOrBlank() || alerts.isEmpty() || consumedDeepLinkAlertId == alertId) return@LaunchedEffect
+
+        val deepLinkedAlertId = alertId.toIntOrNull() ?: return@LaunchedEffect
+        val index = alerts.indexOfFirst { it.id == deepLinkedAlertId }
+        if (index == -1) return@LaunchedEffect
+
+        listState.animateScrollToItem(index)
+        selectedAlertId = deepLinkedAlertId
+        consumedDeepLinkAlertId = alertId
+    }
 
     // Safety Poll Dialog
     activePoll?.let { poll ->
@@ -521,11 +544,11 @@ fun AlertsScreen(
                 }
 
                 is Resource.Success -> {
-                    val alerts = resource.data.map { it.alert }.filter { it.title != "General Inquiry" }
                     if (alerts.isEmpty()) {
                         EmptyAlertsView()
                     } else {
                         LazyColumn(
+                            state = listState,
                             contentPadding = PaddingValues(16.dp),
                             verticalArrangement = Arrangement.spacedBy(if (isCompactMode) 8.dp else 16.dp),
                             modifier = Modifier.fillMaxSize()
@@ -577,8 +600,79 @@ fun AlertsScreen(
                 backgroundColor = MaterialTheme.colorScheme.surface, 
                 contentColor = MaterialTheme.colorScheme.primary
             )
+
+            selectedAlert?.let { alert ->
+                AlertDetailDialog(
+                    alert = alert,
+                    onDismiss = { selectedAlertId = null },
+                    onMessageClick = {
+                        onMessageClick?.invoke(alert.id.toString(), alert.title ?: "Chat")
+                    }
+                )
+            }
         }
     }
+}
+
+@Composable
+private fun AlertDetailDialog(
+    alert: Alert,
+    onDismiss: () -> Unit,
+    onMessageClick: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = alert.title ?: "Alert Details",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                alert.timestamp?.takeIf { it.isNotBlank() }?.let {
+                    Text(
+                        text = it,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                    )
+                }
+                Text(
+                    text = when {
+                        !alert.content.isNullOrBlank() -> alert.content
+                        !alert.message.isNullOrBlank() -> alert.message
+                        else -> "No additional details."
+                    },
+                    fontSize = 14.sp
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onMessageClick) {
+                Icon(
+                    imageVector = AppIcons.SmartToy,
+                    contentDescription = null,
+                    tint = Color.Black,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Ask our Chatbot",
+                    color = Color.Black,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = "Close",
+                    color = Color.Black,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+    )
 }
 
 @Composable

@@ -5,7 +5,11 @@ import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector?) {
     data object Home : Screen("home", "Home", AppIcons.Home)
-    data object Alerts : Screen("alerts", "Alerts", AppIcons.Alerts)
+    data object Alerts : Screen("alerts", "Alerts", AppIcons.Alerts) {
+        const val routeWithArgs = "alerts?alertId={alertId}"
+
+        fun createRoute(alertId: Int): String = "alerts?alertId=$alertId"
+    }
     data object Profile : Screen("profile", "Profile", AppIcons.Profile)
     data object Map : Screen("map", "Map", AppIcons.Map)
     data object EmergencyContacts : Screen("emergency_contacts", "Emergency Contacts", null)
@@ -38,6 +42,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
 
                 "home" -> Home
                 "alerts" -> Alerts
+                "alerts?alertId={alertId}" -> Alerts
                 "profile" -> Profile
                 "map" -> Map
                 "login" -> Login // Added Login route handling
@@ -57,6 +62,8 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
                     // Handle dynamic route for EmergencyGuideDetail
                     if (route?.startsWith("emergency_guide_detail/") == true) {
                         EmergencyGuideDetail
+                    } else if (route?.startsWith("alerts") == true) {
+                        Alerts
                     } else if (route?.startsWith("internet_call") == true) {
                         InternetCall
                     } else {

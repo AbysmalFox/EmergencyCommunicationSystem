@@ -55,7 +55,9 @@ fun BottomNavigationBar(
 
     val currentSelectionIndex = remember(currentDestination) {
         screens.indexOfFirst { screen ->
-            currentDestination?.hierarchy?.any { it.route == screen.route } == true
+            currentDestination?.hierarchy?.any { destination ->
+                destination.route.matchesScreenRoute(screen)
+            } == true
         }.coerceAtLeast(0)
     }
 
@@ -116,7 +118,7 @@ fun BottomNavigationBar(
             screens.forEachIndexed { index, screen ->
                 val isSelected = currentSelectionIndex == index
                 NavItem(screen = screen, isSelected = isSelected, isDarkMode = isDark) {
-                    if (currentDestination?.route != screen.route) {
+                    if (!(currentDestination?.route.matchesScreenRoute(screen) == true)) {
                         navController.navigate(screen.route) {
                             popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                             launchSingleTop = true
@@ -126,6 +128,14 @@ fun BottomNavigationBar(
                 }
             }
         }
+    }
+}
+
+private fun String?.matchesScreenRoute(screen: Screen): Boolean {
+    val route = this ?: return false
+    return when (screen) {
+        is Screen.Alerts -> route == Screen.Alerts.route || route.startsWith("alerts?")
+        else -> route == screen.route
     }
 }
 
