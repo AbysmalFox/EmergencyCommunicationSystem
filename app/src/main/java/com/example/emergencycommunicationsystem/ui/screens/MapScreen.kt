@@ -5,6 +5,9 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Animatable
+import android.graphics.drawable.AnimationDrawable
+import android.graphics.drawable.Drawable
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -34,6 +37,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -42,6 +46,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import com.example.emergencycommunicationsystem.util.NavigationManager
 import com.example.emergencycommunicationsystem.data.network.RoutingService
+import com.example.emergencycommunicationsystem.data.network.WeatherApiClient
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -52,6 +57,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import android.widget.Toast
 import com.example.emergencycommunicationsystem.util.LogFilter
+import com.example.emergencycommunicationsystem.util.WeatherIconUtils
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -75,8 +81,47 @@ import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
 import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
 import com.example.emergencycommunicationsystem.viewmodel.MapViewModel
+import com.example.emergencycommunicationsystem.BuildConfig
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 
 private const val TAG = "MapScreen"
+
+private class FixedSizeAnimatableDrawable(
+    private val inner: Drawable,
+    private val sizePx: Int
+) : Drawable(), Animatable {
+    override fun draw(canvas: Canvas) {
+        inner.bounds = bounds
+        inner.draw(canvas)
+    }
+
+    override fun setAlpha(alpha: Int) {
+        inner.alpha = alpha
+    }
+
+    override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {
+        inner.colorFilter = colorFilter
+    }
+
+    @Suppress("DEPRECATION")
+    override fun getOpacity(): Int = inner.opacity
+
+    override fun getIntrinsicWidth(): Int = sizePx
+
+    override fun getIntrinsicHeight(): Int = sizePx
+
+    override fun start() {
+        (inner as? Animatable)?.start()
+    }
+
+    override fun stop() {
+        (inner as? Animatable)?.stop()
+    }
+
+    override fun isRunning(): Boolean = (inner as? Animatable)?.isRunning == true
+}
 
 @Composable
 fun MapScreen() {
@@ -111,8 +156,10 @@ fun MapScreen() {
     
     // Map Filters State
     var showAlerts by remember { mutableStateOf(true) }
+    var showWeather by remember { mutableStateOf(true) }
     var showHospitals by remember { mutableStateOf(true) }
     var showEvacuationCenters by remember { mutableStateOf(true) }
+    val qcWeatherCache = remember { mutableStateMapOf<String, CachedQcWeather>() }
     
     // Navigation Manager from ViewModel
     val navigationManager = mapViewModel.navigationManager
@@ -323,7 +370,7 @@ fun MapScreen() {
                         val currentAlerts = if (showAlerts) allAlerts else emptyList()
                         val currentAlertIds = currentAlerts.map { it.id }.toSet()
                         
-                        // Always clean up if toggled off or changed
+                        // Always clean up alert visuals if toggled off or changed
                         val markersToRemove = mapView.overlays
                             .filterIsInstance<Marker>()
                             .filter { marker ->
@@ -331,6 +378,10 @@ fun MapScreen() {
                             }
                             .toList()
                         markersToRemove.forEach { mapView.overlays.remove(it) }
+                        val pulsesToRemove = mapView.overlays
+                            .filterIsInstance<PulsingCircleOverlay>()
+                            .toList()
+                        pulsesToRemove.forEach { mapView.overlays.remove(it) }
 
                         // Re-add only if supposed to show
                         if (showAlerts) {
@@ -462,6 +513,107 @@ fun MapScreen() {
             }
         }
 
+        // Manage Weather Markers from weather-related alerts
+        LaunchedEffect(alertsState, currentLanguage, showWeather) {
+            mapView?.let { map ->
+                // Remove existing weather markers first
+                val weatherMarkersToRemove = map.overlays
+                    .filterIsInstance<Marker>()
+                    .filter { marker -> marker.title?.startsWith("🌦 Weather:") == true }
+                    .toList()
+                weatherMarkersToRemove.forEach { map.overlays.remove(it) }
+
+                if (!showWeather) {
+                    map.invalidate()
+                    return@let
+                }
+
+                val successState = alertsState as? com.example.emergencycommunicationsystem.util.Resource.Success
+                val weatherAlerts = successState?.data
+                    ?.map { it.alert }
+                    ?.filter { alert ->
+                        alert.latitude != null &&
+                            alert.longitude != null &&
+                            isWeatherAlertForMap(alert)
+                    }
+                    ?: emptyList()
+
+                weatherAlerts.forEach { alert ->
+                    val condition = inferWeatherConditionForMap(alert)
+                    val marker = Marker(map).apply {
+                        // Slight offset to avoid perfectly overlapping the alert marker at the same location
+                        position = GeoPoint(alert.latitude!! + 0.00025, alert.longitude!!)
+                        title = "🌦 Weather: ${condition.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }}"
+                        val weatherSnippetSource = alert.content ?: alert.message ?: alert.location ?: "Weather update"
+                        snippet = if (currentLanguage != "en") {
+                            com.example.emergencycommunicationsystem.util.TranslationService.translate(weatherSnippetSource, currentLanguage)
+                        } else {
+                            weatherSnippetSource
+                        }
+                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                        icon = createWeatherMarkerIcon(map.context, condition)
+                        startWeatherIconAnimation(icon, map)
+                    }
+                    map.overlays.add(marker)
+                }
+                map.invalidate()
+            }
+        }
+
+        // Manage place-aware QC weather markers around the user's current location.
+        LaunchedEffect(userLocation, currentLanguage, showWeather) {
+            mapView?.let { map ->
+                val qcWeatherMarkersToRemove = map.overlays
+                    .filterIsInstance<Marker>()
+                    .filter { marker -> marker.title?.startsWith("QC Weather:") == true }
+                    .toList()
+                qcWeatherMarkersToRemove.forEach { map.overlays.remove(it) }
+
+                if (!showWeather) {
+                    map.invalidate()
+                    return@let
+                }
+
+                val currentUserLocation = userLocation ?: locationOverlay?.myLocation
+                if (currentUserLocation == null) {
+                    map.invalidate()
+                    return@let
+                }
+
+                val nearbyPlaces = detectNearbyQcWeatherPlaces(
+                    userLat = currentUserLocation.latitude,
+                    userLon = currentUserLocation.longitude,
+                    maxDistanceMeters = 12000.0
+                )
+
+                val livePlaces = coroutineScope {
+                    nearbyPlaces.map { place ->
+                        async {
+                            fetchLiveWeatherForQcPlace(place, qcWeatherCache)
+                        }
+                    }.awaitAll().filterNotNull()
+                }
+
+                livePlaces.forEach { place ->
+                    val marker = Marker(map).apply {
+                        position = GeoPoint(place.latitude, place.longitude)
+                        title = "QC Weather: ${place.name}"
+                        val baseSnippet = "${place.description} (${place.condition.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }})"
+                        snippet = if (currentLanguage != "en") {
+                            com.example.emergencycommunicationsystem.util.TranslationService.translate(baseSnippet, currentLanguage)
+                        } else {
+                            baseSnippet
+                        }
+                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                        icon = createWeatherMarkerIcon(map.context, place.condition)
+                        startWeatherIconAnimation(icon, map)
+                    }
+                    map.overlays.add(marker)
+                }
+                map.invalidate()
+            }
+        }
+
         // Map Legend (Always visible at TopEnd)
         MapLegend(
             modifier = Modifier
@@ -471,6 +623,8 @@ fun MapScreen() {
             currentLanguage = currentLanguage,
             showAlerts = showAlerts,
             onShowAlertsChange = { showAlerts = it },
+            showWeather = showWeather,
+            onShowWeatherChange = { showWeather = it },
             showHospitals = showHospitals,
             onShowHospitalsChange = { showHospitals = it },
             showEvacuationCenters = showEvacuationCenters,
@@ -815,6 +969,8 @@ fun MapLegend(
     currentLanguage: String = "en",
     showAlerts: Boolean = true,
     onShowAlertsChange: (Boolean) -> Unit = {},
+    showWeather: Boolean = true,
+    onShowWeatherChange: (Boolean) -> Unit = {},
     showHospitals: Boolean = true,
     onShowHospitalsChange: (Boolean) -> Unit = {},
     showEvacuationCenters: Boolean = true,
@@ -828,6 +984,7 @@ fun MapLegend(
     
     val translatedLegend = localeContext.getString(R.string.map_legend)
     val translatedAlert = localeContext.getString(R.string.map_alert)
+    val translatedWeather = "Weather"
     val translatedHospital = localeContext.getString(R.string.map_hospital)
     val translatedEvac = localeContext.getString(R.string.map_evacuation)
     
@@ -864,6 +1021,14 @@ fun MapLegend(
                 isPin = false,
                 isChecked = showAlerts,
                 onToggle = onShowAlertsChange
+            )
+            LegendItem(
+                color = Color(0xFFFFB300),
+                label = translatedWeather,
+                textColor = contentColor,
+                isCircle = true,
+                isChecked = showWeather,
+                onToggle = onShowWeatherChange
             )
             LegendItem(
                 color = Color(0xFF4CAF50), 
@@ -1287,6 +1452,294 @@ private fun createPulseCoreIcon(context: android.content.Context, colorInt: Int)
     canvas.drawCircle(radius, radius, radius - 2f, borderPaint)
     
     return BitmapDrawable(context.resources, bitmap)
+}
+
+private fun createWeatherMarkerIcon(
+    context: android.content.Context,
+    condition: String
+): android.graphics.drawable.Drawable {
+    val resId = WeatherIconUtils.getWeatherAnimation(condition)
+    val drawable = ContextCompat.getDrawable(context, resId)?.mutate()
+        ?: return createPulseCoreIcon(context, Color(0xFFFFB300).toArgb())
+
+    val size = 172
+    if (drawable is AnimationDrawable) {
+        val scaledAnimation = AnimationDrawable().apply { isOneShot = drawable.isOneShot }
+        for (i in 0 until drawable.numberOfFrames) {
+            val frame = drawable.getFrame(i)
+            val duration = drawable.getDuration(i)
+            val scaledFrame = renderDrawableAsBitmapDrawable(context, frame, size)
+            scaledAnimation.addFrame(scaledFrame, duration)
+        }
+        scaledAnimation.setBounds(0, 0, size, size)
+        return scaledAnimation
+    }
+
+    // Preserve animatable drawables (e.g., AnimatedVectorDrawable) so motion is not lost.
+    if (drawable is Animatable) {
+        val wrapped = FixedSizeAnimatableDrawable(drawable, size)
+        wrapped.setBounds(0, 0, size, size)
+        return wrapped
+    }
+
+    return renderDrawableAsBitmapDrawable(context, drawable, size)
+}
+
+private fun startWeatherIconAnimation(
+    drawable: android.graphics.drawable.Drawable?,
+    mapView: MapView
+) {
+    if (drawable == null) return
+    drawable.callback = object : android.graphics.drawable.Drawable.Callback {
+        override fun invalidateDrawable(who: android.graphics.drawable.Drawable) {
+            mapView.invalidate()
+        }
+
+        override fun scheduleDrawable(who: android.graphics.drawable.Drawable, what: Runnable, `when`: Long) {
+            val delay = (`when` - android.os.SystemClock.uptimeMillis()).coerceAtLeast(0L)
+            mapView.postDelayed(what, delay)
+        }
+
+        override fun unscheduleDrawable(who: android.graphics.drawable.Drawable, what: Runnable) {
+            mapView.removeCallbacks(what)
+        }
+    }
+
+    when (drawable) {
+        is Animatable -> drawable.start()
+        is AnimationDrawable -> drawable.start()
+    }
+
+    mapView.invalidate()
+}
+
+private fun renderDrawableAsBitmapDrawable(
+    context: android.content.Context,
+    drawable: android.graphics.drawable.Drawable,
+    size: Int
+): android.graphics.drawable.Drawable {
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    drawable.setBounds(0, 0, size, size)
+    drawable.draw(canvas)
+    return BitmapDrawable(context.resources, bitmap)
+}
+
+private fun isWeatherAlertForMap(alert: com.example.emergencycommunicationsystem.data.models.Alert): Boolean {
+    val text = listOf(alert.category, alert.title, alert.content, alert.message)
+        .filterNotNull()
+        .joinToString(" ")
+        .lowercase()
+
+    return text.contains("weather") ||
+        text.contains("rain") ||
+        text.contains("drizzle") ||
+        text.contains("storm") ||
+        text.contains("typhoon") ||
+        text.contains("flood") ||
+        text.contains("thunder") ||
+        text.contains("cloud") ||
+        text.contains("mist") ||
+        text.contains("fog") ||
+        text.contains("haze") ||
+        text.contains("snow") ||
+        text.contains("clear")
+}
+
+private fun inferWeatherConditionForMap(alert: com.example.emergencycommunicationsystem.data.models.Alert): String {
+    val text = listOf(alert.category, alert.title, alert.content, alert.message)
+        .filterNotNull()
+        .joinToString(" ")
+        .lowercase()
+
+    return when {
+        text.contains("thunder") || text.contains("lightning") -> "thunderstorm"
+        text.contains("snow") -> "snow"
+        text.contains("drizzle") -> "drizzle"
+        text.contains("rain") || text.contains("flood") || text.contains("storm") || text.contains("typhoon") -> "rain"
+        text.contains("mist") || text.contains("fog") || text.contains("haze") || text.contains("smoke") || text.contains("dust") -> "mist"
+        text.contains("cloud") || text.contains("overcast") -> "clouds"
+        text.contains("clear") || text.contains("sunny") || text.contains("hot") -> "clear"
+        else -> "clouds"
+    }
+}
+
+private data class QcWeatherPlaceSeed(
+    val name: String,
+    val latitude: Double,
+    val longitude: Double,
+    val radiusMeters: Double
+)
+
+private data class QcWeatherPlace(
+    val name: String,
+    val latitude: Double,
+    val longitude: Double,
+    val condition: String,
+    val description: String,
+    val radiusMeters: Double
+)
+
+private data class CachedQcWeather(
+    val condition: String,
+    val description: String,
+    val fetchedAtMillis: Long
+)
+
+private fun getQcWeatherPlaces(): List<QcWeatherPlaceSeed> {
+    return listOf(
+        QcWeatherPlaceSeed(
+            name = "La Mesa Watershed",
+            latitude = 14.7097,
+            longitude = 121.0759,
+            radiusMeters = 4200.0
+        ),
+        QcWeatherPlaceSeed(
+            name = "UP Diliman",
+            latitude = 14.6539,
+            longitude = 121.0685,
+            radiusMeters = 3400.0
+        ),
+        QcWeatherPlaceSeed(
+            name = "Cubao",
+            latitude = 14.6196,
+            longitude = 121.0548,
+            radiusMeters = 3000.0
+        ),
+        QcWeatherPlaceSeed(
+            name = "Novaliches",
+            latitude = 14.7213,
+            longitude = 121.0437,
+            radiusMeters = 3600.0
+        ),
+        QcWeatherPlaceSeed(
+            name = "Batasan",
+            latitude = 14.6760,
+            longitude = 121.0942,
+            radiusMeters = 3200.0
+        ),
+        QcWeatherPlaceSeed(
+            name = "Commonwealth",
+            latitude = 14.6768,
+            longitude = 121.0965,
+            radiusMeters = 3300.0
+        )
+    )
+}
+
+private fun detectNearbyQcWeatherPlaces(
+    userLat: Double,
+    userLon: Double,
+    maxDistanceMeters: Double
+): List<QcWeatherPlaceSeed> {
+    val sortedByDistance = getQcWeatherPlaces()
+        .map { place ->
+            val distance = distanceMeters(
+                userLat = userLat,
+                userLon = userLon,
+                placeLat = place.latitude,
+                placeLon = place.longitude
+            )
+            place to distance
+        }
+
+    val strictNearby = sortedByDistance
+        .filter { (place, distance) -> distance <= min(maxDistanceMeters, place.radiusMeters) }
+        .sortedBy { (_, distance) -> distance }
+        .map { (place, _) -> place }
+
+    // Keep "nearby" behavior, but guarantee enough visible weather markers for the user.
+    return if (strictNearby.size >= 4) {
+        strictNearby.take(8)
+    } else {
+        sortedByDistance
+            .sortedBy { (_, distance) -> distance }
+            .map { (place, _) -> place }
+            .take(6)
+    }
+}
+
+private suspend fun fetchLiveWeatherForQcPlace(
+    place: QcWeatherPlaceSeed,
+    cache: MutableMap<String, CachedQcWeather>
+): QcWeatherPlace? {
+    val now = System.currentTimeMillis()
+    val cacheTtlMillis = 10 * 60 * 1000L
+    val cached = cache[place.name]
+
+    if (cached != null && (now - cached.fetchedAtMillis) < cacheTtlMillis) {
+        return QcWeatherPlace(
+            name = place.name,
+            latitude = place.latitude,
+            longitude = place.longitude,
+            condition = cached.condition,
+            description = cached.description,
+            radiusMeters = place.radiusMeters
+        )
+    }
+
+    if (BuildConfig.OPENWEATHER_API_KEY.isBlank()) return null
+
+    return try {
+        val response = WeatherApiClient.weatherService.getCurrentWeatherByLocation(
+            lat = place.latitude,
+            lon = place.longitude,
+            apiKey = BuildConfig.OPENWEATHER_API_KEY
+        )
+
+        val condition = response.weather.firstOrNull()?.main?.lowercase() ?: "clouds"
+        val description = response.weather.firstOrNull()?.main?.replaceFirstChar {
+            if (it.isLowerCase()) it.titlecase() else it.toString()
+        } ?: "Weather unavailable"
+        val temperature = response.main.temp.toInt()
+        val snippet = "$description, $temperature°C"
+
+        cache[place.name] = CachedQcWeather(
+            condition = condition,
+            description = snippet,
+            fetchedAtMillis = now
+        )
+
+        QcWeatherPlace(
+            name = place.name,
+            latitude = place.latitude,
+            longitude = place.longitude,
+            condition = condition,
+            description = snippet,
+            radiusMeters = place.radiusMeters
+        )
+    } catch (_: Exception) {
+        val fallback = cache[place.name]
+        if (fallback != null) {
+            QcWeatherPlace(
+                name = place.name,
+                latitude = place.latitude,
+                longitude = place.longitude,
+                condition = fallback.condition,
+                description = fallback.description,
+                radiusMeters = place.radiusMeters
+            )
+        } else {
+            null
+        }
+    }
+}
+
+private fun distanceMeters(
+    userLat: Double,
+    userLon: Double,
+    placeLat: Double,
+    placeLon: Double
+): Double {
+    val earthRadius = 6371000.0
+    val dLat = Math.toRadians(placeLat - userLat)
+    val dLon = Math.toRadians(placeLon - userLon)
+    val lat1 = Math.toRadians(userLat)
+    val lat2 = Math.toRadians(placeLat)
+
+    val a = sin(dLat / 2).pow(2) + cos(lat1) * cos(lat2) * sin(dLon / 2).pow(2)
+    val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    return earthRadius * c
 }
 
 /**
