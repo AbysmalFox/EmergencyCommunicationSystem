@@ -351,12 +351,17 @@ fun EmergencyApp(
                 composable(Screen.SignUp.route) {
                     val viewModel: SignUpViewModel = viewModel()
                     val state by viewModel.signUpState.collectAsState()
+                    val otpState by viewModel.otpState.collectAsState()
 
                     SignUpScreen(
                         state = state,
+                        otpState = otpState,
                         onSignUpClick = { fullName, email, phone, password, confirmPassword, locationPermissionGranted, latitude, longitude, address ->
                             viewModel.signUp(fullName, email, phone, password, confirmPassword, locationPermissionGranted, latitude, longitude, address)
                         },
+                        onEmailChanged = { email -> viewModel.onEmailChanged(email) },
+                        onSendOtpClick = { email -> viewModel.sendOtp(email) },
+                        onVerifyOtpClick = { email, otp -> viewModel.verifyOtp(email, otp) },
                         onLoginClick = { navController.navigate(Screen.Login.route) },
                         onBackPressed = { navController.popBackStack() },
                         onRegistrationSuccess = {

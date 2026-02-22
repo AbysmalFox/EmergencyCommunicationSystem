@@ -11,7 +11,8 @@ data class RegisterRequest(
     @SerializedName("share_location") val shareLocation: Boolean,
     @SerializedName("latitude") val latitude: Double? = null,
     @SerializedName("longitude") val longitude: Double? = null,
-    @SerializedName("address") val address: String? = null
+    @SerializedName("address") val address: String? = null,
+    @SerializedName("email_verification_token") val emailVerificationToken: String? = null
 )
 
 // Request for user login
@@ -78,4 +79,19 @@ data class ChangePasswordRequest(
 data class ChangePasswordResponse(
     @SerializedName("success") val success: Boolean,
     @SerializedName("message") val message: String
+)
+
+data class RequestEmailOtpRequest(
+    @SerializedName("email") val email: String
+)
+
+data class VerifyEmailOtpRequest(
+    @SerializedName("email") val email: String,
+    @SerializedName("otp") val otp: String
+)
+
+data class EmailOtpResponse(
+    @SerializedName("success") val success: Boolean,
+    @SerializedName("message") val message: String,
+    @SerializedName("verification_token") val verificationToken: String? = null
 )

@@ -31,4 +31,10 @@ interface AuthApiService {
 
     @POST("user/change_password.php")
     suspend fun changePassword(@Body request: ChangePasswordRequest): Response<ChangePasswordResponse>
+
+    @POST("email_otp/request_email_otp.php")
+    suspend fun requestEmailOtp(@Body request: RequestEmailOtpRequest): Response<EmailOtpResponse>
+
+    @POST("email_otp/verify_email_otp.php")
+    suspend fun verifyEmailOtp(@Body request: VerifyEmailOtpRequest): Response<EmailOtpResponse>
 }

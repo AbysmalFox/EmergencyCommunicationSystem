@@ -58,6 +58,7 @@ class AuthRepository {
         request.latitude?.let { registerData["latitude"] = it }
         request.longitude?.let { registerData["longitude"] = it }
         request.address?.let { registerData["address"] = it }
+        request.emailVerificationToken?.let { registerData["email_verification_token"] = it }
 
         return executeApiCall { apiService().registerUser(registerData) }
     }
@@ -84,5 +85,13 @@ class AuthRepository {
 
     suspend fun changePassword(request: ChangePasswordRequest): ChangePasswordResponse {
         return executeApiCall { apiService().changePassword(request) }
+    }
+
+    suspend fun requestEmailOtp(email: String): EmailOtpResponse {
+        return executeApiCall { apiService().requestEmailOtp(RequestEmailOtpRequest(email = email)) }
+    }
+
+    suspend fun verifyEmailOtp(email: String, otp: String): EmailOtpResponse {
+        return executeApiCall { apiService().verifyEmailOtp(VerifyEmailOtpRequest(email = email, otp = otp)) }
     }
 }
