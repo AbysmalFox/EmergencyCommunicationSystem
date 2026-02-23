@@ -1,4 +1,4 @@
-package com.example.emergencycommunicationsystem.ui.screens
+﻿package com.example.emergencycommunicationsystem.ui.screens
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -8,6 +8,8 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Animatable
 import android.graphics.drawable.AnimationDrawable
 import android.graphics.drawable.Drawable
+import android.widget.ImageButton
+import android.widget.TextView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -78,15 +80,44 @@ import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
+import org.osmdroid.views.overlay.infowindow.MarkerInfoWindow
 
 import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
 import com.example.emergencycommunicationsystem.viewmodel.MapViewModel
 import com.example.emergencycommunicationsystem.BuildConfig
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 
 private const val TAG = "MapScreen"
+private const val QC_WEATHER_CACHE_PREFS = "qc_weather_map_cache"
+private const val QC_WEATHER_CACHE_KEY = "qc_weather_entries_v1"
+
+private class WeatherMarkerInfoWindow(mapView: MapView) :
+    MarkerInfoWindow(R.layout.weather_marker_info_window, mapView) {
+
+    override fun onOpen(item: Any?) {
+        val marker = item as? Marker ?: return
+        val view = mView ?: return
+
+        val titleView = view.findViewById<TextView>(R.id.weather_info_title)
+        val snippetView = view.findViewById<TextView>(R.id.weather_info_snippet)
+        val closeButton = view.findViewById<ImageButton>(R.id.weather_info_close)
+
+        titleView.text = marker.title ?: "Weather"
+        snippetView.text = marker.snippet ?: ""
+        closeButton.setOnClickListener { close() }
+    }
+
+    override fun onClose() {
+        val view = mView ?: return
+        view.findViewById<TextView>(R.id.weather_info_title)?.text = ""
+        view.findViewById<TextView>(R.id.weather_info_snippet)?.text = ""
+        view.findViewById<ImageButton>(R.id.weather_info_close)?.setOnClickListener(null)
+    }
+}
 
 private class FixedSizeAnimatableDrawable(
     private val inner: Drawable,
@@ -413,7 +444,7 @@ fun MapScreen() {
                                             com.example.emergencycommunicationsystem.util.TranslationService.translate(alert.title, currentLanguage)
                                         } else alert.title ?: localeContext.getString(R.string.no_title)
                                         
-                                        title = "🚨 $translatedAlertLabel: $translatedTitle"
+                                        title = "ðŸš¨ $translatedAlertLabel: $translatedTitle"
                                         
                                         val snippetText = alert.location ?: alert.content ?: localeContext.getString(R.string.community_alerts_will_appear_here)
                                         snippet = if (currentLanguage != "en") {
@@ -451,7 +482,7 @@ fun MapScreen() {
                         // Identify safe zone markers by their title/content conventions
                         val title = marker.title ?: ""
                         title.contains("Hospital") || title.contains("Evacuation") || 
-                        title.contains("🏥") || title.contains("🛟")
+                        title.contains("ðŸ¥") || title.contains("ðŸ›Ÿ")
                     }
                     .toList()
                 markersToRemove.forEach { map.overlays.remove(it) }
@@ -484,8 +515,8 @@ fun MapScreen() {
                                 }
                                 
                                 val typeIcon = when (safeZone.type) {
-                                    SafeZoneType.HOSPITAL -> "🏥"
-                                    SafeZoneType.EVACUATION_CENTER -> "🛟"
+                                    SafeZoneType.HOSPITAL -> "ðŸ¥"
+                                    SafeZoneType.EVACUATION_CENTER -> "ðŸ›Ÿ"
                                 }
                                 
                                 title = "$typeIcon $translatedType: ${safeZone.name}"
@@ -512,14 +543,15 @@ fun MapScreen() {
                 map.invalidate()
             }
         }
-
-        // Manage Weather Markers from weather-related alerts
-        LaunchedEffect(alertsState, currentLanguage, showWeather) {
+        // Manage all weather markers in one synchronized batch so they appear together.
+        LaunchedEffect(alertsState, userLocation, currentLanguage, showWeather) {
             mapView?.let { map ->
-                // Remove existing weather markers first
                 val weatherMarkersToRemove = map.overlays
                     .filterIsInstance<Marker>()
-                    .filter { marker -> marker.title?.startsWith("🌦 Weather:") == true }
+                    .filter { marker ->
+                        marker.title?.startsWith("ðŸŒ¦ Weather:") == true ||
+                            marker.title?.startsWith("QC Weather:") == true
+                    }
                     .toList()
                 weatherMarkersToRemove.forEach { map.overlays.remove(it) }
 
@@ -527,6 +559,14 @@ fun MapScreen() {
                     map.invalidate()
                     return@let
                 }
+
+                if (qcWeatherCache.isEmpty()) {
+                    qcWeatherCache.putAll(loadPersistedQcWeatherCache(context))
+                }
+
+                val currentUserLocation = userLocation
+                    ?: locationOverlay?.myLocation
+                    ?: GeoPoint(14.6760, 121.0437)
 
                 val successState = alertsState as? com.example.emergencycommunicationsystem.util.Resource.Success
                 val weatherAlerts = successState?.data
@@ -537,48 +577,6 @@ fun MapScreen() {
                             isWeatherAlertForMap(alert)
                     }
                     ?: emptyList()
-
-                weatherAlerts.forEach { alert ->
-                    val condition = inferWeatherConditionForMap(alert)
-                    val marker = Marker(map).apply {
-                        // Slight offset to avoid perfectly overlapping the alert marker at the same location
-                        position = GeoPoint(alert.latitude!! + 0.00025, alert.longitude!!)
-                        title = "🌦 Weather: ${condition.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }}"
-                        val weatherSnippetSource = alert.content ?: alert.message ?: alert.location ?: "Weather update"
-                        snippet = if (currentLanguage != "en") {
-                            com.example.emergencycommunicationsystem.util.TranslationService.translate(weatherSnippetSource, currentLanguage)
-                        } else {
-                            weatherSnippetSource
-                        }
-                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                        icon = createWeatherMarkerIcon(map.context, condition)
-                        startWeatherIconAnimation(icon, map)
-                    }
-                    map.overlays.add(marker)
-                }
-                map.invalidate()
-            }
-        }
-
-        // Manage place-aware QC weather markers around the user's current location.
-        LaunchedEffect(userLocation, currentLanguage, showWeather) {
-            mapView?.let { map ->
-                val qcWeatherMarkersToRemove = map.overlays
-                    .filterIsInstance<Marker>()
-                    .filter { marker -> marker.title?.startsWith("QC Weather:") == true }
-                    .toList()
-                qcWeatherMarkersToRemove.forEach { map.overlays.remove(it) }
-
-                if (!showWeather) {
-                    map.invalidate()
-                    return@let
-                }
-
-                val currentUserLocation = userLocation ?: locationOverlay?.myLocation
-                if (currentUserLocation == null) {
-                    map.invalidate()
-                    return@let
-                }
 
                 val nearbyPlaces = detectNearbyQcWeatherPlaces(
                     userLat = currentUserLocation.latitude,
@@ -594,17 +592,43 @@ fun MapScreen() {
                     }.awaitAll().filterNotNull()
                 }
 
+                persistQcWeatherCache(context, qcWeatherCache)
+                val weatherInfoWindow = WeatherMarkerInfoWindow(map)
+
+                weatherAlerts.forEach { alert ->
+                    val condition = inferWeatherConditionForMap(alert)
+                    val marker = Marker(map).apply {
+                        position = GeoPoint(alert.latitude!! + 0.00025, alert.longitude!!)
+                        title = "ðŸŒ¦ Weather: ${condition.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }}"
+                        val weatherSnippetSource = alert.content ?: alert.message ?: alert.location ?: "Weather update"
+                        snippet = if (currentLanguage != "en") {
+                            com.example.emergencycommunicationsystem.util.TranslationService.translate(weatherSnippetSource, currentLanguage)
+                        } else {
+                            weatherSnippetSource
+                        }
+                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                        infoWindow = weatherInfoWindow
+                        icon = createWeatherMarkerIcon(map.context, condition)
+                        startWeatherIconAnimation(icon, map)
+                    }
+                    map.overlays.add(marker)
+                }
+
                 livePlaces.forEach { place ->
                     val marker = Marker(map).apply {
                         position = GeoPoint(place.latitude, place.longitude)
                         title = "QC Weather: ${place.name}"
-                        val baseSnippet = "${place.description} (${place.condition.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }})"
+                        val forecastLabel = place.forecastCondition.replaceFirstChar {
+                            if (it.isLowerCase()) it.titlecase() else it.toString()
+                        }
+                        val baseSnippet = "${place.description} | +3h: ${place.forecastDescription} ($forecastLabel)"
                         snippet = if (currentLanguage != "en") {
                             com.example.emergencycommunicationsystem.util.TranslationService.translate(baseSnippet, currentLanguage)
                         } else {
                             baseSnippet
                         }
                         setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                        infoWindow = weatherInfoWindow
                         icon = createWeatherMarkerIcon(map.context, place.condition)
                         startWeatherIconAnimation(icon, map)
                     }
@@ -613,7 +637,6 @@ fun MapScreen() {
                 map.invalidate()
             }
         }
-
         // Map Legend (Always visible at TopEnd)
         MapLegend(
             modifier = Modifier
@@ -1576,12 +1599,16 @@ private data class QcWeatherPlace(
     val latitude: Double,
     val longitude: Double,
     val condition: String,
+    val forecastCondition: String,
+    val forecastDescription: String,
     val description: String,
     val radiusMeters: Double
 )
 
 private data class CachedQcWeather(
     val condition: String,
+    val forecastCondition: String,
+    val forecastDescription: String,
     val description: String,
     val fetchedAtMillis: Long
 )
@@ -1623,6 +1650,48 @@ private fun getQcWeatherPlaces(): List<QcWeatherPlaceSeed> {
             latitude = 14.6768,
             longitude = 121.0965,
             radiusMeters = 3300.0
+        ),
+        QcWeatherPlaceSeed(
+            name = "Fairview",
+            latitude = 14.7011,
+            longitude = 121.0710,
+            radiusMeters = 3200.0
+        ),
+        QcWeatherPlaceSeed(
+            name = "Katipunan",
+            latitude = 14.6386,
+            longitude = 121.0748,
+            radiusMeters = 3000.0
+        ),
+        QcWeatherPlaceSeed(
+            name = "Tandang Sora",
+            latitude = 14.6848,
+            longitude = 121.0473,
+            radiusMeters = 3000.0
+        ),
+        QcWeatherPlaceSeed(
+            name = "Timog",
+            latitude = 14.6341,
+            longitude = 121.0332,
+            radiusMeters = 2800.0
+        ),
+        QcWeatherPlaceSeed(
+            name = "Kamuning",
+            latitude = 14.6347,
+            longitude = 121.0449,
+            radiusMeters = 2800.0
+        ),
+        QcWeatherPlaceSeed(
+            name = "Project 8",
+            latitude = 14.6640,
+            longitude = 121.0249,
+            radiusMeters = 2800.0
+        ),
+        QcWeatherPlaceSeed(
+            name = "Balintawak",
+            latitude = 14.6578,
+            longitude = 120.9907,
+            radiusMeters = 3200.0
         )
     )
 }
@@ -1649,13 +1718,13 @@ private fun detectNearbyQcWeatherPlaces(
         .map { (place, _) -> place }
 
     // Keep "nearby" behavior, but guarantee enough visible weather markers for the user.
-    return if (strictNearby.size >= 4) {
-        strictNearby.take(8)
+    return if (strictNearby.size >= 6) {
+        strictNearby.take(12)
     } else {
         sortedByDistance
             .sortedBy { (_, distance) -> distance }
             .map { (place, _) -> place }
-            .take(6)
+            .take(10)
     }
 }
 
@@ -1673,15 +1742,35 @@ private suspend fun fetchLiveWeatherForQcPlace(
             latitude = place.latitude,
             longitude = place.longitude,
             condition = cached.condition,
+            forecastCondition = cached.forecastCondition,
+            forecastDescription = cached.forecastDescription,
             description = cached.description,
             radiusMeters = place.radiusMeters
         )
     }
 
-    if (BuildConfig.OPENWEATHER_API_KEY.isBlank()) return null
+    if (BuildConfig.OPENWEATHER_API_KEY.isBlank()) {
+        return cached?.let {
+            QcWeatherPlace(
+                name = place.name,
+                latitude = place.latitude,
+                longitude = place.longitude,
+                condition = it.condition,
+                forecastCondition = it.forecastCondition,
+                forecastDescription = it.forecastDescription,
+                description = it.description,
+                radiusMeters = place.radiusMeters
+            )
+        }
+    }
 
     return try {
         val response = WeatherApiClient.weatherService.getCurrentWeatherByLocation(
+            lat = place.latitude,
+            lon = place.longitude,
+            apiKey = BuildConfig.OPENWEATHER_API_KEY
+        )
+        val forecastResponse = WeatherApiClient.weatherService.getForecastByLocation(
             lat = place.latitude,
             lon = place.longitude,
             apiKey = BuildConfig.OPENWEATHER_API_KEY
@@ -1691,11 +1780,19 @@ private suspend fun fetchLiveWeatherForQcPlace(
         val description = response.weather.firstOrNull()?.main?.replaceFirstChar {
             if (it.isLowerCase()) it.titlecase() else it.toString()
         } ?: "Weather unavailable"
+        val nextForecast = forecastResponse.list.firstOrNull()
+        val forecastCondition = nextForecast?.weather?.firstOrNull()?.main?.lowercase() ?: condition
+        val forecastDescription = nextForecast?.weather?.firstOrNull()?.main?.replaceFirstChar {
+            if (it.isLowerCase()) it.titlecase() else it.toString()
+        } ?: description
         val temperature = response.main.temp.toInt()
-        val snippet = "$description, $temperature°C"
+        val snippet = "Now: $description, ${temperature}\u00B0C"
+        val markerCondition = selectMostRelevantConditionForMap(condition, forecastCondition)
 
         cache[place.name] = CachedQcWeather(
-            condition = condition,
+            condition = markerCondition,
+            forecastCondition = forecastCondition,
+            forecastDescription = forecastDescription,
             description = snippet,
             fetchedAtMillis = now
         )
@@ -1704,7 +1801,9 @@ private suspend fun fetchLiveWeatherForQcPlace(
             name = place.name,
             latitude = place.latitude,
             longitude = place.longitude,
-            condition = condition,
+            condition = markerCondition,
+            forecastCondition = forecastCondition,
+            forecastDescription = forecastDescription,
             description = snippet,
             radiusMeters = place.radiusMeters
         )
@@ -1716,12 +1815,47 @@ private suspend fun fetchLiveWeatherForQcPlace(
                 latitude = place.latitude,
                 longitude = place.longitude,
                 condition = fallback.condition,
+                forecastCondition = fallback.forecastCondition,
+                forecastDescription = fallback.forecastDescription,
                 description = fallback.description,
                 radiusMeters = place.radiusMeters
             )
         } else {
             null
         }
+    }
+}
+
+private fun selectMostRelevantConditionForMap(
+    currentCondition: String,
+    forecastCondition: String
+): String {
+    val severeConditions = setOf("thunderstorm", "rain", "drizzle", "snow", "mist")
+    return if (forecastCondition in severeConditions) forecastCondition else currentCondition
+}
+
+private fun persistQcWeatherCache(
+    context: android.content.Context,
+    cache: Map<String, CachedQcWeather>
+) {
+    if (cache.isEmpty()) return
+    val json = Gson().toJson(cache)
+    context.getSharedPreferences(QC_WEATHER_CACHE_PREFS, android.content.Context.MODE_PRIVATE)
+        .edit()
+        .putString(QC_WEATHER_CACHE_KEY, json)
+        .apply()
+}
+
+private fun loadPersistedQcWeatherCache(
+    context: android.content.Context
+): MutableMap<String, CachedQcWeather> {
+    val prefs = context.getSharedPreferences(QC_WEATHER_CACHE_PREFS, android.content.Context.MODE_PRIVATE)
+    val stored = prefs.getString(QC_WEATHER_CACHE_KEY, null) ?: return mutableMapOf()
+    return try {
+        val type = object : TypeToken<MutableMap<String, CachedQcWeather>>() {}.type
+        Gson().fromJson<MutableMap<String, CachedQcWeather>>(stored, type) ?: mutableMapOf()
+    } catch (_: Exception) {
+        mutableMapOf()
     }
 }
 
@@ -3154,4 +3288,5 @@ private fun getQuezonCityBoundaryPoints(): ArrayList<GeoPoint> {
         GeoPoint(14.7646242, 121.1095933),
     )
 }
+
 

@@ -5,7 +5,8 @@ import com.example.emergencycommunicationsystem.R
 object WeatherIconUtils {
     fun getWeatherAnimation(condition: String): Int {
         return when (condition.lowercase()) {
-            "clear" -> R.drawable.weather_clear_day
+            // Use a neutral icon for clear conditions to avoid showing a sun marker on map.
+            "clear" -> R.drawable.weather_broken_clouds
             "clouds" -> R.drawable.weather_broken_clouds
             "rain", "drizzle" -> R.drawable.weather_rain
             "thunderstorm" -> R.drawable.weather_thunderstorm
