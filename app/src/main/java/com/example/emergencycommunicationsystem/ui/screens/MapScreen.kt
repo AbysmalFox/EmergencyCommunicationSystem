@@ -90,6 +90,9 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private const val TAG = "MapScreen"
 private const val QC_WEATHER_CACHE_PREFS = "qc_weather_map_cache"
@@ -550,7 +553,8 @@ fun MapScreen() {
                     .filterIsInstance<Marker>()
                     .filter { marker ->
                         marker.title?.startsWith("ðŸŒ¦ Weather:") == true ||
-                            marker.title?.startsWith("QC Weather:") == true
+                            marker.title?.startsWith("QC Weather:") == true ||
+                            marker.title?.startsWith("QC Weather unavailable") == true
                     }
                     .toList()
                 weatherMarkersToRemove.forEach { map.overlays.remove(it) }
@@ -621,7 +625,7 @@ fun MapScreen() {
                         val forecastLabel = place.forecastCondition.replaceFirstChar {
                             if (it.isLowerCase()) it.titlecase() else it.toString()
                         }
-                        val baseSnippet = "${place.description} | +3h: ${place.forecastDescription} ($forecastLabel)"
+                        val baseSnippet = "${place.description} | +3h: ${place.forecastDescription} ($forecastLabel)\nLast updated: ${formatWeatherUpdatedTime(place.fetchedAtMillis)}"
                         snippet = if (currentLanguage != "en") {
                             com.example.emergencycommunicationsystem.util.TranslationService.translate(baseSnippet, currentLanguage)
                         } else {
@@ -631,6 +635,23 @@ fun MapScreen() {
                         infoWindow = weatherInfoWindow
                         icon = createWeatherMarkerIcon(map.context, place.condition)
                         startWeatherIconAnimation(icon, map)
+                    }
+                    map.overlays.add(marker)
+                }
+
+                if (livePlaces.isEmpty()) {
+                    val offlineMessage = "No cached weather yet. Connect once to preload."
+                    val marker = Marker(map).apply {
+                        position = GeoPoint(currentUserLocation.latitude, currentUserLocation.longitude)
+                        title = "QC Weather unavailable"
+                        snippet = if (currentLanguage != "en") {
+                            com.example.emergencycommunicationsystem.util.TranslationService.translate(offlineMessage, currentLanguage)
+                        } else {
+                            offlineMessage
+                        }
+                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                        infoWindow = weatherInfoWindow
+                        icon = createWeatherMarkerIcon(map.context, "clouds")
                     }
                     map.overlays.add(marker)
                 }
@@ -1602,7 +1623,8 @@ private data class QcWeatherPlace(
     val forecastCondition: String,
     val forecastDescription: String,
     val description: String,
-    val radiusMeters: Double
+    val radiusMeters: Double,
+    val fetchedAtMillis: Long
 )
 
 private data class CachedQcWeather(
@@ -1745,7 +1767,8 @@ private suspend fun fetchLiveWeatherForQcPlace(
             forecastCondition = cached.forecastCondition,
             forecastDescription = cached.forecastDescription,
             description = cached.description,
-            radiusMeters = place.radiusMeters
+            radiusMeters = place.radiusMeters,
+            fetchedAtMillis = cached.fetchedAtMillis
         )
     }
 
@@ -1759,7 +1782,8 @@ private suspend fun fetchLiveWeatherForQcPlace(
                 forecastCondition = it.forecastCondition,
                 forecastDescription = it.forecastDescription,
                 description = it.description,
-                radiusMeters = place.radiusMeters
+                radiusMeters = place.radiusMeters,
+                fetchedAtMillis = it.fetchedAtMillis
             )
         }
     }
@@ -1805,7 +1829,8 @@ private suspend fun fetchLiveWeatherForQcPlace(
             forecastCondition = forecastCondition,
             forecastDescription = forecastDescription,
             description = snippet,
-            radiusMeters = place.radiusMeters
+            radiusMeters = place.radiusMeters,
+            fetchedAtMillis = now
         )
     } catch (_: Exception) {
         val fallback = cache[place.name]
@@ -1818,12 +1843,18 @@ private suspend fun fetchLiveWeatherForQcPlace(
                 forecastCondition = fallback.forecastCondition,
                 forecastDescription = fallback.forecastDescription,
                 description = fallback.description,
-                radiusMeters = place.radiusMeters
+                radiusMeters = place.radiusMeters,
+                fetchedAtMillis = fallback.fetchedAtMillis
             )
         } else {
             null
         }
     }
+}
+
+private fun formatWeatherUpdatedTime(millis: Long): String {
+    val formatter = SimpleDateFormat("MMM d, h:mm a", Locale.getDefault())
+    return formatter.format(Date(millis))
 }
 
 private fun selectMostRelevantConditionForMap(
