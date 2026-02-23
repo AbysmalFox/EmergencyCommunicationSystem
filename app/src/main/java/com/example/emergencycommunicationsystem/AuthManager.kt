@@ -2,9 +2,10 @@ package com.example.emergencycommunicationsystem
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import com.example.emergencycommunicationsystem.data.repository.AuthRepository
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +20,7 @@ object AuthManager {
     private const val KEY_PHONE = "phone" // Added phone key
     private const val KEY_PROFILE_PIC = "profile_pic"
     private const val KEY_TOKEN = "auth_token"
+    private const val TAG = "AuthManager"
 
     private lateinit var sharedPrefs: SharedPreferences
     private lateinit var appContext: Context
@@ -44,7 +46,7 @@ object AuthManager {
 
     fun initialize(context: Context) {
         appContext = context.applicationContext
-        sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        sharedPrefs = createSecurePrefs(context)
         val loggedIn = sharedPrefs.getBoolean(KEY_IS_LOGGED_IN, false)
         _isLoggedIn.value = loggedIn
         if (loggedIn) {
@@ -54,6 +56,24 @@ object AuthManager {
             _profilePic.value = sharedPrefs.getString(KEY_PROFILE_PIC, null)
         }
         userDataFlow.tryEmit(Unit)
+    }
+
+    private fun createSecurePrefs(context: Context): SharedPreferences {
+        return try {
+            val masterKey = MasterKey.Builder(context)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build()
+            EncryptedSharedPreferences.create(
+                context,
+                PREFS_NAME,
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "EncryptedSharedPreferences init failed; using non-sensitive fallback prefs", e)
+            context.getSharedPreferences("${PREFS_NAME}_fallback", Context.MODE_PRIVATE)
+        }
     }
 
     fun saveLoginState(userId: Int, username: String, email: String, phone: String, token: String, profilePic: String? = null) {

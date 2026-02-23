@@ -18,8 +18,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.Cache
+import okhttp3.CertificatePinner
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -51,6 +53,19 @@ object ApiClient {
         
         val builder = OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
+
+        val productionHost = NetworkConfig.PRODUCTION_HOST.toHttpUrlOrNull()?.host
+        val configuredPins = BuildConfig.BACKEND_CERT_PINS
+            .split(",")
+            .map { it.trim() }
+            .filter { it.startsWith("sha256/") }
+        if (productionHost != null && configuredPins.isNotEmpty()) {
+            val pinnerBuilder = CertificatePinner.Builder()
+            configuredPins.forEach { pin ->
+                pinnerBuilder.add(productionHost, pin)
+            }
+            builder.certificatePinner(pinnerBuilder.build())
+        }
         
         context?.let { ctx ->
             val cacheSize = 10 * 1024 * 1024L // 10 MB

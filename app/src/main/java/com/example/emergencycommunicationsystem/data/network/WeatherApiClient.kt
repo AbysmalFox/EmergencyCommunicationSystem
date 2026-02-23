@@ -1,5 +1,6 @@
 package com.example.emergencycommunicationsystem.data.network
 
+import com.example.emergencycommunicationsystem.BuildConfig
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -8,7 +9,11 @@ import retrofit2.converter.gson.GsonConverterFactory
 object WeatherApiClient {
 
     private val logging = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
+        level = if (BuildConfig.DEBUG) {
+            HttpLoggingInterceptor.Level.BASIC
+        } else {
+            HttpLoggingInterceptor.Level.NONE
+        }
     }
 
     private val httpClient = OkHttpClient.Builder()

@@ -165,8 +165,6 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
             Log.d("LoginViewModel", "🚀 SENDING GOOGLE LOGIN TO BACKEND")
             Log.d("LoginViewModel", "Email: $email")
             Log.d("LoginViewModel", "Name: $displayName")
-            Log.d("LoginViewModel", "Token Length: ${idToken.length}")
-            Log.d("LoginViewModel", "Token Prefix: ${idToken.take(10)}...")
             Log.d("LoginViewModel", "Device ID: ${loginData["device_id"]}")
             Log.d("LoginViewModel", "====================================================")
             

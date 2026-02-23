@@ -66,6 +66,7 @@ android {
         buildConfigField("String", "GEMINI_API_KEY", "\"${getLocalProperty("GEMINI_API_KEY", "")}\"")
         buildConfigField("String", "OPENWEATHER_API_KEY", "\"${getLocalProperty("OPENWEATHER_API_KEY", "")}\"")
         buildConfigField("String", "LOCAL_DEVICE_HOST", "\"${getLocalProperty("LOCAL_DEVICE_HOST", "192.168.1.9")}\"")
+        buildConfigField("String", "BACKEND_CERT_PINS", "\"${getLocalProperty("BACKEND_CERT_PINS", "")}\"")
         buildConfigField("boolean", "ALLOW_LOCAL_FALLBACK", "false")
     }
 
@@ -122,6 +123,7 @@ dependencies {
     implementation("com.google.mlkit:translate:17.0.2")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
     implementation("androidx.datastore:datastore-preferences:1.2.0")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
     val room_version = "2.6.1"
     implementation("androidx.room:room-runtime:$room_version")
     implementation("androidx.room:room-ktx:$room_version")
