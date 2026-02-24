@@ -11,6 +11,7 @@ import org.osmdroid.config.Configuration
 import org.webrtc.PeerConnectionFactory
 
 import com.example.emergencycommunicationsystem.util.NotificationChannels
+import com.example.emergencycommunicationsystem.data.sync.IncidentOutboxSyncScheduler
 
 class MyApplication : Application(), ImageLoaderFactory {
 
@@ -56,5 +57,6 @@ class MyApplication : Application(), ImageLoaderFactory {
         // --- END WEBRTC INITIALIZATION ---
 
         AuthManager.initialize(this)
+        IncidentOutboxSyncScheduler.schedulePeriodic(this)
     }
 }

@@ -22,6 +22,17 @@ class ReportIncidentViewModel : ViewModel() {
 
     private val _reportState = MutableStateFlow<ReportState>(ReportState.Idle)
     val reportState: StateFlow<ReportState> = _reportState
+    private val _pendingOutboxCount = MutableStateFlow(0)
+    val pendingOutboxCount: StateFlow<Int> = _pendingOutboxCount
+
+    fun flushPendingReports(context: Context) {
+        viewModelScope.launch {
+            runCatching {
+                incidentRepository.flushOutbox(context)
+            }
+            refreshPendingCount(context)
+        }
+    }
 
     fun submitReport(
         context: Context,
@@ -58,10 +69,19 @@ class ReportIncidentViewModel : ViewModel() {
             } catch (e: Exception) {
                 _reportState.value = ReportState.Error(e.message ?: "An unknown error occurred")
             }
+            refreshPendingCount(context)
         }
     }
 
     fun resetState() {
         _reportState.value = ReportState.Idle
+    }
+
+    fun refreshPendingCount(context: Context) {
+        viewModelScope.launch {
+            _pendingOutboxCount.value = runCatching {
+                incidentRepository.getPendingOutboxCount(context)
+            }.getOrDefault(0)
+        }
     }
 }

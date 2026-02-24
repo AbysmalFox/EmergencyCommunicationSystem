@@ -26,6 +26,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudOff
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -111,7 +113,13 @@ fun ReportIncidentScreen(
     )
 
     val reportState by reportViewModel.reportState.collectAsState()
+    val pendingOutboxCount by reportViewModel.pendingOutboxCount.collectAsState()
     val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        reportViewModel.flushPendingReports(context)
+        reportViewModel.refreshPendingCount(context)
+    }
 
     LaunchedEffect(reportState) {
         when (val state = reportState) {
@@ -176,6 +184,36 @@ fun ReportIncidentScreen(
                 verticalArrangement = Arrangement.spacedBy(24.dp),
                 contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp) // Adjusted padding
             ) {
+                if (pendingOutboxCount > 0) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CloudOff,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "$pendingOutboxCount report(s) queued offline and will auto-send.",
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    }
+                }
+
                 item { MapView(weatherState) }
 
                 item {
