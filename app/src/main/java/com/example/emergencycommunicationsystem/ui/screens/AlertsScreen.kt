@@ -45,6 +45,7 @@ import com.example.emergencycommunicationsystem.data.models.Alert
 import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import com.example.emergencycommunicationsystem.ui.theme.*
 import com.example.emergencycommunicationsystem.util.*
+import com.example.emergencycommunicationsystem.util.NetworkUtils
 import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -432,6 +433,7 @@ fun AlertsScreen(
     var consumedDeepLinkAlertId by rememberSaveable { mutableStateOf<String?>(null) }
     val listState = rememberLazyListState()
     val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
+    val lastSyncMillis by UserPrefs.getAlertsLastSyncMillis(context).collectAsState(initial = 0L)
     val alerts = (state as? Resource.Success)?.data
         ?.map { it.alert }
         ?.filter { it.title != "General Inquiry" }
@@ -439,6 +441,10 @@ fun AlertsScreen(
     val selectedAlert = selectedAlertId?.let { id -> alerts.firstOrNull { it.id == id } }
     
     val snackbarHostState = remember { SnackbarHostState() }
+    val isOnline = remember(state) { NetworkUtils.isNetworkAvailable(context) }
+    val now = remember { System.currentTimeMillis() }
+    val ageMinutes = if (lastSyncMillis > 0L) ((now - lastSyncMillis) / 60000L).toInt() else Int.MAX_VALUE
+    val showCacheBadge = !isOnline || ageMinutes >= 15
 
     LaunchedEffect(savedCompactMode) {
         isCompactMode = savedCompactMode
@@ -528,6 +534,22 @@ fun AlertsScreen(
                     color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.align(Alignment.Center)
                 )
+
+                if (showCacheBadge) {
+                    Surface(
+                        modifier = Modifier.align(Alignment.CenterStart).padding(start = 8.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer
+                    ) {
+                        Text(
+                            text = if (lastSyncMillis > 0L) "Cached ${ageMinutes}m" else "Cached",
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
                 
                 androidx.compose.material3.IconButton(
                     onClick = {

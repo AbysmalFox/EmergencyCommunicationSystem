@@ -3,6 +3,7 @@ package com.example.emergencycommunicationsystem.data
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -18,6 +19,8 @@ object UserPrefs {
     private val THEME_KEY = stringPreferencesKey("app_theme")
     private val MAGNIFIER_ENABLED_KEY = booleanPreferencesKey("magnifier_enabled")
     private val ALERTS_COMPACT_MODE_KEY = booleanPreferencesKey("alerts_compact_mode")
+    private val ALERTS_LAST_SYNC_MILLIS_KEY = longPreferencesKey("alerts_last_sync_millis")
+    private val MAP_WEATHER_LAST_SYNC_MILLIS_KEY = longPreferencesKey("map_weather_last_sync_millis")
 
     suspend fun saveLanguage(context: Context, langCode: String) {
         context.dataStore.edit { prefs ->
@@ -45,6 +48,18 @@ object UserPrefs {
     suspend fun saveAlertsCompactMode(context: Context, isCompactMode: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[ALERTS_COMPACT_MODE_KEY] = isCompactMode
+        }
+    }
+
+    suspend fun saveAlertsLastSyncMillis(context: Context, millis: Long) {
+        context.dataStore.edit { prefs ->
+            prefs[ALERTS_LAST_SYNC_MILLIS_KEY] = millis
+        }
+    }
+
+    suspend fun saveMapWeatherLastSyncMillis(context: Context, millis: Long) {
+        context.dataStore.edit { prefs ->
+            prefs[MAP_WEATHER_LAST_SYNC_MILLIS_KEY] = millis
         }
     }
 
@@ -82,5 +97,15 @@ object UserPrefs {
     fun isAlertsCompactMode(context: Context): Flow<Boolean> =
         context.dataStore.data.map { prefs ->
             prefs[ALERTS_COMPACT_MODE_KEY] ?: false
+        }
+
+    fun getAlertsLastSyncMillis(context: Context): Flow<Long> =
+        context.dataStore.data.map { prefs ->
+            prefs[ALERTS_LAST_SYNC_MILLIS_KEY] ?: 0L
+        }
+
+    fun getMapWeatherLastSyncMillis(context: Context): Flow<Long> =
+        context.dataStore.data.map { prefs ->
+            prefs[MAP_WEATHER_LAST_SYNC_MILLIS_KEY] ?: 0L
         }
 }

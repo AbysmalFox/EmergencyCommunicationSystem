@@ -55,10 +55,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import android.widget.Toast
 import com.example.emergencycommunicationsystem.util.LogFilter
+import com.example.emergencycommunicationsystem.util.NetworkUtils
 import com.example.emergencycommunicationsystem.util.WeatherIconUtils
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -166,8 +168,10 @@ fun MapScreen() {
     
     val alertsState by alertsViewModel.uiState.collectAsState()
     val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
+    val lastMapWeatherSyncMillis by UserPrefs.getMapWeatherLastSyncMillis(context).collectAsState(initial = 0L)
     val localeContext = getLocaleContext()
     val userLocation by mapViewModel.userLocation.collectAsState()
+    val isOnline = remember { NetworkUtils.isNetworkAvailable(context) }
 
     // State to hold MapView and Overlay for interaction
     var mapView by remember { mutableStateOf<MapView?>(null) }
@@ -597,6 +601,10 @@ fun MapScreen() {
                 }
 
                 persistQcWeatherCache(context, qcWeatherCache)
+                val newestWeatherFetchMillis = livePlaces.maxOfOrNull { it.fetchedAtMillis } ?: 0L
+                if (newestWeatherFetchMillis > 0L) {
+                    UserPrefs.saveMapWeatherLastSyncMillis(context, newestWeatherFetchMillis)
+                }
                 val weatherInfoWindow = WeatherMarkerInfoWindow(map)
 
                 weatherAlerts.forEach { alert ->
@@ -674,6 +682,30 @@ fun MapScreen() {
             showEvacuationCenters = showEvacuationCenters,
             onShowEvacuationCentersChange = { showEvacuationCenters = it }
         )
+
+        val mapWeatherAgeMinutes = if (lastMapWeatherSyncMillis > 0L) {
+            ((System.currentTimeMillis() - lastMapWeatherSyncMillis) / 60000L).toInt()
+        } else {
+            Int.MAX_VALUE
+        }
+        val showMapWeatherCacheBadge = !isOnline || mapWeatherAgeMinutes >= 15
+        if (showMapWeatherCacheBadge) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(top = 16.dp, start = 16.dp),
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer
+            ) {
+                Text(
+                    text = if (lastMapWeatherSyncMillis > 0L) "Cached ${mapWeatherAgeMinutes}m" else "Cached",
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                )
+            }
+        }
 
         // 5. Navigation Card or Directions Card (Overlays Legend at TopEnd)
         if (!isCalculatingRoute) {

@@ -61,6 +61,7 @@ class AlertsRepository(
                     }
                     
                     alertDao.insertAlerts(entitiesToInsert)
+                    UserPrefs.saveAlertsLastSyncMillis(context, System.currentTimeMillis())
                 } else {
                     val errorBody = response.errorBody()?.string()
                     LogFilter.e("AlertsRepository", "Failed to fetch alerts. Code: ${response.code()}, Error: $errorBody")
