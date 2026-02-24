@@ -13,6 +13,10 @@ import com.example.emergencycommunicationsystem.util.Resource
 import com.example.emergencycommunicationsystem.data.UserPrefs
 import com.example.emergencycommunicationsystem.util.TranslationService
 import com.example.emergencycommunicationsystem.util.LogFilter
+import com.example.emergencycommunicationsystem.util.AlertUrgency
+import com.example.emergencycommunicationsystem.util.resolveAlertUrgency
+import com.example.emergencycommunicationsystem.util.shouldVibrateForUrgency
+import com.example.emergencycommunicationsystem.util.vibrateForUrgency
 import android.widget.Toast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -53,6 +57,8 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
     
     private val _serverStatus = MutableStateFlow<String>("Unknown")
     val serverStatus: StateFlow<String> = _serverStatus.asStateFlow()
+    private val knownAlertIds = mutableSetOf<Int>()
+    private var initializedKnownAlerts = false
 
     init {
         val database = AppDatabase.getDatabase(application)
@@ -102,6 +108,7 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
                             }
                         }
                         _uiState.value = com.example.emergencycommunicationsystem.util.Resource.Success(alertsWithDistance)
+                        handleUrgentNewAlerts(resource.data)
                     }
                     is com.example.emergencycommunicationsystem.util.Resource.Error -> _uiState.value = com.example.emergencycommunicationsystem.util.Resource.Error(resource.message)
                     is com.example.emergencycommunicationsystem.util.Resource.Loading -> _uiState.value = com.example.emergencycommunicationsystem.util.Resource.Loading
@@ -224,6 +231,42 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
                 }
                 _uiState.value = com.example.emergencycommunicationsystem.util.Resource.Success(alertsWithDistance)
             }
+        }
+    }
+
+    private fun handleUrgentNewAlerts(alerts: List<Alert>) {
+        val appContext = getApplication<Application>().applicationContext
+
+        if (!initializedKnownAlerts) {
+            knownAlertIds += alerts.map { it.id }
+            initializedKnownAlerts = true
+            return
+        }
+
+        val newlySeen = alerts.filter { it.id !in knownAlertIds }
+        if (newlySeen.isEmpty()) return
+
+        knownAlertIds += newlySeen.map { it.id }
+
+        val highestUrgency = newlySeen
+            .map { alert ->
+                resolveAlertUrgency(
+                    severity = alert.severity,
+                    category = alert.category,
+                    title = alert.title,
+                    content = alert.content ?: alert.message
+                )
+            }
+            .maxByOrNull {
+                when (it) {
+                    AlertUrgency.HIGH -> 2
+                    AlertUrgency.MEDIUM -> 1
+                    AlertUrgency.LOW -> 0
+                }
+            } ?: AlertUrgency.LOW
+
+        if (shouldVibrateForUrgency(highestUrgency)) {
+            vibrateForUrgency(appContext, highestUrgency)
         }
     }
 }

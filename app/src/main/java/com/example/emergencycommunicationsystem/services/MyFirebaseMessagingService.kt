@@ -5,7 +5,11 @@ import android.content.Context
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.example.emergencycommunicationsystem.R
+import com.example.emergencycommunicationsystem.util.AlertUrgency
 import com.example.emergencycommunicationsystem.util.NotificationChannels
+import com.example.emergencycommunicationsystem.util.resolveAlertUrgency
+import com.example.emergencycommunicationsystem.util.shouldVibrateForUrgency
+import com.example.emergencycommunicationsystem.util.vibrateForUrgency
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.CoroutineScope
@@ -19,25 +23,41 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         
         Log.d(TAG, "From: ${remoteMessage.from}")
 
-        // Check if message contains a data payload
+        var urgency = AlertUrgency.LOW
         if (remoteMessage.data.isNotEmpty()) {
             Log.d(TAG, "Message data payload: ${remoteMessage.data}")
-            handleDataMessage(remoteMessage.data)
+            urgency = handleDataMessage(remoteMessage.data)
+        } else {
+            remoteMessage.notification?.let {
+                Log.d(TAG, "Message Notification Body: ${it.body}")
+                showNotification(it.title ?: "Emergency Alert", it.body ?: "")
+                urgency = resolveAlertUrgency(
+                    severity = null,
+                    category = null,
+                    title = it.title,
+                    content = it.body
+                )
+            }
         }
 
-        // Check if message contains a notification payload
-        remoteMessage.notification?.let {
-            Log.d(TAG, "Message Notification Body: ${it.body}")
-            showNotification(it.title ?: "Emergency Alert", it.body ?: "")
+        if (shouldVibrateForUrgency(urgency)) {
+            vibrateForUrgency(this, urgency)
         }
     }
 
-    private fun handleDataMessage(data: Map<String, String>) {
+    private fun handleDataMessage(data: Map<String, String>): AlertUrgency {
         val title = data["title"] ?: "Emergency Alert"
         val body = data["body"] ?: data["message"] ?: ""
         val category = data["category"] ?: "general"
+        val severity = data["severity"] ?: data["urgency"]
         
         showNotification(title, body, category)
+        return resolveAlertUrgency(
+            severity = severity,
+            category = category,
+            title = title,
+            content = body
+        )
     }
 
     private fun showNotification(title: String, body: String, category: String = "general") {
