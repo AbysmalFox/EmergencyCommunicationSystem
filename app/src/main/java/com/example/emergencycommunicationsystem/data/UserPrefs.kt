@@ -17,6 +17,7 @@ object UserPrefs {
     private val LANGUAGE_KEY = stringPreferencesKey("app_language")
     private val THEME_KEY = stringPreferencesKey("app_theme")
     private val MAGNIFIER_ENABLED_KEY = booleanPreferencesKey("magnifier_enabled")
+    private val ALERTS_COMPACT_MODE_KEY = booleanPreferencesKey("alerts_compact_mode")
 
     suspend fun saveLanguage(context: Context, langCode: String) {
         context.dataStore.edit { prefs ->
@@ -38,6 +39,12 @@ object UserPrefs {
     suspend fun saveMagnifierEnabled(context: Context, enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[MAGNIFIER_ENABLED_KEY] = enabled
+        }
+    }
+
+    suspend fun saveAlertsCompactMode(context: Context, isCompactMode: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[ALERTS_COMPACT_MODE_KEY] = isCompactMode
         }
     }
 
@@ -70,5 +77,10 @@ object UserPrefs {
     fun isMagnifierEnabled(context: Context): Flow<Boolean> =
         context.dataStore.data.map { prefs ->
             prefs[MAGNIFIER_ENABLED_KEY] ?: false
+        }
+
+    fun isAlertsCompactMode(context: Context): Flow<Boolean> =
+        context.dataStore.data.map { prefs ->
+            prefs[ALERTS_COMPACT_MODE_KEY] ?: false
         }
 }

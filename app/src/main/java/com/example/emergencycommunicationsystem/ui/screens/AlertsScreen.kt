@@ -46,6 +46,7 @@ import com.example.emergencycommunicationsystem.ui.icons.AppIcons
 import com.example.emergencycommunicationsystem.ui.theme.*
 import com.example.emergencycommunicationsystem.util.*
 import com.example.emergencycommunicationsystem.viewmodel.AlertsViewModel
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 @Composable
@@ -419,15 +420,18 @@ fun AlertsScreen(
     alertId: String? = null,
     onMessageClick: ((alertId: String, alertTitle: String) -> Unit)? = null
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val localeContext = getLocaleContext()
     val state by viewModel.uiState.collectAsState()
     val activePoll by viewModel.activePoll.collectAsState()
     val isRefreshing = state is Resource.Loading
-    var isCompactMode by remember { mutableStateOf(false) }
+    val savedCompactMode by UserPrefs.isAlertsCompactMode(context).collectAsState(initial = false)
+    var isCompactMode by rememberSaveable { mutableStateOf(savedCompactMode) }
     var selectedAlertId by remember { mutableStateOf<Int?>(null) }
     var consumedDeepLinkAlertId by rememberSaveable { mutableStateOf<String?>(null) }
     val listState = rememberLazyListState()
-    val currentLanguage by UserPrefs.getLanguage(LocalContext.current).collectAsState(initial = "en")
+    val currentLanguage by UserPrefs.getLanguage(context).collectAsState(initial = "en")
     val alerts = (state as? Resource.Success)?.data
         ?.map { it.alert }
         ?.filter { it.title != "General Inquiry" }
@@ -435,6 +439,10 @@ fun AlertsScreen(
     val selectedAlert = selectedAlertId?.let { id -> alerts.firstOrNull { it.id == id } }
     
     val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(savedCompactMode) {
+        isCompactMode = savedCompactMode
+    }
 
     // Sync location from WeatherViewModel
     val weatherState by weatherViewModel.weatherState.collectAsState()
@@ -522,7 +530,13 @@ fun AlertsScreen(
                 )
                 
                 androidx.compose.material3.IconButton(
-                    onClick = { isCompactMode = !isCompactMode },
+                    onClick = {
+                        val updated = !isCompactMode
+                        isCompactMode = updated
+                        coroutineScope.launch {
+                            UserPrefs.saveAlertsCompactMode(context, updated)
+                        }
+                    },
                     modifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp)
                 ) {
                     Icon(
