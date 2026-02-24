@@ -209,7 +209,7 @@ private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, isDarkMode: Bo
                     Text(
                         text = localizedTitle,
                         color = accentColor,
-                        fontSize = 9.sp,
+                        fontSize = 9.sp,    
                         fontWeight = FontWeight.ExtraBold,
                         modifier = Modifier.padding(top = 1.dp)
                     )
