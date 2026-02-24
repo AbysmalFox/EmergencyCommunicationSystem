@@ -428,7 +428,7 @@ fun LoginScreen(
                     // Google icon (using account circle as placeholder)
 
                                 Icon(
-                                    painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_tabler_user),
+                                    painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_google_logo),
                                     contentDescription = "Google",
                                     modifier = Modifier.size(20.dp),
                                     tint = Color.Unspecified
