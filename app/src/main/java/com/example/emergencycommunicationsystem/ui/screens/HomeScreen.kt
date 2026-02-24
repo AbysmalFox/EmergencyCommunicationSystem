@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MicOff
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -528,11 +529,11 @@ fun DashboardHeroSection(
                     onTeal = true
                 )
                 Spacer(modifier = Modifier.width(10.dp))
-                StatCard(
+                StatCardVector(
                     label = localizedStringResource(R.string.urgency_high),
                     value = highPriorityCount.toString(),
-                    icon = painterResource(id = R.drawable.ic_tabler_file_alert),
-                    color = Color(0xFFFFD54F), // Amber for high priority
+                    icon = Icons.Filled.WarningAmber,
+                    color = Color.White,
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                     onTeal = true
                 )
@@ -541,7 +542,7 @@ fun DashboardHeroSection(
                     label = localizedStringResource(R.string.temp),
                     value = "$temperature°",
                     icon = painterResource(id = R.drawable.ic_tabler_thermometer),
-                    color = Color(0xFF81D4FA), // Light blue for temp
+                    color = Color.White,
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                     onTeal = true
                 )
@@ -595,7 +596,50 @@ fun StatCard(
     }
 }
 
-
+@Composable
+fun StatCardVector(
+    label: String,
+    value: String,
+    icon: ImageVector,
+    color: Color,
+    modifier: Modifier = Modifier,
+    onTeal: Boolean = false
+) {
+    Column(
+        modifier = modifier
+            .background(
+                color = if (onTeal) Color.White.copy(alpha = 0.15f) else color.copy(alpha = 0.08f),
+                shape = RoundedCornerShape(
+                    topStart = 16.dp,
+                    topEnd = 4.dp,
+                    bottomEnd = 16.dp,
+                    bottomStart = 4.dp
+                )
+            )
+            .padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = color,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = value,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = if (onTeal) Color.White else MaterialTheme.colorScheme.onBackground
+        )
+        Text(
+            text = label,
+            fontSize = 10.sp,
+            color = if (onTeal) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
 /**
  * Quick Actions Grid - Modern Card Layout
  */
@@ -1483,3 +1527,6 @@ fun CompactInstructionsCard(
         }
     }
 }
+
+
+

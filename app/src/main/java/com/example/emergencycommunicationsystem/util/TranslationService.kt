@@ -139,20 +139,17 @@ object TranslationService {
             "es" -> TranslateLanguage.SPANISH
             "en" -> TranslateLanguage.ENGLISH
             "ceb" -> {
-                // Try Cebuano, fallback to Filipino (Tagalog) if not available
+                // Cebuano is not reliably supported; avoid incorrect Tagalog fallback.
                 try {
-                    TranslateLanguage.fromLanguageTag("ceb") ?: TranslateLanguage.fromLanguageTag("tl") ?: TranslateLanguage.ENGLISH
+                    TranslateLanguage.fromLanguageTag("ceb") ?: TranslateLanguage.ENGLISH
                 } catch (e: Exception) {
                     TranslateLanguage.ENGLISH
                 }
             }
             "bcl", "war", "ilo" -> {
-                // Bicolano, Waray and Ilocano are not supported by ML Kit, fallback to Filipino (Tagalog)
-                try {
-                    TranslateLanguage.fromLanguageTag("tl") ?: TranslateLanguage.ENGLISH
-                } catch (e: Exception) {
-                    TranslateLanguage.ENGLISH
-                }
+                // Bicolano, Waray and Ilocano are not supported by ML Kit.
+                // Fallback to English to avoid showing wrong Filipino/Tagalog text.
+                TranslateLanguage.ENGLISH
             }
             else -> {
                 // Try to get language directly, fallback to English

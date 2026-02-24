@@ -311,7 +311,7 @@ fun AlertItem(
                     ),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
                 ) {
-                    Icon(imageVector = AppIcons.Message, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Icon(imageVector = AppIcons.SmartToy, contentDescription = null, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(text = buttonText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
@@ -405,7 +405,7 @@ fun AlertItemLine(
         Spacer(modifier = Modifier.width(4.dp))
         
         Icon(
-            imageVector = AppIcons.Message,
+            imageVector = AppIcons.SmartToy,
             contentDescription = "Chat",
             tint = MaterialTheme.colorScheme.secondary,
             modifier = Modifier.size(16.dp)
