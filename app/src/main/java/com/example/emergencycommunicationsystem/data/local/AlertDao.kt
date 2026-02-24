@@ -11,6 +11,9 @@ interface AlertDao {
     @Query("SELECT * FROM alerts ORDER BY timestamp DESC")
     fun getAllAlerts(): Flow<List<AlertEntity>>
 
+    @Query("SELECT COUNT(*) FROM alerts WHERE isAcknowledged = 0")
+    fun getUnacknowledgedCount(): Flow<Int>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAlerts(alerts: List<AlertEntity>)
 

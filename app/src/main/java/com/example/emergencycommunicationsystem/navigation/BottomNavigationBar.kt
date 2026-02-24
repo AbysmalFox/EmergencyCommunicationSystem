@@ -15,9 +15,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.ui.res.painterResource
 import com.example.emergencycommunicationsystem.R
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -37,6 +40,8 @@ import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.compose.ui.platform.LocalContext
+import com.example.emergencycommunicationsystem.data.local.AppDatabase
 import com.example.emergencycommunicationsystem.ui.theme.ThemeManager
 import androidx.compose.ui.graphics.Color
 import com.example.emergencycommunicationsystem.util.getLocaleContext
@@ -49,9 +54,15 @@ fun BottomNavigationBar(
     modifier: Modifier = Modifier,
     navController: NavController
 ) {
+    val context = LocalContext.current
     val screens = listOf(Screen.Home, Screen.Alerts, Screen.Map, Screen.Profile)
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+    val unacknowledgedAlertsCount by AppDatabase
+        .getDatabase(context)
+        .alertDao()
+        .getUnacknowledgedCount()
+        .collectAsState(initial = 0)
 
     val currentSelectionIndex = remember(currentDestination) {
         screens.indexOfFirst { screen ->
@@ -117,7 +128,13 @@ fun BottomNavigationBar(
         ) {
             screens.forEachIndexed { index, screen ->
                 val isSelected = currentSelectionIndex == index
-                NavItem(screen = screen, isSelected = isSelected, isDarkMode = isDark) {
+                val badgeCount = if (screen is Screen.Alerts) unacknowledgedAlertsCount else 0
+                NavItem(
+                    screen = screen,
+                    isSelected = isSelected,
+                    isDarkMode = isDark,
+                    badgeCount = badgeCount
+                ) {
                     if (!(currentDestination?.route.matchesScreenRoute(screen) == true)) {
                         navController.navigate(screen.route) {
                             popUpTo(navController.graph.findStartDestination().id) { saveState = true }
@@ -140,7 +157,13 @@ private fun String?.matchesScreenRoute(screen: Screen): Boolean {
 }
 
 @Composable
-private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, isDarkMode: Boolean, onClick: () -> Unit) {
+private fun RowScope.NavItem(
+    screen: Screen,
+    isSelected: Boolean,
+    isDarkMode: Boolean,
+    badgeCount: Int = 0,
+    onClick: () -> Unit
+) {
     val haptic = LocalHapticFeedback.current
     val localeContext = getLocaleContext()
 
@@ -194,12 +217,25 @@ private fun RowScope.NavItem(screen: Screen, isSelected: Boolean, isDarkMode: Bo
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Icon(
-                    painter = painterResource(id = tablerIconRes),
-                    contentDescription = localizedTitle,
-                    tint = iconColor,
-                    modifier = Modifier.size(if (isSelected) 26.dp else 22.dp)
-                )
+                BadgedBox(
+                    badge = {
+                        if (badgeCount > 0) {
+                            Badge {
+                                Text(
+                                    text = if (badgeCount > 99) "99+" else badgeCount.toString(),
+                                    fontSize = 9.sp
+                                )
+                            }
+                        }
+                    }
+                ) {
+                    Icon(
+                        painter = painterResource(id = tablerIconRes),
+                        contentDescription = localizedTitle,
+                        tint = iconColor,
+                        modifier = Modifier.size(if (isSelected) 26.dp else 22.dp)
+                    )
+                }
 
                 AnimatedVisibility(
                     visible = isSelected,
