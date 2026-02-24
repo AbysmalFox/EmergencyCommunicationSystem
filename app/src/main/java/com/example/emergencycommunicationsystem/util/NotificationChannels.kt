@@ -10,7 +10,9 @@ object NotificationChannels {
     const val CHANNEL_ID_FIRE = "alert_fire"
     const val CHANNEL_ID_EARTHQUAKE = "alert_earthquake"
     const val CHANNEL_ID_WEATHER = "alert_weather"
-    const val CHANNEL_ID_GENERAL = "alert_general"
+    // Use v2 id so devices that already created old default-importance channel
+    // get a fresh HIGH-importance channel for heads-up notifications.
+    const val CHANNEL_ID_GENERAL = "alert_general_v2"
 
     fun createNotificationChannels(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -64,15 +66,16 @@ object NotificationChannels {
                 enableVibration(true)
             }
 
-            // General Alert Channel - Default Importance
+            // General Alert Channel - High Importance (status bar + heads-up + drawer)
             val generalChannel = NotificationChannel(
                 CHANNEL_ID_GENERAL,
                 "General Alerts",
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "General notifications and updates"
                 enableLights(true)
                 lightColor = android.graphics.Color.CYAN
+                enableVibration(true)
             }
 
             notificationManager.createNotificationChannels(
